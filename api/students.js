@@ -37,6 +37,15 @@ module.exports = async (req, res) => {
       return;
     }
 
+    if (req.method === 'DELETE') {
+      const url = new URL(req.url, 'http://x');
+      const id = (req.query && req.query.id) || url.searchParams.get('id');
+      if (!id) { res.status(400).json({ error: 'id required' }); return; }
+      await query('DELETE FROM students WHERE id = $1', [id]);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
     res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     const status = err.code === 'DB_NOT_CONFIGURED' ? 503 : 500;
