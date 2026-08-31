@@ -1491,6 +1491,7 @@ function saveNewLesson(s){
 const KB_NOTES = ['фа м.о.','соль м.о.','ля м.о.','си м.о.','до 1.о.','ре 1.о.','ми 1.о.','фа 1.о.','соль 1.о.','ля 1.о.','си 1.о.','до 2.о.','ре 2.о.','ми 2.о.'];
 
 const KB_OPTS = {
+  age: Array.from({length: 21}, (_, i) => String(20 + i)),
   voiceType: ['Сопрано','Меццо-сопрано','Альт','Тенор','Баритон','Бас'],
   goal: ['Сцена','Реабилитация','Расширение диапазона','Подготовка к проекту','Снять зажимы и форсирование','Работа над микстом','Ставить громкую динамику (бэлт)','Освоить экстрим-эффекты','Запись в студии','Кастинг / прослушивание','Мюзикл и театр','Постановка речи и голоса для работы','Подготовка к поступлению','Для себя, без сцены'],
   genre: ['Поп','Соул / R&B','Экстрим','Джаз','Мюзикл','Академический','K-POP','J-POP','Инди','Рэп (русский)','Рэп (зарубежный)','Рок'],
@@ -1515,7 +1516,9 @@ const KB_COMPLAINTS = ['Хрипота','Усталость голоса','По�
 // учеников. Загружается один раз при первом заходе на вкладку Кабинет.
 state.kbDicts = {
   goals: { core: KB_OPTS.goal.slice(), pinned: [], added: [] },
-  genres: { core: KB_OPTS.genre.slice(), pinned: [], added: [] }
+  genres: { core: KB_OPTS.genre.slice(), pinned: [], added: [] },
+  age: { core: KB_OPTS.age.slice(), pinned: [], added: [] },
+  voiceType: { core: KB_OPTS.voiceType.slice(), pinned: [], added: [] }
 };
 state.kbDictsLoaded = false;
 // Один общий "открытый справочник" за раз — так же, как в исходном
@@ -1615,11 +1618,31 @@ function kbMultiFieldBox(label, fieldKey, options, values){
 // dropdown open, instead of setting a single value and closing — because
 // Цель обучения/Жанр are multi-select here, not single-select like the
 // mockup's original use of this component.
+// Single-select Справочник fields (Возраст, Тип голоса на слух): a student
+// has exactly one value here, so onSelect keeps the mockup's original
+// behaviour (set the value, close the dropdown) instead of the toggle-and-
+// stay-open adaptation used for the multi-select fields above.
+const KB_SINGLE_DICT_FIELDS = new Set(['age', 'voiceType']);
+
 function kbDictRows(fieldKey){
   const d = state.kbDicts[fieldKey];
   return d.core.map(l=>({label:l, kind:'core'}))
     .concat(d.pinned.map(l=>({label:l, kind:'pinned'})))
     .concat(d.added.map(l=>({label:l, kind:'added'})));
+}
+
+function kbDictAddingHtml(fieldKey){
+  const dd = state.kabinetDictDD;
+  return `
+    <div style="margin-top:6px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="text" class="kb-dict-draft" data-kb-dict-draft="${fieldKey}" placeholder="Введите свой вариант" value="${dd.draft||''}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #D9CFC2;border-radius:9px;background:#fff;font-size:14px;font-weight:600;color:#23201D;">
+        <button type="button" data-kb-dict-commit="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:none;background:#4E7047;color:#fff;font-size:14px;cursor:pointer;">✓</button>
+        <button type="button" data-kb-dict-cancel-add="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:1px solid #E4DCD1;background:#fff;color:#8A8076;font-size:13px;cursor:pointer;">✕</button>
+      </div>
+      ${dd.error && dd.openKey===fieldKey ? `<div style="font-size:12px;color:#A8452C;margin-top:5px;">${dd.error}</div>` : ''}
+    </div>
+  `;
 }
 
 function kbSpravochnikField(label, fieldKey, values){
@@ -1632,16 +1655,7 @@ function kbSpravochnikField(label, fieldKey, values){
     ? `<span class="kb-multi-chips">${selected.map(v=>`<span class="kb-multi-chip-tag">${v}</span>`).join('')}</span>`
     : `<span class="kb-multi-placeholder">— выбрать —</span>`;
 
-  const addingHtml = `
-    <div style="margin-top:6px;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input type="text" class="kb-dict-draft" data-kb-dict-draft="${fieldKey}" placeholder="Введите свой вариант" value="${dd.draft||''}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #D9CFC2;border-radius:9px;background:#fff;font-size:14px;font-weight:600;color:#23201D;">
-        <button type="button" data-kb-dict-commit="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:none;background:#4E7047;color:#fff;font-size:14px;cursor:pointer;">✓</button>
-        <button type="button" data-kb-dict-cancel-add="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:1px solid #E4DCD1;background:#fff;color:#8A8076;font-size:13px;cursor:pointer;">✕</button>
-      </div>
-      ${dd.error && dd.openKey===fieldKey ? `<div style="font-size:12px;color:#A8452C;margin-top:5px;">${dd.error}</div>` : ''}
-    </div>
-  `;
+  const addingHtml = kbDictAddingHtml(fieldKey);
 
   const triggerHtml = `
     <button type="button" class="kb-multi-trigger" data-kb-dict-toggle="${fieldKey}">
@@ -1696,10 +1710,85 @@ function kbSpravochnikField(label, fieldKey, values){
   `;
 }
 
+// Same Справочник component, single-select variant: value is a scalar
+// (not an array), the closed field shows plain text instead of chip tags,
+// clicking a row sets the value and closes the dropdown. Pin/add/delete and
+// the shared field_dicts persistence work exactly the same as the
+// multi-select version.
+function kbSpravochnikSingleField(label, fieldKey, value, noteHtml){
+  const dd = state.kabinetDictDD;
+  const isAdding = dd.openKey === fieldKey && dd.adding;
+  const isOpen = dd.openKey === fieldKey && !dd.adding;
+
+  const valueHtml = value
+    ? `<span style="font-size:16px;font-weight:600;color:var(--text);">${value}</span>`
+    : `<span class="kb-multi-placeholder">— выбрать —</span>`;
+
+  const addingHtml = kbDictAddingHtml(fieldKey);
+
+  const triggerHtml = `
+    <button type="button" class="kb-multi-trigger" data-kb-dict-toggle="${fieldKey}">
+      ${valueHtml}
+      <span class="kb-multi-caret">${isOpen?'▲':'▼'}</span>
+    </button>
+  `;
+
+  const rows = kbDictRows(fieldKey);
+  const dropdownHtml = `
+    <div class="kb-dict-dropdown">
+      ${rows.map(r=>{
+        const confirming = dd.confirm === fieldKey + '::' + r.label;
+        if(confirming){
+          const inUse = value === r.label;
+          return `
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="flex:1;padding:8px 10px;background:#F6EAE5;border-radius:9px;">
+              <div style="font-size:12.5px;color:#A8452C;font-weight:600;line-height:1.35;">${inUse ? 'Удалить «'+r.label+'»? Значение стоит в карточке — оно останется там обычным текстом.' : 'Удалить «'+r.label+'» из справочника?'}</div>
+              <div style="display:flex;gap:6px;margin-top:7px;">
+                <button type="button" data-kb-dict-delete-confirm="${fieldKey}" data-kb-value="${r.label}" style="padding:6px 12px;border-radius:8px;border:none;background:#A8452C;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;">Удалить</button>
+                <button type="button" data-kb-dict-delete-cancel="${fieldKey}" style="padding:6px 12px;border-radius:8px;border:1px solid #E0CDC4;background:#fff;color:#8A8076;font-size:12.5px;font-weight:700;cursor:pointer;">Отмена</button>
+              </div>
+            </div>
+          </div>`;
+        }
+        const isSelected = value === r.label;
+        const rowStyle = 'display:flex;align-items:center;justify-content:space-between;gap:10px;flex:1;min-width:0;padding:9px 10px;border:none;border-radius:9px;cursor:pointer;text-align:left;font-size:14px;background:'
+          + (isSelected?'#F1EDE5':'transparent') + ';color:#23201D;font-weight:' + (isSelected?'700':'600') + ';';
+        const pinStyle = 'width:28px;height:28px;flex:none;border-radius:8px;border:none;background:none;cursor:pointer;font-size:13px;color:' + (r.kind==='pinned' ? '#A8452C' : '#C0B4A6') + ';';
+        return `
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button type="button" data-kb-dict-select-one="${fieldKey}" data-kb-value="${r.label}" style="${rowStyle}">
+            <span>${r.label}</span>
+            ${r.kind==='core' ? `<span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#C0B4A6;">основное</span>` : ''}
+          </button>
+          ${r.kind!=='core' ? `<button type="button" data-kb-dict-pin="${fieldKey}" data-kb-value="${r.label}" title="${r.kind==='pinned'?'Открепить':'Закрепить в основных'}" style="${pinStyle}">${r.kind==='pinned'?'★':'☆'}</button>` : ''}
+          ${r.kind!=='core' ? `<button type="button" data-kb-dict-delete-ask="${fieldKey}" data-kb-value="${r.label}" title="Удалить вариант" style="width:28px;height:28px;flex:none;border-radius:8px;border:none;background:none;color:#C0B4A6;font-size:13px;cursor:pointer;">✕</button>` : ''}
+        </div>`;
+      }).join('')}
+      <div style="height:1px;background:#EFE7DC;margin:6px 4px;"></div>
+      <button type="button" data-kb-dict-start-add="${fieldKey}" style="padding:9px 10px;border:none;background:none;border-radius:9px;color:#A8452C;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;">+ Добавить свой вариант</button>
+    </div>
+  `;
+
+  return `
+    <div class="kb-card kb-multi-field">
+      <label>${label}</label>
+      ${isAdding ? addingHtml : triggerHtml}
+      ${isOpen ? dropdownHtml : ''}
+      ${!isAdding && !isOpen && noteHtml ? noteHtml : ''}
+    </div>
+  `;
+}
+
 function kbCommitDictAdd(fieldKey, s){
   const dd = state.kabinetDictDD;
   const raw = (dd.draft || '').trim();
   if(!raw){ state.kabinetDictDD = Object.assign({}, dd, {error:'Пустое значение добавить нельзя.'}); paintKabinet(s); return; }
+  if(fieldKey === 'age' && !/^\d{1,3}$/.test(raw)){
+    state.kabinetDictDD = Object.assign({}, dd, {error:'Введите возраст числом.'});
+    paintKabinet(s);
+    return;
+  }
   const d = state.kbDicts[fieldKey];
   const all = d.core.concat(d.pinned, d.added);
   if(all.some(x=>x.toLowerCase()===raw.toLowerCase())){
@@ -1712,11 +1801,15 @@ function kbCommitDictAdd(fieldKey, s){
   state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
   saveFieldDict(fieldKey, nextDict);
   const cache = kbCache(s);
-  const cur = cache.intake[fieldKey] || [];
-  if(cur.indexOf(raw) === -1){
-    saveKabinet(s, {[fieldKey]: cur.concat([raw])});
+  if(KB_SINGLE_DICT_FIELDS.has(fieldKey)){
+    saveKabinet(s, {[fieldKey]: fieldKey === 'age' ? Number(raw) : raw});
   } else {
-    paintKabinet(s);
+    const cur = cache.intake[fieldKey] || [];
+    if(cur.indexOf(raw) === -1){
+      saveKabinet(s, {[fieldKey]: cur.concat([raw])});
+    } else {
+      paintKabinet(s);
+    }
   }
 }
 
@@ -1850,15 +1943,8 @@ function paintKabinet(s){
     ${kbSection('general','ОБЩЕЕ','заполняется один раз')}
     ${open.general ? `
     <div class="kb-grid">
-      <div class="kb-card">
-        <label>Возраст</label>
-        <input type="number" class="kb-input" min="5" max="90" value="${intake.age!=null?intake.age:''}" data-kb-field="age" data-kb-type="number" placeholder="—">
-      </div>
-      <div class="kb-card">
-        <label>Тип голоса на слух</label>
-        <select class="kb-select" data-kb-field="voiceType">${kbSelectOptions(KB_OPTS.voiceType, intake.voiceType)}</select>
-        <div class="kb-card-note">оценка педагога, не поле из бота</div>
-      </div>
+      ${kbSpravochnikSingleField('Возраст', 'age', intake.age!=null ? String(intake.age) : '')}
+      ${kbSpravochnikSingleField('Тип голоса на слух', 'voiceType', intake.voiceType, '<div class="kb-card-note">оценка педагога, не поле из бота</div>')}
       ${kbSpravochnikField('Цель обучения', 'goals', intake.goals)}
       ${kbSpravochnikField('Жанр', 'genres', intake.genres)}
       <div class="kb-card">
@@ -2209,6 +2295,16 @@ function wireKabinetHandlers(s){
       const idx = cur.indexOf(label);
       const next = idx>=0 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([label]);
       saveKabinet(s, {[key]: next});
+    };
+  });
+
+  c.querySelectorAll('[data-kb-dict-select-one]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.kbDictSelectOne;
+      const label = el.dataset.kbValue;
+      state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+      saveKabinet(s, {[key]: key === 'age' ? Number(label) : label});
     };
   });
 
