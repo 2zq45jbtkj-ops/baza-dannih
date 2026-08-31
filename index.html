@@ -47,15 +47,33 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .resizer{flex:none;width:6px;margin-left:-3px;margin-right:-3px;cursor:col-resize;position:relative;z-index:5;background:transparent;}
 .resizer:hover, .resizer:active{background:rgba(168,69,44,0.12);}
 .main{flex:1;padding:26px 32px;max-width:1160px;min-width:0;}
-.top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
-.top-row h2{font-size:26px;margin:0;}
-.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px;}
 .chip{padding:6px 12px;border-radius:20px;font-size:12.5px;font-weight:600;background:var(--panel);border:1px solid var(--line);}
 .chip.status-active{background:#EAF3EA;color:#3E6B3E;border-color:#CFE4CF;}
 .chip.status-trial{background:var(--blue-bg);color:var(--blue);border-color:#D3E2E9;}
 .chip.status-paused{background:var(--cream);color:var(--muted);border-color:var(--line);}
 .chip.flag{background:var(--terracotta-bg);color:var(--terracotta-dark);border-color:#EFD4C6;}
 .editable{cursor:pointer;} .editable:hover{outline:1px dashed var(--terracotta-light);outline-offset:2px;}
+.student-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px;}
+.student-header-eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#A8452C;}
+.student-header-name{margin:6px 0 0;font-size:40px;font-weight:800;letter-spacing:-.025em;cursor:pointer;}
+.student-header-name:hover{outline:1px dashed var(--terracotta-light);outline-offset:4px;}
+.student-header-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.pill-select-wrap{position:relative;display:inline-flex;align-items:center;border-radius:999px;}
+.pill-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:none;border-radius:999px;padding:8px 28px 8px 15px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;color:inherit;background:transparent;}
+.pill-select-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:11px;color:inherit;opacity:.75;}
+.status-pill-active{background:#E6F0E3;color:#4E7047;}
+.status-pill-trial{background:#F7E3DD;color:#A8452C;}
+.status-pill-paused{background:#EFEAE3;color:#8A8078;}
+.schedule-pill{background:var(--panel);border:1px solid var(--line);color:var(--text);}
+.schedule-pill .pill-select{font-weight:600;}
+.save-fab{width:37px;height:37px;border-radius:50%;border:none;background:#A8452C;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0;transition:background .15s;}
+.save-fab:hover{background:#8E3721;}
+.save-fab.saved{background:#4E7047;}
+.tabs-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.tabs-row .tabs{margin-bottom:0;border-bottom:none;}
+.collapse-toggle-btn{margin-left:auto;align-self:center;padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;}
+.collapse-toggle-btn:hover{background:var(--bg);}
+.intake-placeholder{border:1px dashed var(--line);border-radius:14px;padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.5;}
 .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
 .tab{padding:10px 16px;font-size:14.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
 .tab.active{color:var(--terracotta-dark);border-bottom-color:var(--terracotta);}
@@ -300,7 +318,8 @@ const state = {
   cardCache: {},
   search: '',
   sidebarWidth: 288,
-  lessonCounts: {}
+  lessonCounts: {},
+  introCollapsed: false
 };
 state.activeStudentId = state.data.students[0]?.id || null;
 if(!state.data.variant) state.data.variant = 'wheel';
@@ -327,7 +346,14 @@ function ensureLessonCounts(){
     state.lessonCounts[s.id] = null;
     fetch('/api/lessons?studentId=' + encodeURIComponent(s.id))
       .then(r=> r.ok ? r.json() : Promise.reject(new Error('http '+r.status)))
-      .then(data=>{ state.lessonCounts[s.id] = (data.lessons||[]).length; renderStudentList(); })
+      .then(data=>{
+        state.lessonCounts[s.id] = (data.lessons||[]).length;
+        renderStudentList();
+        if(state.activeStudentId===s.id){
+          const eyebrow = document.getElementById('studentEyebrow');
+          if(eyebrow) eyebrow.textContent = 'Карточка ученика · ' + lessonsLabel(state.lessonCounts[s.id]);
+        }
+      })
       .catch(()=>{ delete state.lessonCounts[s.id]; });
   });
 }
@@ -507,11 +533,12 @@ async function syncStudentsFromServer(){
       if(loc){
         loc.name = srv.name;
         loc.status = srv.status;
+        if(srv.schedule){ loc.org.freq = srv.schedule; }
         return loc;
       }
       return {
         id: srv.id, name: srv.name, status: srv.status,
-        org: { schedule:'—', format:'Онлайн', source:'Прочее', freq:'Пробное занятие' },
+        org: { schedule:'—', format:'Онлайн', source:'Прочее', freq: srv.schedule || 'Пробное занятие' },
         voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
         range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
         timbre: [], problems: [], compensations: [], flags: [],
@@ -531,71 +558,101 @@ async function syncStudentsFromServer(){
   }
 }
 
+const SAVE_ICON_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 3v6h8V3" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 21v-7h10v7" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+
+async function apiUpdateStudent(id, patch){
+  return apiSend('/api/students?id=' + encodeURIComponent(id), 'PATCH', patch);
+}
+
 function renderMain(s){
   const main = document.getElementById('mainArea');
   if(!s){ main.innerHTML = `<div class="empty-state">Выберите ученика слева или добавьте нового.</div>`; return; }
 
+  const count = state.lessonCounts[s.id];
+  const eyebrowText = 'Карточка ученика' + (count!=null ? ' · ' + lessonsLabel(count) : '');
+  const statusOptions = OPTIONS.status.map(o=>`<option value="${o[0]}" ${s.status===o[0]?'selected':''}>${o[1]}</option>`).join('');
+  const scheduleOptions = OPTIONS.freq.map(f=>`<option value="${f}" ${s.org.freq===f?'selected':''}>${f}</option>`).join('');
+
   main.innerHTML = `
-    <div class="top-row"><h2 class="editable" id="nameField">${s.name}</h2></div>
-    <div class="chip-row" id="chipRow"></div>
-    <div class="tabs">
-      <div class="tab ${state.activeTab==='profile'?'active':''}" data-tab="profile">Профиль</div>
-      <div class="tab ${state.activeTab==='card'?'active':''}" data-tab="card">Карта голоса</div>
-      <div class="tab ${state.activeTab==='srezy'?'active':''}" data-tab="srezy">Срезы и колесо баланса</div>
-      <div class="tab ${state.activeTab==='rep'?'active':''}" data-tab="rep">Репертуар</div>
+    <div class="student-header">
+      <div class="student-header-left">
+        <div class="student-header-eyebrow" id="studentEyebrow">${eyebrowText}</div>
+        <h1 class="student-header-name editable" id="nameField">${s.name}</h1>
+      </div>
+      <div class="student-header-right">
+        <div class="pill-select-wrap status-pill-${s.status}">
+          <select class="pill-select" id="statusPillSelect">${statusOptions}</select>
+          <span class="pill-select-arrow">▾</span>
+        </div>
+        <div class="pill-select-wrap schedule-pill">
+          <select class="pill-select" id="schedulePillSelect">${scheduleOptions}</select>
+          <span class="pill-select-arrow">▾</span>
+        </div>
+        <button class="save-fab" id="saveFab" title="Сохраняется автоматически — нажмите, чтобы сохранить вручную">${SAVE_ICON_SVG}</button>
+      </div>
+    </div>
+
+    <div class="tabs-row">
+      <div class="tabs">
+        <div class="tab ${state.activeTab==='profile'?'active':''}" data-tab="profile">Кабинет</div>
+        <div class="tab ${state.activeTab==='card'?'active':''}" data-tab="card">Дневник занятий</div>
+        <div class="tab ${state.activeTab==='srezy'?'active':''}" data-tab="srezy">Колесо баланса и срезы</div>
+        <div class="tab ${state.activeTab==='rep'?'active':''}" data-tab="rep">Репертуар</div>
+      </div>
+      ${state.activeTab==='profile' ? `<button class="collapse-toggle-btn" id="collapseToggleBtn">${state.introCollapsed?'Развернуть':'Свернуть'}</button>` : ''}
     </div>
     <div id="tabContent"></div>
   `;
 
   document.getElementById('nameField').onclick = ()=>{
     const v = prompt('Имя ученика:', s.name);
-    if(v && v.trim()){ s.name = v.trim(); saveData(); render(); }
+    if(v && v.trim()){
+      s.name = v.trim(); saveData(); render();
+      apiUpdateStudent(s.id, {name: s.name}).catch(()=>{});
+    }
   };
+
+  document.getElementById('statusPillSelect').onchange = (e)=>{
+    const val = e.target.value;
+    s.status = val; saveData();
+    apiUpdateStudent(s.id, {status: val}).catch(err=>{ alert('Не удалось сохранить статус в базе: ' + (err.message||err)); });
+    render();
+  };
+  document.getElementById('schedulePillSelect').onchange = (e)=>{
+    const val = e.target.value;
+    s.org.freq = val; saveData();
+    apiUpdateStudent(s.id, {schedule: val}).catch(err=>{ alert('Не удалось сохранить расписание в базе: ' + (err.message||err)); });
+    render();
+  };
+  document.getElementById('saveFab').onclick = ()=>{
+    const el = document.getElementById('saveFab');
+    el.classList.add('saved');
+    apiUpdateStudent(s.id, {name: s.name, status: s.status, schedule: s.org.freq})
+      .catch(err=>{ alert('Не удалось сохранить: ' + (err.message||err)); })
+      .then(()=>{ setTimeout(()=>{ if(el) el.classList.remove('saved'); }, 900); });
+  };
+
   document.querySelectorAll('.tab').forEach(el=>{
     el.onclick = ()=>{
       state.activeTab = el.dataset.tab; state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
       renderMain(s);
     };
   });
+  const collapseBtn = document.getElementById('collapseToggleBtn');
+  if(collapseBtn){
+    collapseBtn.onclick = ()=>{ state.introCollapsed = !state.introCollapsed; renderMain(s); };
+  }
 
-  renderChips(s);
-
-  if(state.activeTab==='profile') renderProfile(s);
+  if(state.activeTab==='profile') renderIntakePlaceholder(s);
   else if(state.activeTab==='card') renderCard(s);
   else if(state.activeTab==='srezy') renderSrezy(s);
   else renderRepertoire(s);
 }
 
-function renderChips(s){
-  const row = document.getElementById('chipRow');
-  const statusChip = `<span class="chip status-${s.status} editable" id="statusChip">${statusLabel(s.status)}</span>`;
-  const freqChip = `<span class="chip editable" id="freqChip">${s.org.freq}</span>`;
-  const formatChip = `<span class="chip editable" id="formatChip">${s.org.format}</span>`;
-  const flagsChips = s.flags.map((f,i)=>`<span class="chip flag" data-flag-i="${i}">${f} ✕</span>`).join('');
-  const addFlagChip = `<span class="chip editable" id="addFlagChip" style="border-style:dashed;color:var(--muted);">+ метка</span>`;
-  row.innerHTML = statusChip + freqChip + formatChip + flagsChips + addFlagChip;
-
-  document.getElementById('statusChip').onclick = ()=>{
-    const opts = OPTIONS.status.map(o=>o[1]).join(' / ');
-    const v = prompt(`Статус (${opts}):`, statusLabel(s.status));
-    const match = OPTIONS.status.find(o=>o[1].toLowerCase()===((v||'').trim().toLowerCase()));
-    if(match){ s.status = match[0]; saveData(); render(); }
-  };
-  document.getElementById('freqChip').onclick = ()=>{
-    const idx = OPTIONS.freq.indexOf(s.org.freq);
-    s.org.freq = OPTIONS.freq[(idx+1) % OPTIONS.freq.length]; saveData(); render();
-  };
-  document.getElementById('formatChip').onclick = ()=>{
-    const idx = OPTIONS.format.indexOf(s.org.format);
-    s.org.format = OPTIONS.format[(idx+1) % OPTIONS.format.length]; saveData(); render();
-  };
-  document.getElementById('addFlagChip').onclick = ()=>{
-    const v = prompt('Новая метка (например: Рекомендован осмотр):');
-    if(v && v.trim()){ s.flags.push(v.trim()); saveData(); render(); }
-  };
-  row.querySelectorAll('[data-flag-i]').forEach(el=>{
-    el.onclick = ()=>{ s.flags.splice(parseInt(el.dataset.flagI),1); saveData(); render(); };
-  });
+function renderIntakePlaceholder(s){
+  const c = document.getElementById('tabContent');
+  if(state.introCollapsed){ c.innerHTML = ''; return; }
+  c.innerHTML = `<div class="intake-placeholder">Здесь появится анкета первичной встречи и структура «Кабинета» — раздел в разработке.</div>`;
 }
 
 function renderProfile(s){
