@@ -194,6 +194,123 @@ textarea.rep-input{width:100%;border:1px solid var(--line);border-radius:8px;pad
   width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13.5px;background:var(--bg);color:var(--text);
 }
 .new-lesson-form label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:4px;margin-top:10px;}
+
+/* ---------- KABINET (anketa accordion) ---------- */
+.kb-loading{padding:30px 0;color:var(--muted);font-size:13.5px;}
+.kb-wrap{display:flex;flex-direction:column;gap:34px;}
+.kb-summary{display:flex;align-items:center;gap:16px;background:#EDE3D8;border:1px solid #E0D2C2;border-radius:16px;padding:16px 19px;flex-wrap:wrap;}
+body.dark .kb-summary{background:#3A2F26;border-color:#4A3B2E;}
+.kb-summary-title{font-size:14.5px;font-weight:800;}
+.kb-summary-desc{font-size:13px;color:#7A6E62;margin-top:3px;line-height:1.45;}
+body.dark .kb-summary-desc{color:#B8ADA1;}
+.kb-summary-btn{padding:12px 22px;border:none;border-radius:11px;background:var(--terracotta-dark);color:#fff;font-size:14px;font-weight:700;cursor:pointer;}
+.kb-summary-btn:hover{background:#7A2C1D;}
+.kb-sec-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.kb-sec-toggle{display:flex;align-items:center;gap:9px;border:none;background:none;padding:0;cursor:pointer;color:#A09488;font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;}
+.kb-chevron{width:20px;height:20px;border-radius:6px;background:var(--bg);color:#8A8076;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;}
+.kb-sec-hint{font-size:12.5px;color:#B8ADA1;}
+.kb-sec-actions{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
+.kb-ghost-btn{padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;}
+.kb-ghost-btn:hover{background:var(--bg);}
+.kb-ghost-btn.active{background:#2C2724;border-color:#2C2724;color:#F7F2EB;}
+.kb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:10px;}
+.kb-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px;position:relative;}
+.kb-card.span2{grid-column:span 2;}
+.kb-card label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;margin-bottom:5px;}
+.kb-card-note{font-size:12px;color:var(--muted);margin-top:3px;}
+.kb-select,.kb-input,.kb-textarea{width:100%;border:none;background:none;font-size:16px;font-weight:600;color:var(--text);font-family:inherit;padding:0;appearance:none;cursor:pointer;}
+.kb-input,.kb-textarea{cursor:text;}
+.kb-textarea{resize:vertical;min-height:44px;line-height:1.45;}
+.kb-select:focus,.kb-input:focus,.kb-textarea:focus{outline:none;}
+.kb-pair{display:flex;gap:18px;}
+.kb-pair>div{flex:1;}
+.kb-anamnesis-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:20px;}
+.kb-block-title{font-size:13.5px;font-weight:700;margin-bottom:10px;}
+.kb-chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+.kb-chip{padding:5px 11px;border-radius:8px;font-size:12.5px;line-height:1.25;text-align:left;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-weight:600;}
+.kb-chip.on{background:#2C2724;border-color:#2C2724;color:#F7F2EB;font-weight:700;}
+.kb-chip.on.warn{background:#F6EAE5;border-color:#E8CFC5;color:var(--terracotta-dark);}
+.kb-subgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+.kb-subcard{background:var(--bg);border-radius:12px;padding:13px 15px;position:relative;}
+.kb-subcard label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;margin-bottom:5px;}
+.kb-admin-block{border-top:1px dashed var(--line);padding-top:18px;}
+.kb-admin-title-row{display:flex;align-items:center;gap:9px;margin-bottom:11px;}
+.kb-admin-title{font-size:13.5px;font-weight:700;}
+.kb-admin-badge{padding:4px 9px;border-radius:6px;background:#F1E7E3;color:var(--terracotta-dark);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;}
+body.dark .kb-admin-badge{background:#4A2E28;}
+.kb-structure-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px;}
+.kb-structure-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+.kb-structure-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.kb-structure-label{font-size:14.5px;font-weight:700;}
+.kb-structure-hint{font-size:11.5px;color:var(--muted);font-weight:600;}
+.kb-structure-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.kb-small-btn{padding:7px 12px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--bg);border:1px solid var(--line);color:var(--muted);}
+.kb-small-btn.on{background:#2C2724;border-color:#2C2724;color:#F7F2EB;font-weight:700;}
+.kb-small-btn.risk{background:#F6EAE5;border-color:#E0553A;color:var(--terracotta-dark);font-weight:700;}
+.kb-qual-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;}
+@media (max-width:760px){.kb-qual-wrap{grid-template-columns:1fr;}}
+.kb-qual-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px 21px;}
+.kb-qual-title-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.kb-qual-hint{font-size:11.5px;color:var(--muted);}
+.kb-qual-list{display:flex;flex-direction:column;gap:7px;margin-top:13px;}
+.kb-state-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px 15px;border-radius:12px;cursor:pointer;text-align:left;border:1px solid transparent;font-family:inherit;}
+.kb-state-name{font-size:15px;font-weight:700;}
+.kb-state-recipe{font-size:12px;color:#9A8E82;font-weight:600;margin-left:8px;}
+.kb-state-badge{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;}
+.kb-side-col{display:flex;flex-direction:column;gap:10px;}
+.kb-modes-card{background:#F4EFE8;border:1px solid #E4DACC;border-radius:16px;padding:19px 21px;}
+body.dark .kb-modes-card{background:#332A22;border-color:#4A3B2E;}
+.kb-modes-title-row{display:flex;align-items:center;gap:9px;margin-bottom:4px;}
+.kb-modes-title{font-size:13.5px;font-weight:700;}
+.kb-modes-badge{padding:4px 9px;border-radius:6px;background:#E4D8C7;color:#6E5B48;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.kb-modes-desc{font-size:12.5px;color:#8A8076;line-height:1.45;margin-bottom:13px;}
+body.dark .kb-modes-desc{color:#B8ADA1;}
+.kb-modes-subtitle{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;margin-bottom:8px;}
+.kb-modes-list{display:flex;flex-direction:column;gap:6px;}
+.kb-metallic-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px 21px;}
+.kb-metallic-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.kb-metallic-title{font-size:13.5px;font-weight:700;}
+.kb-metallic-value{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--terracotta-dark);font-weight:500;}
+.kb-metallic-scale{display:flex;justify-content:space-between;font-size:12px;color:#9A8E82;font-weight:600;}
+.kb-metallic-note{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.45;}
+input[type="range"].kb-metal{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;cursor:pointer;margin:14px 0 7px;}
+input[type="range"].kb-metal::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,#E7DFD4,#D8C7B6);}
+input[type="range"].kb-metal::-moz-range-track{height:8px;border-radius:999px;background:linear-gradient(90deg,#E7DFD4,#D8C7B6);}
+input[type="range"].kb-metal::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-5px;border-radius:50%;background:var(--terracotta-dark);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.18);}
+input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--terracotta-dark);border:3px solid #fff;}
+.kb-anchors-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px 21px;}
+.kb-rec-box{background:#2C2724;border-radius:18px;padding:20px 22px;}
+.kb-rec-top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.kb-rec-btn{padding:0 22px;height:48px;border-radius:24px;border:none;font-size:14.5px;font-weight:800;letter-spacing:.02em;cursor:pointer;background:var(--terracotta-dark);color:#fff;}
+.kb-rec-btn.active{background:#E0553A;}
+.kb-rec-caption{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#A2968A;}
+.kb-rec-timer{font-family:'JetBrains Mono',monospace;font-size:25px;font-weight:500;color:#F7F2EB;letter-spacing:.02em;}
+.kb-rec-dot{width:11px;height:11px;border-radius:50%;background:#E0553A;animation:kbrecpulse 1.1s infinite;}
+@keyframes kbrecpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.82);}}
+.kb-rec-bars{display:flex;gap:4px;align-items:center;height:40px;}
+.kb-rec-bar{width:3px;border-radius:2px;background:#5E544B;transition:height .09s;}
+.kb-rec-takes{margin-top:18px;padding-top:16px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;}
+.kb-rec-take-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.kb-rec-take-name{font-size:14px;font-weight:700;color:#F7F2EB;min-width:168px;}
+.kb-rec-take-meta{font-family:'JetBrains Mono',monospace;font-size:12px;color:#A2968A;margin-top:2px;}
+.kb-rec-take-del{border:none;background:none;color:#8A7E74;font-size:13px;font-weight:700;cursor:pointer;}
+.kb-rec-take-dl{font-size:13px;font-weight:700;color:#E0A899;}
+.kb-rec-error{margin-top:14px;font-size:13px;color:#E3A99A;line-height:1.45;}
+.kb-upload-label{padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;}
+.kb-upload-label:hover{background:var(--bg);}
+.kb-files-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 10px;display:flex;flex-direction:column;}
+.kb-files-empty{padding:14px 10px;font-size:13px;color:var(--muted);}
+.kb-file-row{display:flex;align-items:center;gap:14px;padding:11px 10px;flex-wrap:wrap;}
+.kb-file-name{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:500;flex:1;min-width:240px;}
+.kb-file-topic{font-size:13px;color:var(--muted);}
+.kb-file-missing{font-size:12.5px;color:#C0B4A6;font-weight:600;}
+.kb-compare-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px 19px;margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;}
+.kb-compare-label{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;}
+.kb-compare-row{display:flex;align-items:center;gap:9px;margin-top:6px;flex-wrap:wrap;}
+.kb-compare-start{font-size:15px;font-weight:600;color:#9A8E82;}
+.kb-compare-arrow{font-size:13px;color:#C0B4A6;}
+.kb-compare-now{font-size:15px;font-weight:700;}
+.kb-compare-delta{padding:4px 9px;border-radius:7px;background:#E6F0E3;color:#4E7047;font-size:12px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -319,7 +436,11 @@ const state = {
   search: '',
   sidebarWidth: 288,
   lessonCounts: {},
-  introCollapsed: false
+  introCollapsed: false,
+  kabinetOpen: { general:true, measures:true, anamnesis:true, evt:true, qualities:true, record:true, files:true },
+  kabinetCache: {},
+  kabinetCompareOpen: false,
+  kabinetRec: { active:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
 };
 state.activeStudentId = state.data.students[0]?.id || null;
 if(!state.data.variant) state.data.variant = 'wheel';
@@ -599,7 +720,7 @@ function renderMain(s){
         <div class="tab ${state.activeTab==='srezy'?'active':''}" data-tab="srezy">Колесо баланса и срезы</div>
         <div class="tab ${state.activeTab==='rep'?'active':''}" data-tab="rep">Репертуар</div>
       </div>
-      ${state.activeTab==='profile' ? `<button class="collapse-toggle-btn" id="collapseToggleBtn">${state.introCollapsed?'Развернуть':'Свернуть'}</button>` : ''}
+      ${state.activeTab==='profile' ? `<button class="collapse-toggle-btn" id="collapseToggleBtn">${kbAnyOpen()?'Свернуть':'Развернуть'}</button>` : ''}
     </div>
     <div id="tabContent"></div>
   `;
@@ -640,20 +761,21 @@ function renderMain(s){
   });
   const collapseBtn = document.getElementById('collapseToggleBtn');
   if(collapseBtn){
-    collapseBtn.onclick = ()=>{ state.introCollapsed = !state.introCollapsed; renderMain(s); };
+    collapseBtn.onclick = ()=>{
+      const anyOpen = kbAnyOpen();
+      Object.keys(state.kabinetOpen).forEach(k=>{ state.kabinetOpen[k] = !anyOpen; });
+      collapseBtn.textContent = kbAnyOpen() ? 'Свернуть' : 'Развернуть';
+      paintKabinet(s);
+    };
   }
 
-  if(state.activeTab==='profile') renderIntakePlaceholder(s);
+  if(state.activeTab==='profile') renderKabinet(s);
   else if(state.activeTab==='card') renderCard(s);
   else if(state.activeTab==='srezy') renderSrezy(s);
   else renderRepertoire(s);
 }
 
-function renderIntakePlaceholder(s){
-  const c = document.getElementById('tabContent');
-  if(state.introCollapsed){ c.innerHTML = ''; return; }
-  c.innerHTML = `<div class="intake-placeholder">Здесь появится анкета первичной встречи и структура «Кабинета» — раздел в разработке.</div>`;
-}
+function kbAnyOpen(){ return Object.keys(state.kabinetOpen).some(k=>state.kabinetOpen[k]); }
 
 function renderProfile(s){
   const c = document.getElementById('tabContent');
@@ -1338,6 +1460,666 @@ function saveNewLesson(s){
   apiSend('/api/lessons', 'POST', payload)
     .then(()=> renderCard(s))
     .catch(err=>{ alert('Не удалось сохранить занятие: ' + err.message); if(btn) btn.disabled = false; });
+}
+
+/* ============================================================
+   KABINET — вкладка «Кабинет», аккордеон анкеты (7 секций)
+   Реальный бэкенд: /api/intake (Postgres), автосохранение по полю
+   ============================================================ */
+
+const KB_NOTES = ['фа м.о.','соль м.о.','ля м.о.','си м.о.','до 1.о.','ре 1.о.','ми 1.о.','фа 1.о.','соль 1.о.','ля 1.о.','си 1.о.','до 2.о.','ре 2.о.','ми 2.о.'];
+
+const KB_OPTS = {
+  voiceType: ['Сопрано','Меццо-сопрано','Альт','Тенор','Баритон','Бас'],
+  goal: ['Сцена','Реабилитация','Расширение диапазона','Подготовка к проекту','Снять зажимы и форсирование','Работа над микстом','Ставить громкую динамику (бэлт)','Освоить экстрим-эффекты','Запись в студии','Кастинг / прослушивание','Мюзикл и театр','Постановка речи и голоса для работы','Подготовка к поступлению','Для себя, без сцены'],
+  genre: ['Поп','Соул / R&B','Экстрим','Джаз','Мюзикл','Академический'],
+  experienceLevel: ['Нет опыта','До 1 года','1–3 года','3–5 лет','Больше 5 лет'],
+  duration: ['меньше месяца','1–3 месяца','3–6 месяцев','больше года'],
+  lar: ['Не был','Был, без диагноза','Был, есть диагноз','Направлен к фониатру'],
+  load: ['Нет нагрузки','Преподаёт','Спикер / выступления','Крикливая работа'],
+  hydration: ['Достаточно воды','Мало воды','Много кофе','Мало воды, много кофе'],
+  sleep: ['Меньше 5 часов','5–6 часов','7–8 часов','Больше 8 часов'],
+  diagnosis: ['Нет','Узелки','Парез','Рефлюкс (ГЭРБ)','Полип','Хронический ларингит'],
+  smoking: ['Нет','Иногда','Регулярно','Бросила недавно'],
+  alcohol: ['Не пьёт','Редко','1–2 раза в месяц','Еженедельно','Часто, влияет на голос'],
+  pmsFactor: ['Не релевантно','Без влияния','Отёк, минус 1–2 полутона верха','Сильное влияние'],
+  breath: ['Клавикулярное','Грудное','Смешанное','Опора (апподжо)']
+};
+
+const KB_COMPLAINTS = ['Хрипота','Усталость голоса','Потеря диапазона','Срывы','Ком в горле','Боль после нагрузки'];
+
+const KB_STRUCTURES = [
+  { key:'tvf_onset', label:'Голосовые складки — атака', hint:'атака и снятие звука', options:['одновременная','глоттальная','аспирированная'], neutral:'одновременная' },
+  { key:'tvf_body', label:'Голосовые складки — масса', hint:'толщина и упругость', options:['тонкие','толстые','жёсткие','вялые'], neutral:'тонкие' },
+  { key:'fvf', label:'Ложные складки', hint:'ретракция или сужение', options:['расширены','нейтрально','сужены'], risk:['сужены'], neutral:'нейтрально' },
+  { key:'thyroid', label:'Щитовидный хрящ', hint:'наклон щитовидного', options:['наклонён','нейтрально','вертикально'], neutral:'нейтрально' },
+  { key:'cricoid', label:'Перстневидный хрящ', hint:'наклон перстневидного', options:['наклонён','вертикально'], neutral:'вертикально' },
+  { key:'larynx', label:'Высота гортани', hint:'гортань в покое и в работе', options:['высокая','средняя','низкая'], neutral:'средняя' },
+  { key:'aes', label:'Надгортанный сфинктер', hint:'источник твэнга', options:['сужен','средний','расширен'], neutral:'средний' },
+  { key:'velum', label:'Мягкое нёбо', hint:'носовой проход', options:['закрыт','средний','открыт'], neutral:'закрыт' },
+  { key:'tongue', label:'Язык', hint:'корпус языка', options:['высоко','нейтрально','низко'], risk:['высоко'], neutral:'нейтрально' },
+  { key:'jaw', label:'Челюсть', hint:'положение челюсти', options:['вперёд','нейтрально','назад'], risk:['назад'], neutral:'нейтрально' },
+  { key:'lips', label:'Губы', hint:'форма губ', options:['вытянуты','нейтрально','растянуты'], neutral:'нейтрально' },
+  { key:'head', label:'Голова и шея', hint:'положение головы', options:['вперёд','нейтрально','назад'], risk:['вперёд'], neutral:'нейтрально' },
+  { key:'torso', label:'Корпус', hint:'опора и раскрытие', options:['сжат','нейтрально','раскрыт'], risk:['сжат'], neutral:'нейтрально' }
+];
+
+const KB_QUALITIES = [
+  ['Речевое (Speech)','толстые складки, щитовидный вертикально'],
+  ['Фальцет (Falsetto)','жёсткие складки, воздух'],
+  ['Всхлип (Sob)','наклон щитовидного, низкая гортань'],
+  ['Твэнг (Twang)','сужённый надгортанный сфинктер'],
+  ['Оперное (Opera)','наклон + якоря'],
+  ['Бэлт (Belt)','толстые складки, высокая гортань, якоря'],
+  ['Штробас (Vocal fry)','вялые складки, минимальный воздушный поток'],
+  ['Дисторшн (Distortion)','ретракция + вибрация над складками, плотные якоря'],
+  ['Плач (Cry)','наклон щитовидного, тонкие складки, мягкая атака'],
+  ['Крик (Yell)','толстые складки, суженный сфинктер, все якоря']
+];
+
+const KB_MODE_KEYS = ['Neutral','Curbing','Overdrive','Edge'];
+const KB_ANCHOR_KEYS = ['Голова и шея','Корпус','Носоглоточная'];
+const KB_STATES = ['есть','частично','нет'];
+const KB_STATE_COLORS = {
+  'есть': ['#EFF4ED','#D9E4D5','#4E7047'],
+  'частично': ['#FBF3E7','#EEDFC6','#8A6A2F'],
+  'нет': ['#FAF7F2','#EAE2D7','#A09488']
+};
+
+function kbSelectOptions(list, value){
+  const empty = '<option value="" ' + (!value?'selected':'') + '>— выбрать —</option>';
+  return [empty].concat(list.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`)).join('');
+}
+
+function kbNeutralStructures(){
+  const out = {};
+  KB_STRUCTURES.forEach(st=>{ out[st.key] = st.neutral; });
+  return out;
+}
+
+function kbMetallicNote(v){
+  if(v<=20) return 'Почти без металла. Голос воздушный и лёгкий, складки смыкаются неплотно, часть выдоха уходит мимо звука. На сцене такой тембр не несёт: без микрофона его перекрывает даже негромкий аккомпанемент, в миксе он тонет за инструментами. Плюс в том, что нагрузка на складки минимальна и голос почти не устаёт, поэтому режим годится для восстановления после перегруза. Минус — динамику и опору на нём не построить: любая попытка добавить громкость выходит через давление, а не через смыкание.';
+  if(v<=40) return 'Перевес в воздушность. Металл появляется только тогда, когда добавляется подсвязочное давление, поэтому громкая динамика идёт через форсирование, а не через плотность смыкания. Практически это выглядит так: тихие фразы звучат мягко и красиво, а на подъёме к громкому звук либо срывается в фальцет, либо становится сдавленным. Работать нужно с массой складок и опорой отдельно от громкости: сначала плотное смыкание на комфортной динамике, только потом наращивание объёма. До этого любые попытки бэлта будут закрепляться как пережим.';
+  if(v<=60) return 'Рабочий баланс. Металл включается по запросу, а не по случайности: ученик может дать плотный звук и тут же вернуться в воздушный, не меняя опоры. Переход между регистрами держится без срыва, потому что масса складок и наклон щитовидного перестраиваются постепенно, а не рывком. Это то состояние, из которого стоит осваивать новые качества и эффекты: база уже устойчива, а запас по громкости и по мягкости есть в обе стороны. Задача на этом этапе — не ломать баланс при усложнении репертуара.';
+  if(v<=80) return 'Металла много. Звук яркий, плотный и несущий, хорошо читается в миксе и на большой сцене без запаса по мощности микрофона. Обратная сторона — высокая нагрузка: складки работают толстой массой почти всё время, поэтому нужно следить за усталостью к концу занятия и за ретракцией ложных складок. Если ретракция теряется, металл быстро превращается в сдавленность, а на следующий день появляется сип. В таком режиме обязательны короткие паузы, воздушные упражнения между подходами и контроль общего голосового пробега за неделю.';
+  return 'Максимум металла. Плотный сценический звук на всём диапазоне, ощущение мощи и полного контроля над динамикой. Держится он только на двух вещах: постоянной ретракции ложных складок и рабочих якорях головы, шеи и корпуса. Стоит потерять любую из них — и режим мгновенно уходит в пережим, с болью, сипом и потерей верха на несколько дней. Такой уровень металла не должен быть режимом по умолчанию: это инструмент для отдельных фраз и кульминаций, а базовую работу и разогрев нужно вести на более умеренном балансе.';
+}
+
+function kbSection(key, label, hint, extraBtnsHtml){
+  const open = !!state.kabinetOpen[key];
+  return `
+    <div class="kb-sec-header">
+      <button type="button" class="kb-sec-toggle" data-kb-toggle="${key}">
+        <span class="kb-chevron">${open?'▾':'▸'}</span>${label}
+      </button>
+      ${hint? `<div class="kb-sec-hint">${hint}</div>` : ''}
+      ${extraBtnsHtml? `<div class="kb-sec-actions">${extraBtnsHtml}</div>` : ''}
+    </div>`;
+}
+
+function renderKabinet(s){
+  const c = document.getElementById('tabContent');
+  if(state.kabinetCache[s.id]){ paintKabinet(s); return; }
+  c.innerHTML = `<div class="kb-loading">Загружаю анкету…</div>`;
+  Promise.all([
+    apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
+    apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
+  ]).then(([intakeRes, lessonsRes])=>{
+    state.kabinetCache[s.id] = {
+      intake: (intakeRes && intakeRes.intake) || {},
+      lessons: (lessonsRes && lessonsRes.lessons) || []
+    };
+    paintKabinet(s);
+  }).catch(err=>{
+    c.innerHTML = `<div class="card-error">Не удалось загрузить анкету: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`;
+  });
+}
+
+function kbCache(s){
+  return state.kabinetCache[s.id] || (state.kabinetCache[s.id] = {intake:{}, lessons:[]});
+}
+
+function saveKabinet(s, patch){
+  const cache = kbCache(s);
+  cache.intake = Object.assign({}, cache.intake, patch);
+  const payload = Object.assign({studentId: s.id}, cache.intake);
+  apiSend('/api/intake', 'POST', payload)
+    .then(res=>{ cache.intake = res.intake; paintKabinet(s); })
+    .catch(err=>{ alert('Не удалось сохранить: ' + (err.message||err)); paintKabinet(s); });
+}
+
+function paintKabinet(s){
+  const c = document.getElementById('tabContent');
+  const cache = kbCache(s);
+  const intake = cache.intake || {};
+  const lessons = cache.lessons || [];
+  const open = state.kabinetOpen;
+
+  const generalHtml = `
+    ${kbSection('general','ОБЩЕЕ','заполняется один раз')}
+    ${open.general ? `
+    <div class="kb-grid">
+      <div class="kb-card">
+        <label>Возраст</label>
+        <input type="number" class="kb-input" min="5" max="90" value="${intake.age!=null?intake.age:''}" data-kb-field="age" data-kb-type="number" placeholder="—">
+      </div>
+      <div class="kb-card">
+        <label>Тип голоса на слух</label>
+        <select class="kb-select" data-kb-field="voiceType">${kbSelectOptions(KB_OPTS.voiceType, intake.voiceType)}</select>
+        <div class="kb-card-note">оценка педагога, не поле из бота</div>
+      </div>
+      <div class="kb-card">
+        <label>Цель обучения</label>
+        <select class="kb-select" data-kb-field="goal">${kbSelectOptions(KB_OPTS.goal, intake.goal)}</select>
+      </div>
+      <div class="kb-card">
+        <label>Жанр</label>
+        <select class="kb-select" data-kb-field="genre">${kbSelectOptions(KB_OPTS.genre, intake.genre)}</select>
+      </div>
+      <div class="kb-card">
+        <label>Опыт пения до меня</label>
+        <select class="kb-select" data-kb-field="experienceLevel">${kbSelectOptions(KB_OPTS.experienceLevel, intake.experienceLevel)}</select>
+      </div>
+      <div class="kb-card span2">
+        <label>На чём застряла</label>
+        <textarea class="kb-textarea" rows="2" data-kb-field="stuckNote" placeholder="коротко: где предел и в чём затык">${intake.stuckNote||''}</textarea>
+      </div>
+    </div>` : ''}
+  `;
+
+  const cmp = state.kabinetCompareOpen;
+  const measuresHtml = `
+    ${kbSection('measures','СТАРТОВЫЕ ЗАМЕРЫ','по факту, а не по желанию', `<button type="button" class="kb-ghost-btn${cmp?' active':''}" data-kb-compare-toggle="1">${cmp?'Скрыть сравнение':'Сравнить со стартом'}</button>`)}
+    ${open.measures ? `
+    <div class="kb-grid">
+      <div class="kb-card">
+        <label>Диапазон по факту</label>
+        <div class="kb-pair">
+          <select class="kb-select" data-kb-field="rangeLow">${kbSelectOptions(KB_NOTES, intake.rangeLow)}</select>
+          <select class="kb-select" data-kb-field="rangeHigh">${kbSelectOptions(KB_NOTES, intake.rangeHigh)}</select>
+        </div>
+      </div>
+      <div class="kb-card">
+        <label>Тесситура комфорта</label>
+        <div class="kb-pair">
+          <select class="kb-select" data-kb-field="tessLow">${kbSelectOptions(KB_NOTES, intake.tessLow)}</select>
+          <select class="kb-select" data-kb-field="tessHigh">${kbSelectOptions(KB_NOTES, intake.tessHigh)}</select>
+        </div>
+      </div>
+      <div class="kb-card">
+        <label>Где ломается регистр</label>
+        <div class="kb-pair">
+          <select class="kb-select" data-kb-field="registerBreakLow">${kbSelectOptions(KB_NOTES, intake.registerBreakLow)}</select>
+          <select class="kb-select" data-kb-field="registerBreakHigh">${kbSelectOptions(KB_NOTES, intake.registerBreakHigh)}</select>
+        </div>
+      </div>
+      <div class="kb-card">
+        <label>Дыхание · опора</label>
+        <select class="kb-select" data-kb-field="breathingType">${kbSelectOptions(KB_OPTS.breath, intake.breathingType)}</select>
+      </div>
+    </div>
+    ${cmp ? `
+    <div class="kb-compare-box">
+      <div>
+        <div class="kb-compare-label">Диапазон</div>
+        <div class="kb-compare-row">
+          <span class="kb-compare-start">${intake.baselineRangeLow&&intake.baselineRangeHigh ? intake.baselineRangeLow+' — '+intake.baselineRangeHigh : '— нет стартового замера —'}</span>
+          <span class="kb-compare-arrow">→</span>
+          <span class="kb-compare-now">${(intake.rangeLow||'—')+' — '+(intake.rangeHigh||'—')}</span>
+          <span class="kb-compare-delta">текущий замер</span>
+        </div>
+      </div>
+      <div>
+        <div class="kb-compare-label">Тесситура комфорта</div>
+        <div class="kb-compare-row">
+          <span class="kb-compare-start">${intake.baselineTessLow&&intake.baselineTessHigh ? intake.baselineTessLow+' — '+intake.baselineTessHigh : '— нет стартового замера —'}</span>
+          <span class="kb-compare-arrow">→</span>
+          <span class="kb-compare-now">${(intake.tessLow||'—')+' — '+(intake.tessHigh||'—')}</span>
+          <span class="kb-compare-delta">текущий замер</span>
+        </div>
+      </div>
+      <div>
+        <div class="kb-compare-label">Точка слома регистра</div>
+        <div class="kb-compare-row">
+          <span class="kb-compare-start">${intake.baselineRegisterBreak || '— нет стартового замера —'}</span>
+          <span class="kb-compare-arrow">→</span>
+          <span class="kb-compare-now">${intake.registerBreakLow||'—'}</span>
+          <span class="kb-compare-delta">текущий замер</span>
+        </div>
+      </div>
+    </div>` : ''}
+    ` : ''}
+  `;
+
+  const complaints = intake.complaints || [];
+  const anamnesisHtml = `
+    ${kbSection('anamnesis','ГОЛОСОВОЙ АНАМНЕЗ','')}
+    ${open.anamnesis ? `
+    <div class="kb-anamnesis-box">
+      <div>
+        <div class="kb-block-title">Жалобы</div>
+        <div class="kb-chip-row">
+          ${KB_COMPLAINTS.map(k=>`<button type="button" class="kb-chip${complaints.indexOf(k)>=0?' on warn':''}" data-kb-complaint="${k}">${k}</button>`).join('')}
+        </div>
+      </div>
+      <div class="kb-subgrid">
+        <div class="kb-subcard"><label>Длительность симптомов</label><select class="kb-select" data-kb-field="symptomDuration">${kbSelectOptions(KB_OPTS.duration, intake.symptomDuration)}</select></div>
+        <div class="kb-subcard"><label>ЛОР / фониатр</label><select class="kb-select" data-kb-field="larStatus">${kbSelectOptions(KB_OPTS.lar, intake.larStatus)}</select></div>
+        <div class="kb-subcard"><label>Нагрузка на голос вне пения</label><select class="kb-select" data-kb-field="vocalLoadJob">${kbSelectOptions(KB_OPTS.load, intake.vocalLoadJob)}</select></div>
+        <div class="kb-subcard"><label>Гидратация</label><select class="kb-select" data-kb-field="hydration">${kbSelectOptions(KB_OPTS.hydration, intake.hydration)}</select></div>
+        <div class="kb-subcard"><label>Сон</label><select class="kb-select" data-kb-field="sleep">${kbSelectOptions(KB_OPTS.sleep, intake.sleep)}</select></div>
+      </div>
+      <div class="kb-admin-block">
+        <div class="kb-admin-title-row">
+          <div class="kb-admin-title">Медицинское и чувствительное</div>
+          <span class="kb-admin-badge">только педагог</span>
+        </div>
+        <div class="kb-subgrid">
+          <div class="kb-subcard"><label>Диагноз</label><select class="kb-select" data-kb-field="diagnosis">${kbSelectOptions(KB_OPTS.diagnosis, intake.diagnosis)}</select></div>
+          <div class="kb-subcard"><label>Курение</label><select class="kb-select" data-kb-field="smoking">${kbSelectOptions(KB_OPTS.smoking, intake.smoking)}</select></div>
+          <div class="kb-subcard"><label>Алкоголь</label><select class="kb-select" data-kb-field="alcohol">${kbSelectOptions(KB_OPTS.alcohol, intake.alcohol)}</select></div>
+          <div class="kb-subcard"><label>ПМС-фактор</label><select class="kb-select" data-kb-field="pmsFactor">${kbSelectOptions(KB_OPTS.pmsFactor, intake.pmsFactor)}</select></div>
+        </div>
+      </div>
+    </div>` : ''}
+  `;
+
+  const structures = Object.assign({}, kbNeutralStructures(), intake.structures||{});
+  const evtHtml = `
+    ${kbSection('evt','EVT · КАРТА СТРУКТУР','условие каждой структуры на старте — нажмите, чтобы отметить', `
+      <button type="button" class="kb-ghost-btn" data-kb-reset-structures="1">Сбросить в нейтраль</button>
+      <button type="button" class="kb-ghost-btn" data-kb-transfer="1">Перенести в занятие</button>
+    `)}
+    ${open.evt ? `
+    <div class="kb-structure-grid">
+      ${KB_STRUCTURES.map(st=>`
+        <div class="kb-structure-card">
+          <div class="kb-structure-top">
+            <div class="kb-structure-label">${st.label}</div>
+            <div class="kb-structure-hint">${st.hint}</div>
+          </div>
+          <div class="kb-structure-opts">
+            ${st.options.map(o=>{
+              const on = structures[st.key] === o;
+              const risky = st.risk && st.risk.indexOf(o) >= 0;
+              const cls = on ? (risky?'kb-small-btn risk':'kb-small-btn on') : 'kb-small-btn';
+              return `<button type="button" class="${cls}" data-kb-structure="${st.key}" data-kb-value="${o}">${o}</button>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>` : ''}
+  `;
+
+  const qualities = Object.assign({}, intake.qualities||{});
+  const modes = Object.assign({}, intake.modes||{});
+  const anchors = Object.assign({}, intake.anchors||{});
+  const metallic = intake.metallicPercent==null ? 32 : intake.metallicPercent;
+  const qualitiesHtml = `
+    ${kbSection('qualities','КАЧЕСТВА ГОЛОСА И ИНСТРУМЕНТЫ CVT','')}
+    ${open.qualities ? `
+    <div class="kb-qual-wrap">
+      <div class="kb-qual-card">
+        <div class="kb-qual-title-row"><div class="kb-block-title" style="margin-bottom:0;">Десять качеств голоса (EVT)</div><div class="kb-qual-hint">клик меняет статус</div></div>
+        <div class="kb-qual-list">
+          ${KB_QUALITIES.map(function(pair){
+            const label = pair[0], recipe = pair[1];
+            const st = qualities[label] || 'нет';
+            const col = KB_STATE_COLORS[st];
+            return `<button type="button" class="kb-state-row" style="background:${col[0]};border-color:${col[1]};" data-kb-quality="${label}">
+              <span><span class="kb-state-name">${label}</span><span class="kb-state-recipe">${recipe}</span></span>
+              <span class="kb-state-badge" style="color:${col[2]};">${st}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="kb-side-col">
+        <div class="kb-modes-card">
+          <div class="kb-modes-title-row"><div class="kb-modes-title">Инструменты из CVT</div><span class="kb-modes-badge">оставлено</span></div>
+          <div class="kb-modes-desc">Моды и effort как рабочий ярлык поверх EVT-структур.</div>
+          <div class="kb-modes-subtitle">Моды на старте</div>
+          <div class="kb-modes-list">
+            ${KB_MODE_KEYS.map(k=>{
+              const st = modes[k] || 'нет';
+              const col = KB_STATE_COLORS[st];
+              return `<button type="button" class="kb-state-row" style="background:${col[0]};border-color:${col[1]};" data-kb-mode="${k}">
+                <span class="kb-state-name">${k}</span><span class="kb-state-badge" style="color:${col[2]};">${st}</span>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>
+        <div class="kb-metallic-card">
+          <div class="kb-metallic-top"><div class="kb-metallic-title">Metallic / non-metallic (CVT)</div><div class="kb-metallic-value" id="kbMetallicValue">${metallic}% металла</div></div>
+          <input type="range" class="kb-metal" min="0" max="100" step="1" value="${metallic}" id="kbMetallicSlider">
+          <div class="kb-metallic-scale"><span>non-metallic</span><span>metallic</span></div>
+          <div class="kb-metallic-note" id="kbMetallicNote">${kbMetallicNote(metallic)}</div>
+        </div>
+        <div class="kb-anchors-card">
+          <div class="kb-block-title">Якоря (Anchoring) на старте</div>
+          <div class="kb-chip-row">
+            ${KB_ANCHOR_KEYS.map(k=>`<button type="button" class="kb-chip${anchors[k]?' on':''}" data-kb-anchor="${k}">${k}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>` : ''}
+  `;
+
+  const rec = state.kabinetRec;
+  const takes = intake.referenceTakes || [];
+  const recordHtml = `
+    ${kbSection('record','РЕФЕРЕНС-ЗАПИСЬ НА ВХОДЕ','записывается здесь, в браузере', `
+      <label class="kb-upload-label">Загрузить файл<input type="file" accept="audio/*" id="kbUploadInput" style="display:none;"></label>
+    `)}
+    ${open.record ? `
+    <div class="kb-rec-box">
+      <div class="kb-rec-top">
+        <button type="button" class="kb-rec-btn${rec.active?' active':''}" id="kbRecBtn">${rec.active?'Стоп':'Запись'}</button>
+        <div style="flex:1;min-width:220px;">
+          <div class="kb-rec-caption">${rec.active?'Идёт запись':(takes.length?'Записано '+takes.length:'Нажмите, чтобы записать голос')}</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+            <div class="kb-rec-timer" id="kbRecTimer">00:00</div>
+            ${rec.active? `<div class="kb-rec-dot"></div>` : ''}
+          </div>
+        </div>
+        <div class="kb-rec-bars" id="kbRecBars">${Array.from({length:28}).map((_,i)=>`<div class="kb-rec-bar" style="height:${[6,12,9,15,7,11,8,14,6,10,13,8,11,7,12,9,15,6,10,8,13,7,11,9,6,12,8,10][i%28]}px;"></div>`).join('')}</div>
+      </div>
+      ${rec.error? `<div class="kb-rec-error">${rec.error}</div>` : ''}
+      ${takes.length? `
+      <div class="kb-rec-takes">
+        ${takes.map(t=>`
+          <div class="kb-rec-take-row">
+            <div>
+              <div class="kb-rec-take-name">${t.name}</div>
+              <div class="kb-rec-take-meta">${t.meta}</div>
+            </div>
+            <audio controls src="${t.dataUrl}" style="flex:1;min-width:260px;height:38px;"></audio>
+            <a class="kb-rec-take-dl" href="${t.dataUrl}" download="${t.name}">Скачать</a>
+            <button type="button" class="kb-rec-take-del" data-kb-take-del="${t.id}">Удалить</button>
+          </div>
+        `).join('')}
+      </div>` : ''}
+    </div>` : ''}
+  `;
+
+  const files = lessons.map(l=>({
+    name: (l.lessonDate||'').split('-').reverse().join('.') + '_' + (s.name||'').replace(/\s+/g,'_') + (l.mediaUrl?'.webm':''),
+    topic: l.rangeWorked || l.whatWorked || '—',
+    url: l.mediaUrl || '',
+    hasAudio: !!l.mediaUrl
+  }));
+  const filesHtml = `
+    ${kbSection('files','ЗАПИСИ С УРОКОВ','дата_имя ученика')}
+    ${open.files ? `
+    <div class="kb-files-box">
+      ${files.length ? files.map(f=>`
+        <div class="kb-file-row">
+          <div class="kb-file-name">${f.name}</div>
+          <div class="kb-file-topic">${f.topic}</div>
+          ${f.hasAudio ? `<audio controls src="${f.url}" style="height:34px;"></audio>` : `<span class="kb-file-missing">запись не приложена</span>`}
+        </div>
+      `).join('') : `<div class="kb-files-empty">Записей пока нет — появятся после первых занятий в «Дневнике занятий».</div>`}
+    </div>` : ''}
+  `;
+
+  const summaryHtml = `
+    <div class="kb-summary">
+      <div style="flex:1;min-width:220px;">
+        <div class="kb-summary-title">Сводка для ученика</div>
+        <div class="kb-summary-desc">Один PDF: цель, замеры, прогресс по занятиям и домашние задания — без методики и медицинских полей.</div>
+      </div>
+      <button type="button" class="kb-summary-btn" id="kbExportPdfBtn">Отправить PDF ученику</button>
+    </div>
+  `;
+
+  c.innerHTML = `
+    <div class="kb-wrap">
+      <section>${generalHtml}</section>
+      <section>${measuresHtml}</section>
+      <section>${anamnesisHtml}</section>
+      <section>${evtHtml}</section>
+      <section>${qualitiesHtml}</section>
+      <section>${recordHtml}</section>
+      <section>${filesHtml}</section>
+      <section>${summaryHtml}</section>
+    </div>
+  `;
+
+  wireKabinetHandlers(s);
+}
+
+function wireKabinetHandlers(s){
+  const c = document.getElementById('tabContent');
+
+  c.querySelectorAll('[data-kb-toggle]').forEach(el=>{
+    el.onclick = ()=>{
+      const key = el.dataset.kbToggle;
+      state.kabinetOpen[key] = !state.kabinetOpen[key];
+      const btn = document.getElementById('collapseToggleBtn');
+      if(btn) btn.textContent = kbAnyOpen() ? 'Свернуть' : 'Развернуть';
+      paintKabinet(s);
+    };
+  });
+
+  c.querySelectorAll('select[data-kb-field]').forEach(el=>{
+    el.onchange = ()=> saveKabinet(s, {[el.dataset.kbField]: el.value || null});
+  });
+  c.querySelectorAll('input[data-kb-field]').forEach(el=>{
+    el.onchange = ()=>{
+      const key = el.dataset.kbField, type = el.dataset.kbType;
+      let v = el.value;
+      if(type==='number') v = v===''? null : Number(v);
+      saveKabinet(s, {[key]: v});
+    };
+  });
+  c.querySelectorAll('textarea[data-kb-field]').forEach(el=>{
+    el.onchange = ()=> saveKabinet(s, {[el.dataset.kbField]: el.value || null});
+  });
+
+  const compareBtn = c.querySelector('[data-kb-compare-toggle]');
+  if(compareBtn) compareBtn.onclick = ()=>{ state.kabinetCompareOpen = !state.kabinetCompareOpen; paintKabinet(s); };
+
+  c.querySelectorAll('[data-kb-complaint]').forEach(el=>{
+    el.onclick = ()=>{
+      const cache = kbCache(s);
+      const cur = cache.intake.complaints || [];
+      const k = el.dataset.kbComplaint;
+      const idx = cur.indexOf(k);
+      const next = idx>=0 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([k]);
+      saveKabinet(s, {complaints: next});
+    };
+  });
+
+  const resetBtn = c.querySelector('[data-kb-reset-structures]');
+  if(resetBtn) resetBtn.onclick = ()=> saveKabinet(s, {structures: kbNeutralStructures()});
+  const transferBtn = c.querySelector('[data-kb-transfer]');
+  if(transferBtn) transferBtn.onclick = ()=> alert('Раздел «Дневник занятий» ещё не готов — перенос структур в занятие подключим, когда он появится.');
+
+  c.querySelectorAll('[data-kb-structure]').forEach(el=>{
+    el.onclick = ()=>{
+      const cache = kbCache(s);
+      const structures = Object.assign({}, kbNeutralStructures(), cache.intake.structures||{});
+      structures[el.dataset.kbStructure] = el.dataset.kbValue;
+      saveKabinet(s, {structures});
+    };
+  });
+
+  c.querySelectorAll('[data-kb-quality]').forEach(el=>{
+    el.onclick = ()=>{
+      const cache = kbCache(s);
+      const qualities = Object.assign({}, cache.intake.qualities||{});
+      const key = el.dataset.kbQuality;
+      const cur = qualities[key] || 'нет';
+      qualities[key] = KB_STATES[(KB_STATES.indexOf(cur)+1) % KB_STATES.length];
+      saveKabinet(s, {qualities});
+    };
+  });
+  c.querySelectorAll('[data-kb-mode]').forEach(el=>{
+    el.onclick = ()=>{
+      const cache = kbCache(s);
+      const modes = Object.assign({}, cache.intake.modes||{});
+      const key = el.dataset.kbMode;
+      const cur = modes[key] || 'нет';
+      modes[key] = KB_STATES[(KB_STATES.indexOf(cur)+1) % KB_STATES.length];
+      saveKabinet(s, {modes});
+    };
+  });
+  c.querySelectorAll('[data-kb-anchor]').forEach(el=>{
+    el.onclick = ()=>{
+      const cache = kbCache(s);
+      const anchors = Object.assign({}, cache.intake.anchors||{});
+      const key = el.dataset.kbAnchor;
+      anchors[key] = !anchors[key];
+      saveKabinet(s, {anchors});
+    };
+  });
+
+  const slider = document.getElementById('kbMetallicSlider');
+  if(slider){
+    slider.oninput = ()=>{
+      const v = Number(slider.value);
+      const valEl = document.getElementById('kbMetallicValue');
+      const noteEl = document.getElementById('kbMetallicNote');
+      if(valEl) valEl.textContent = v + '% металла';
+      if(noteEl) noteEl.textContent = kbMetallicNote(v);
+    };
+    slider.onchange = ()=> saveKabinet(s, {metallicPercent: Number(slider.value)});
+  }
+
+  const uploadInput = document.getElementById('kbUploadInput');
+  if(uploadInput) uploadInput.onchange = (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(file) kbUploadFile(s, file);
+    e.target.value = '';
+  };
+
+  c.querySelectorAll('[data-kb-take-del]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = Number(el.dataset.kbTakeDel);
+      const cache = kbCache(s);
+      const takes = (cache.intake.referenceTakes||[]).filter(t=>t.id!==id);
+      saveKabinet(s, {referenceTakes: takes});
+    };
+  });
+
+  const recBtn = document.getElementById('kbRecBtn');
+  if(recBtn) recBtn.onclick = ()=>{
+    if(state.kabinetRec.active) kbStopRecording(s);
+    else kbStartRecording(s);
+  };
+
+  const pdfBtn = document.getElementById('kbExportPdfBtn');
+  if(pdfBtn) pdfBtn.onclick = ()=> alert('Отправка PDF ученику — в разработке. Нужно решить отдельно: email, ссылка на скачивание или Telegram. Как определимся — подключим.');
+}
+
+function kbUploadFile(s, file){
+  if(file.size > 4200000){
+    alert('Файл слишком большой для сохранения в базе (лимит ~4 МБ на запись). Загрузите файл покороче.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const take = { id: Date.now(), name: file.name, meta: 'загружено · ' + Math.round(file.size/1024) + ' KB', dataUrl: reader.result, createdAt: new Date().toISOString() };
+    const cache = kbCache(s);
+    const takes = [take].concat(cache.intake.referenceTakes || []);
+    saveKabinet(s, {referenceTakes: takes});
+  };
+  reader.readAsDataURL(file);
+}
+
+function kbPad(n){ return n<10 ? '0'+n : String(n); }
+
+function kbUpdateRecDom(){
+  const rec = state.kabinetRec;
+  const timerEl = document.getElementById('kbRecTimer');
+  if(timerEl) timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60);
+  const barsWrap = document.getElementById('kbRecBars');
+  if(barsWrap){
+    const bars = barsWrap.children;
+    const levels = rec.levels;
+    for(let i=0;i<bars.length;i++){
+      const v = levels[levels.length - bars.length + i] || 0;
+      const h = Math.max(3, Math.round(v*38));
+      bars[i].style.height = h + 'px';
+      bars[i].style.background = '#E0553A';
+    }
+  }
+}
+
+function kbStartRecording(s){
+  const rec = state.kabinetRec;
+  if(rec.active) return;
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    rec.error = 'Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.';
+    paintKabinet(s);
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    rec.stream = stream;
+    const mr = new MediaRecorder(stream);
+    rec.chunks = [];
+    mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
+    mr.onstop = ()=>{
+      const blob = new Blob(rec.chunks, {type: mr.mimeType || 'audio/webm'});
+      const secs = rec.seconds;
+      const d = new Date();
+      const fileName = kbPad(d.getDate())+'.'+kbPad(d.getMonth()+1)+'.'+d.getFullYear()+'_'+(s.name||'student').replace(/\s+/g,'_')+'_reference.webm';
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const dataUrl = reader.result;
+        kbTeardownRecorder();
+        if(dataUrl.length > 5800000){
+          rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.';
+          paintKabinet(s);
+          return;
+        }
+        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString() };
+        const cache = kbCache(s);
+        const takes = [take].concat(cache.intake.referenceTakes || []);
+        saveKabinet(s, {referenceTakes: takes});
+      };
+      reader.readAsDataURL(blob);
+    };
+    rec.mediaRecorder = mr;
+    mr.start();
+    rec.active = true; rec.seconds = 0; rec.error = ''; rec.levels = [];
+    paintKabinet(s);
+    rec.timer = setInterval(()=>{ rec.seconds++; kbUpdateRecDom(); }, 1000);
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      rec.ctx = ctx;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      rec.levelTimer = setInterval(()=>{
+        analyser.getByteTimeDomainData(data);
+        let peak = 0;
+        for(let i=0;i<data.length;i++) peak = Math.max(peak, Math.abs(data[i]-128)/128);
+        rec.levels = rec.levels.concat([peak]).slice(-28);
+        kbUpdateRecDom();
+      }, 90);
+    }catch(e){ /* визуализация не критична для работы записи */ }
+  }).catch(()=>{
+    rec.error = 'Нет доступа к микрофону. Разрешите запись в настройках браузера и попробуйте снова.';
+    paintKabinet(s);
+  });
+}
+
+function kbStopRecording(s){
+  const rec = state.kabinetRec;
+  if(rec.timer) clearInterval(rec.timer);
+  if(rec.levelTimer) clearInterval(rec.levelTimer);
+  if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop();
+  else kbTeardownRecorder();
+}
+
+function kbTeardownRecorder(){
+  const rec = state.kabinetRec;
+  if(rec.timer) clearInterval(rec.timer);
+  if(rec.levelTimer) clearInterval(rec.levelTimer);
+  if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; }
+  if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; }
+  rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
 }
 
 render();
