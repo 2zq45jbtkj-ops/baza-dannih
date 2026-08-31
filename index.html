@@ -38,7 +38,9 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
 .s-name{font-size:15px;font-weight:700;}
 .s-status{font-size:12.5px;font-weight:600;color:#9A8E82;}
-.student-item.active .s-status{color:#6E8C6A;}
+.s-status.status-color-active{color:#6E8C6A;}
+.s-status.status-color-paused{color:#9A8E82;}
+.s-status.status-color-trial{color:#C96B5C;}
 .status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;}
 .dot-active{background:#6FA36F;} .dot-trial{background:var(--blue);} .dot-paused{background:#C7BDB2;}
 .add-student-btn{margin:12px 10px 0;width:calc(100% - 20px);padding:10px;border-radius:10px;border:1px dashed var(--terracotta);background:none;color:var(--terracotta-dark);font-size:13.5px;font-weight:600;cursor:pointer;flex-shrink:0;}
@@ -334,7 +336,7 @@ function renderStudentList(){
   const wrap = document.getElementById('studentListWrap');
   if(!wrap) return;
   const q = (state.search||'').trim().toLowerCase();
-  const all = state.data.students;
+  const all = state.data.students.slice().sort((a,b)=>a.name.localeCompare(b.name,'ru'));
   const filtered = q ? all.filter(s=>s.name.toLowerCase().indexOf(q)>=0) : all;
   const metaEl = document.getElementById('searchMeta');
   if(metaEl){
@@ -358,11 +360,12 @@ function renderStudentList(){
     const meta = s.status==='trial'
       ? 'Пробный · анкета не заполнена'
       : (statusLabel(s.status) + (count!=null ? ' · ' + lessonsLabel(count) : ''));
+    const statusColorClass = s.status==='active' ? 'status-color-active' : s.status==='trial' ? 'status-color-trial' : 'status-color-paused';
     return `<div class="student-item ${s.id===state.activeStudentId?'active':''}" data-id="${s.id}">
             <div class="avatar" style="background:${av[0]};color:${av[1]};">${initials(s.name)}</div>
             <div>
               <div class="s-name">${s.name}</div>
-              <div class="s-status">${meta}</div>
+              <div class="s-status ${statusColorClass}">${meta}</div>
             </div>
           </div>`;
   }).join('');
