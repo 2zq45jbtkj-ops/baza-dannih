@@ -444,6 +444,7 @@ const state = {
   kabinetCache: {},
   kabinetCompareOpen: false,
   kabinetSaveSeq: {},
+  kabinetSaveChain: {},
   kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
 };
 state.activeStudentId = state.data.students[0]?.id || null;
@@ -1596,10 +1597,23 @@ function kbCache(s){
 function saveKabinet(s, patch){
   const cache = kbCache(s);
   cache.intake = Object.assign({}, cache.intake, patch);
+  // Two POSTs fired back-to-back can reach Postgres out of order — whichever
+  // one physically commits last wins, even if it carries older data. Rapid
+  // clicks (e.g. picking several chips in a multi-select in a row) reliably
+  // triggered this and silently dropped a selection. Fix: never have more
+  // than one save in flight per student — chain every save onto the same
+  // per-student promise so they run strictly one after another. Each save
+  // still reads cache.intake at the moment it actually fires, so rapid local
+  // changes get coalesced into the next flush rather than lost.
+  const prevChain = state.kabinetSaveChain[s.id] || Promise.resolve();
+  const thisSave = prevChain.then(()=> kbFlushKabinet(s));
+  state.kabinetSaveChain[s.id] = thisSave.catch(()=>{});
+  return thisSave;
+}
+
+function kbFlushKabinet(s){
+  const cache = kbCache(s);
   const payload = Object.assign({studentId: s.id}, cache.intake);
-  // Guard against out-of-order responses: if a newer save for this student
-  // starts before this one resolves, this response must not overwrite the
-  // (newer) local state with a stale server snapshot.
   const mySeq = (state.kabinetSaveSeq[s.id] = (state.kabinetSaveSeq[s.id] || 0) + 1);
   return apiSend('/api/intake', 'POST', payload)
     .then(res=>{
