@@ -113,6 +113,19 @@ async function ensureSchema(p) {
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS goals TEXT[] DEFAULT '{}';`);
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS genres TEXT[] DEFAULT '{}';`);
 
+  // Справочники — общий (не привязанный к ученику) список вариантов для
+  // полей вроде "Цель обучения"/"Жанр": какие варианты закреплены в основных
+  // и какие добавлены преподавателем вручную. Встроенные ("core") варианты
+  // не хранятся здесь — они всегда приходят из кода фронтенда.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS field_dicts (
+      field_key TEXT PRIMARY KEY,
+      pinned TEXT[] DEFAULT '{}',
+      added TEXT[] DEFAULT '{}',
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
   ensured = true;
 }
 
