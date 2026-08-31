@@ -81,6 +81,32 @@ async function ensureSchema(p) {
     );
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_lesson_log_student ON lesson_log(student_id, lesson_date DESC);`);
+
+  // Кабинет — блок «Анкета» (аккордеон из 7 секций), доп. поля поверх уже существующих
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS voice_type TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS genre TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS experience_level TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS stuck_note TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS tess_low TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS tess_high TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS register_break_low TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS register_break_high TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS baseline_range_low TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS baseline_range_high TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS baseline_tess_low TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS baseline_tess_high TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS baseline_register_break TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS lar_status TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS diagnosis TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS alcohol TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS pms_factor TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS structures JSONB DEFAULT '{}';`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS qualities JSONB DEFAULT '{}';`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS modes JSONB DEFAULT '{}';`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS anchors JSONB DEFAULT '{}';`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS metallic_percent INTEGER DEFAULT 32;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS reference_takes JSONB DEFAULT '[]';`);
+
   ensured = true;
 }
 
