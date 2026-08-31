@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>База данных — Лаборатория звука</title>
+<style>
+:root{
+  --terracotta:#AE5F3F; --terracotta-light:#D6A289; --terracotta-dark:#8A3324; --terracotta-bg:#FBF1EC;
+  --blue:#6C91A6; --blue-light:#B8CCD9; --blue-bg:#EAF1F5;
+  --cream:#F2ECE7; --ink:#2E2A27; --muted:#8A8078; --line:#E4E0DA; --white:#FFFFFF;
+  --bg:var(--cream); --panel:#fff; --text:var(--ink);
+  --lvlA:#AE5F3F; --lvlB:#6C91A6; --lvlC:#C9A227; --lvlD:#7A6C9E;
+}
+body.dark{
+  --bg:#1C1A18; --panel:#26221F; --text:#EFE9E3; --line:#3A342F; --muted:#9C9188;
+  --cream:#242019; --terracotta-bg:#3A2620; --blue-bg:#20303A;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);transition:background .2s,color .2s;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:288px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;padding:20px 0;display:flex;flex-direction:column;min-width:210px;max-width:520px;overflow-y:auto;}
+.sidebar-header{padding:0 20px 16px;border-bottom:1px solid var(--line);margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;}
+.sidebar-header h1{font-size:17px;margin:0 0 2px;}
+.sidebar-header p{font-size:12.5px;color:var(--muted);margin:0;}
+.theme-toggle{border:1px solid var(--line);background:var(--bg);border-radius:20px;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;}
+.sidebar-search{padding:0 20px 10px;flex-shrink:0;}
+.sidebar-search input{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:20px;border:1px solid var(--line);background:var(--bg);font-size:13.5px;color:var(--text);font-family:inherit;}
+.sidebar-search input::placeholder{color:#B8ADA1;}
+.sidebar-search input:focus{outline:2px solid #E4C9BE;outline-offset:0;}
+.search-meta{display:flex;align-items:center;justify-content:space-between;padding:0 20px 10px;font-size:12px;color:var(--muted);min-height:16px;flex-shrink:0;}
+.search-meta button{border:none;background:none;color:#A8452C;font-size:12px;font-weight:700;cursor:pointer;padding:0;}
+.search-meta button:hover{text-decoration:underline;}
+.no-students{padding:18px 20px;font-size:13px;color:var(--muted);line-height:1.5;}
+.student-list{padding:0 10px;flex-shrink:0;}
+.student-item{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;}
+.student-item:hover{background:var(--bg);}
+.student-item.active{background:#EDE3D8;border-color:#E0D2C2;}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+.s-name{font-size:14.5px;font-weight:600;}
+.s-status{font-size:11.5px;color:var(--muted);}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;}
+.dot-active{background:#6FA36F;} .dot-trial{background:var(--blue);} .dot-paused{background:#C7BDB2;}
+.add-student-btn{margin:12px 10px 0;width:calc(100% - 20px);padding:10px;border-radius:10px;border:1px dashed var(--terracotta);background:none;color:var(--terracotta-dark);font-size:13.5px;font-weight:600;cursor:pointer;flex-shrink:0;}
+.add-student-btn:hover{background:var(--terracotta-bg);}
+.resizer{flex:none;width:6px;margin-left:-3px;margin-right:-3px;cursor:col-resize;position:relative;z-index:5;background:transparent;}
+.resizer:hover, .resizer:active{background:rgba(168,69,44,0.12);}
+.main{flex:1;padding:26px 32px;max-width:1160px;min-width:0;}
+.top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.top-row h2{font-size:26px;margin:0;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px;}
+.chip{padding:6px 12px;border-radius:20px;font-size:12.5px;font-weight:600;background:var(--panel);border:1px solid var(--line);}
+.chip.status-active{background:#EAF3EA;color:#3E6B3E;border-color:#CFE4CF;}
+.chip.status-trial{background:var(--blue-bg);color:var(--blue);border-color:#D3E2E9;}
+.chip.status-paused{background:var(--cream);color:var(--muted);border-color:var(--line);}
+.chip.flag{background:var(--terracotta-bg);color:var(--terracotta-dark);border-color:#EFD4C6;}
+.editable{cursor:pointer;} .editable:hover{outline:1px dashed var(--terracotta-light);outline-offset:2px;}
+.tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+.tab{padding:10px 16px;font-size:14.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+.tab.active{color:var(--terracotta-dark);border-bottom-color:var(--terracotta);}
+.section{margin-bottom:26px;}
+.section-title{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.field{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+.field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:4px;}
+.field select{width:100%;border:none;background:none;font-size:14.5px;font-weight:600;color:var(--text);font-family:inherit;padding:0;appearance:none;cursor:pointer;}
+.field select:focus{outline:none;}
+.tag-group{margin-bottom:16px;} .tag-group-title{font-size:13.5px;font-weight:600;margin-bottom:8px;}
+.tags{display:flex;flex-wrap:wrap;gap:8px;}
+.tag{padding:7px 13px;border-radius:20px;font-size:13px;border:1px solid var(--line);background:var(--panel);cursor:pointer;color:var(--muted);}
+.tag.selected{background:var(--terracotta);color:#fff;border-color:var(--terracotta);}
+.admin-note{font-size:11.5px;color:var(--muted);font-style:italic;margin-bottom:12px;}
+.variant-switcher{display:flex;gap:6px;margin-bottom:20px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;width:fit-content;}
+.variant-btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;}
+.variant-btn.active{background:var(--terracotta);color:#fff;}
+.level-switcher{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+.level-btn{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;gap:6px;}
+.level-btn.active{color:#fff;border-color:transparent;}
+.level-btn .lvl-swatch{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.level-btn .lvl-count{font-weight:400;opacity:.8;}
+.date-bar{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;}
+.date-bar .cur-date{font-size:13.5px;font-weight:600;} .date-bar .prev-date{font-size:12.5px;color:var(--muted);}
+.pin-btn{margin-left:auto;padding:9px 16px;border-radius:10px;border:none;background:var(--terracotta);color:#fff;font-size:13px;font-weight:600;cursor:pointer;}
+
+.add-topic-wrap{position:relative;margin-bottom:18px;}
+.add-topic-plus{width:38px;height:38px;border-radius:50%;border:none;background:var(--terracotta-dark);color:#fff;font-size:19px;font-weight:700;cursor:pointer;line-height:1;}
+.add-topic-label{font-size:13px;color:var(--muted);margin-left:10px;}
+.topic-popover{position:absolute;top:46px;left:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,0.12);padding:14px;width:340px;max-width:90vw;}
+.topic-popover-title{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:8px;}
+.topic-pick-list{max-height:220px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;}
+.topic-pick-item{padding:6px 11px;border-radius:16px;font-size:12.5px;border:1px solid var(--line);background:var(--bg);cursor:pointer;color:var(--text);}
+.topic-pick-item:hover{border-color:var(--terracotta);background:var(--terracotta-bg);}
+.topic-pick-empty{font-size:12.5px;color:var(--muted);font-style:italic;padding:4px 0 10px;}
+.custom-topic-row{display:flex;gap:6px;border-top:1px solid var(--line);padding-top:10px;}
+.custom-topic-input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);}
+.custom-topic-btn{padding:8px 12px;border-radius:8px;border:none;background:var(--terracotta);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.no-topics-note{font-size:13px;color:var(--muted);padding:8px 0;}
+
+.topic-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+.topic-row:last-child{border-bottom:none;}
+.topic-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.topic-name{flex:1;font-size:13.5px;font-weight:600;cursor:pointer;}
+.topic-score{font-size:14px;font-weight:700;min-width:34px;text-align:right;cursor:pointer;}
+.topic-score.low{color:var(--terracotta-dark);} .topic-score.high{color:var(--blue);} .topic-score.none{color:var(--muted);font-weight:400;}
+.topic-delta{font-size:11.5px;margin-left:2px;font-weight:600;}
+.topic-delta.up{color:#3E6B3E;} .topic-delta.down{color:var(--terracotta-dark);}
+.topic-remove{color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;flex-shrink:0;}
+.topic-remove:hover{color:var(--terracotta-dark);}
+.score-input{width:44px;border:1px solid var(--line);border-radius:8px;padding:6px 4px;font-size:14px;font-weight:700;text-align:center;font-family:inherit;background:var(--panel);color:var(--text);flex-shrink:0;-moz-appearance:textfield;}
+.score-input::-webkit-outer-spin-button,.score-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.score-input.low{color:var(--terracotta-dark);border-color:var(--terracotta-light);}
+.score-input.high{color:var(--blue);border-color:var(--blue-light);}
+.score-input.none{color:var(--muted);}
+.score-input:focus{outline:none;border-color:var(--terracotta);}
+.wheel-compare-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap;}
+.legend-swatch{display:inline-flex;align-items:center;gap:5px;}
+.legend-line{width:16px;height:0;border-top:2px solid var(--terracotta);display:inline-block;}
+.legend-line.dashed{border-top:2px dashed var(--muted);}
+.level-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin:8px 0 4px;flex-wrap:wrap;}
+.bullet-row{margin-bottom:14px;}
+.bullet-head{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:600;margin-bottom:6px;gap:8px;}
+.bullet-head .bh-name{cursor:pointer;flex:1;}
+.bullet-track{position:relative;background:var(--cream);border-radius:8px;height:22px;overflow:visible;cursor:pointer;}
+.bullet-fill{position:absolute;top:0;left:0;bottom:0;border-radius:8px;transition:width .2s;}
+.bullet-fill.none{background:var(--line) !important;}
+.bullet-prev-marker{position:absolute;top:-3px;bottom:-3px;width:3px;border-radius:2px;}
+.bullet-scale{display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);margin-top:3px;}
+.wheel-wrap{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;}
+.wheel-svg{flex-shrink:0;}
+.wheel-legend{flex:1;min-width:280px;max-height:680px;overflow-y:auto;padding-right:6px;}
+.srez-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.srez-card.compared{border-color:var(--terracotta);box-shadow:0 0 0 2px var(--terracotta-bg);}
+.srez-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.srez-date{font-size:13px;color:var(--text);font-weight:700;}
+.srez-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.srez-action-btn{padding:6px 11px;border-radius:8px;font-size:11.5px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;}
+.srez-action-btn.compare-active{background:var(--terracotta);color:#fff;border-color:var(--terracotta);}
+.srez-action-btn.danger:hover{border-color:var(--terracotta-dark);color:var(--terracotta-dark);}
+.srez-scores{display:flex;flex-wrap:wrap;gap:10px;}
+.srez-score-pill{background:var(--cream);border-radius:8px;padding:5px 10px;font-size:12.5px;}
+.srez-score-pill b{color:var(--terracotta-dark);}
+.rep-block{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+.rep-block h4{margin:0 0 8px;font-size:14px;}
+.song-list{list-style:none;padding:0;margin:0;}
+.song-list li{padding:7px 0;border-bottom:1px solid var(--line);font-size:14px;}
+.song-list li:last-child{border-bottom:none;}
+textarea.rep-input{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;min-height:60px;resize:vertical;background:var(--panel);color:var(--text);}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+@media (max-width: 800px){
+  .app{flex-direction:column;}
+  .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--line);}
+  .main{padding:20px 16px;}
+}
+
+/* ---------- CARD TAB (anamnesis + lessons) ---------- */
+.card-loading{padding:30px 0;color:var(--muted);font-size:13.5px;}
+.intake-empty{padding:14px 16px;background:var(--terracotta-bg);border-radius:12px;color:var(--terracotta-dark);font-size:13px;margin-bottom:16px;}
+.card-error{padding:14px 16px;background:#FBEAEA;border:1px solid #EFC9C9;border-radius:12px;color:#A33A3A;font-size:13px;margin-bottom:16px;}
+.btn{padding:9px 16px;border-radius:8px;border:none;background:var(--terracotta);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;}
+.btn.secondary{background:var(--panel);color:var(--text);border:1px solid var(--line);}
+.btn:disabled{opacity:.55;cursor:default;}
+.lesson-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.lesson-top{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;}
+.lesson-date{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;}
+.flag-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.flag-better{background:#4C9A5B;} .flag-same{background:#C9A227;} .flag-worse{background:#B23A3A;}
+.flag-label{font-size:12px;color:var(--muted);}
+.lesson-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;font-size:13px;margin-top:6px;}
+.lesson-grid div b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;}
+.lesson-remove{color:var(--muted);cursor:pointer;font-size:12px;}
+.lesson-remove:hover{color:var(--terracotta-dark);}
+.new-lesson-form{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:16px;margin-top:14px;}
+.new-lesson-form .field-grid{margin-bottom:10px;}
+.new-lesson-form textarea, .new-lesson-form input[type=text], .new-lesson-form input[type=date], .new-lesson-form input[type=url]{
+  width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13.5px;background:var(--bg);color:var(--text);
+}
+.new-lesson-form label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:4px;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+
+const CATALOG = {
+  A: [
+    ["Дыхание","Дыхание"],["Сила работы голоса","Сила голоса"],["Регистры голоса","Регистры"],
+    ["Атака звука","Атака звука"],["Гортань","Гортань"],["Интонация","Интонация"],
+    ["Работа с переходными нотами","Переходные ноты"],["Дикция и артикуляция","Дикция"],
+    ["Динамика: piano и forte без потери опоры","Динамика f/p"],["Гигиена голоса и голосовая нагрузка","Гигиена голоса"]
+  ],
+  B: [
+    ["Истинные голосовые связки","ИГС"],["Ложные голосовые связки","ЛГС"],["Щитовидный хрящ","ЩХ"],
+    ["Перстневидный хрящ","ПХ"],["Черпаловидные хрящи","ЧХ"],["Черпалонадгортанный сфинктер","СЧН"],
+    ["Приёмы: бэлтинг и твэнг","Белтинг/твэнг"],["Микст и сглаживание регистрового перехода","Микст"],
+    ["Вибрато","Вибрато"],["Интонация и слуховой контроль","Слуховой контроль"],
+    ["Фразировка и работа с текстом песни","Фразировка"],["Мелизматика и орнаментика","Мелизматика"],
+    ["Профилактика срыва при нагрузке","Профилактика срыва"]
+  ],
+  C: [
+    ["Артикуляция","Артикуляция"],["Мягкое нёбо","Мягкое нёбо"],["Язык","Язык"],
+    ["Нижняя челюсть","Нижняя челюсть"],["Губы","Губы"],["Анкеровка","Анкеровка"],
+    ["Комбинирование фигур","Комб. фигур"],["Белт и безопасное громкое пение","Белт безопасный"],
+    ["Стилевые особенности жанров","Стили жанров"],["Восстановление голоса после нагрузки и болезни","Восстановление голоса"]
+  ],
+  D: [
+    ["Работа с микрофоном","Микрофон"],["Мониторинг и общение со звукорежиссёром","Мониторинг/звукореж"],
+    ["Пение под минус с бэком","Минус с бэком"],["Запись в студии","Студийная запись"],
+    ["Сценическая речь: дикция и посыл","Сцен. речь: дикция"],["Сценическая речь: логика текста и интонирование","Сцен. речь: логика"],
+    ["Актёрская задача в песне","Актёрская задача"],["Сценическое движение и пластика","Сцен. движение"],
+    ["Работа со сценическим волнением","Сцен. волнение"],["Консультация по сценическому имиджу","Сцен. имидж"],
+    ["Импровизация","Импровизация"],["Импровизация джазовая","Джаз. импровизация"],
+    ["Музыкальная грамота","Муз. грамота"],["Ритм в музыке","Ритм"]
+  ]
+};
+const LEVEL_LABELS = {A:'Уровень A', B:'Уровень B', C:'Уровень C', D:'Уровень D'};
+const LEVEL_COLORS = {A:'var(--lvlA)', B:'var(--lvlB)', C:'var(--lvlC)', D:'var(--lvlD)'};
+const LEVEL_ORDER = ['A','B','C','D'];
+const COMPARE_PALETTE = ['#6C91A6','#C9A227','#7A6C9E','#3E6B3E','#B23A48','#4E7A91'];
+
+function catalogNames(level){ return CATALOG[level].map(e=>e[0]); }
+function shortLabelFor(topic){
+  const entry = (CATALOG[topic.level]||[]).find(e=>e[0]===topic.name);
+  if(entry) return entry[1];
+  return topic.name.length>13 ? topic.name.slice(0,12)+'…' : topic.name;
+}
+
+const STORAGE_KEY = 'kabinet_lz_v5';
+let srezIdCounter = 1;
+function nextSrezId(){ return 's' + (Date.now()) + '_' + (srezIdCounter++); }
+
+function sampleTopics(level, entries){
+  return Object.keys(entries).map(name=>({name, level, score:entries[name]}));
+}
+
+const defaultData = () => ({
+  theme: 'light', variant: 'wheel',
+  students: [
+    {
+      id: 's1', name: 'Мария Соколова', status: 'active',
+      org: { schedule:'Постоянное расписание', format:'Онлайн', source:'Instagram', freq:'1×/нед 90 мин' },
+      voice: { type:'Меццо-сопрано', vibrato:'Регулярное', breathType:'Диафрагмальное', support:'Стабильная', attack:'Мягкая', larynx:'Средняя' },
+      range: { bottom:'ля м.о.', top:'до 2.о.', tessBottom:'до1.о.', tessTop:'ля1.о.', passaggio1:'ми1.о.', passaggio2:'соль#1.о.' },
+      timbre: [], problems: [], compensations: [], flags: [],
+      topics: sampleTopics('A', {"Дыхание":7,"Сила работы голоса":6,"Регистры голоса":5,"Атака звука":8,"Гортань":7,"Интонация":9}),
+      srezDate: '15.08.2026',
+      srezy: [{id:nextSrezId(), date:'20.07.2026', topics: sampleTopics('A', {"Дыхание":5,"Сила работы голоса":5,"Регистры голоса":4,"Атака звука":6,"Гортань":6,"Интонация":8})}],
+      repertoire: { current:'', future:[] }
+    },
+    {
+      id: 's2', name: 'Артём Волков', status: 'active',
+      org: { schedule:'Плавающее', format:'Онлайн', source:'Рекомендация ученика', freq:'2×/нед 90' },
+      voice: { type:'Баритон лирический', vibrato:'Нерегулярное', breathType:'Смешанное', support:'Нестабильная', attack:'Придыхательная', larynx:'Низкая' },
+      range: { bottom:'соль б.о.', top:'ля1.о.', tessBottom:'до м.о.', tessTop:'фа м.о.', passaggio1:'ми м.о.', passaggio2:'ля#м.о.' },
+      timbre: ['Тёмный','Дымчатый'], problems: ['Нет уверенности в голосе','Интонация'], compensations: ['Шея','Задержка перед фразой'],
+      flags: ['Рекомендован осмотр'],
+      topics: sampleTopics('A', {"Дыхание":4,"Сила работы голоса":3,"Регистры голоса":4,"Атака звука":5,"Гортань":6,"Интонация":6}),
+      srezDate: '18.08.2026',
+      srezy: [{id:nextSrezId(), date:'01.08.2026', topics: sampleTopics('A', {"Дыхание":3,"Сила работы голоса":2,"Регистры голоса":3,"Атака звука":4,"Гортань":5,"Интонация":5})}],
+      repertoire: { current:'', future:[] }
+    },
+    {
+      id: 's3', name: 'Ксения Лебедева', status: 'trial',
+      org: { schedule:'—', format:'Онлайн', source:'Telegram', freq:'Пробное занятие' },
+      voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
+      range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
+      timbre: [], problems: [], compensations: [], flags: [],
+      topics: [],
+      srezDate: null, srezy: [],
+      repertoire: { current:'', future:[] }
+    }
+  ]
+});
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed.variant==='dial') parsed.variant='wheel';
+      parsed.students.forEach(s=>{
+        (s.srezy||[]).forEach(sr=>{ if(!sr.id) sr.id = nextSrezId(); });
+      });
+      return parsed;
+    }
+  }catch(e){}
+  return defaultData();
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); }
+
+const state = {
+  data: loadData(),
+  activeStudentId: null,
+  activeTab: 'srezy',
+  activeLevel: 'A',
+  openSliderTopicIndex: null,
+  topicPickerOpen: false,
+  compareIds: [],
+  cardCache: {},
+  search: '',
+  sidebarWidth: 288,
+  lessonCounts: {}
+};
+state.activeStudentId = state.data.students[0]?.id || null;
+if(!state.data.variant) state.data.variant = 'wheel';
+if(!state.data.theme) state.data.theme = 'light';
+
+const AVATAR_PALETTE = [
+  ['#E4C9A8','#7A5A32'], ['#C3D6C0','#4E7047'], ['#D3C6E0','#6B4E8A'],
+  ['#C9D9E4','#3F6B85'], ['#E4D0C9','#9A5A3E'], ['#D8D6C0','#6B6B3E']
+];
+function avatarColor(id){
+  const idx = state.data.students.findIndex(s=>s.id===id);
+  return AVATAR_PALETTE[(idx<0?0:idx) % AVATAR_PALETTE.length];
+}
+function pluralRu(n, forms){
+  const mod10 = n%10, mod100 = n%100;
+  if(mod10===1 && mod100!==11) return forms[0];
+  if(mod10>=2 && mod10<=4 && !(mod100>=12 && mod100<=14)) return forms[1];
+  return forms[2];
+}
+function lessonsLabel(n){ return n + ' ' + pluralRu(n, ['занятие','занятия','занятий']); }
+function ensureLessonCounts(){
+  state.data.students.forEach(s=>{
+    if(state.lessonCounts[s.id]!==undefined) return;
+    state.lessonCounts[s.id] = null;
+    fetch('/api/lessons?studentId=' + encodeURIComponent(s.id))
+      .then(r=> r.ok ? r.json() : Promise.reject(new Error('http '+r.status)))
+      .then(data=>{ state.lessonCounts[s.id] = (data.lessons||[]).length; renderStudentList(); })
+      .catch(()=>{ delete state.lessonCounts[s.id]; });
+  });
+}
+function renderStudentList(){
+  const wrap = document.getElementById('studentListWrap');
+  if(!wrap) return;
+  const q = (state.search||'').trim().toLowerCase();
+  const all = state.data.students;
+  const filtered = q ? all.filter(s=>s.name.toLowerCase().indexOf(q)>=0) : all;
+  const metaEl = document.getElementById('searchMeta');
+  if(metaEl){
+    metaEl.innerHTML = q ? `<span>${filtered.length===1?'найден 1 ученик':'найдено: '+filtered.length}</span><button type="button" id="searchResetBtn">Сбросить</button>` : '';
+    const rb = document.getElementById('searchResetBtn');
+    if(rb) rb.onclick = ()=>{
+      state.search = '';
+      const inp = document.getElementById('studentSearch');
+      if(inp) inp.value = '';
+      renderStudentList();
+      if(inp) inp.focus();
+    };
+  }
+  if(filtered.length===0){
+    wrap.innerHTML = `<div class="no-students">Никто не найден. Попробуйте часть имени или фамилии.</div>`;
+    return;
+  }
+  wrap.innerHTML = filtered.map(s=>{
+    const av = avatarColor(s.id);
+    const count = state.lessonCounts[s.id];
+    const meta = s.status==='trial'
+      ? 'Пробный · анкета не заполнена'
+      : (statusLabel(s.status) + (count!=null ? ' · ' + lessonsLabel(count) : ''));
+    return `<div class="student-item ${s.id===state.activeStudentId?'active':''}" data-id="${s.id}">
+            <div class="avatar" style="background:${av[0]};color:${av[1]};">${initials(s.name)}</div>
+            <div>
+              <div class="s-name">${s.name}</div>
+              <div class="s-status">${meta}</div>
+            </div>
+          </div>`;
+  }).join('');
+  wrap.querySelectorAll('.student-item').forEach(el=>{
+    el.onclick = ()=>{
+      state.activeStudentId = el.dataset.id;
+      state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
+      render();
+    };
+  });
+}
+
+const OPTIONS = {
+  status: [['active','Активный'],['trial','Пробный'],['paused','Пауза']],
+  format: ['Онлайн','Очно','Смешанный'],
+  schedule: ['Постоянное расписание','Плавающее','—'],
+  source: ['Instagram','Telegram','Рекомендация ученика','шк. Лаборатория звука','Прочее'],
+  freq: ['1×/нед 45 мин','1×/нед 90 мин','2×/нед 45','2×/нед 90','3×/нед 45','3×/нед 90','Постоянное расписание','Плавающее расписание','Пробное занятие'],
+  voiceType: ['Сопрано','Меццо-сопрано','Контральто','Тенор','Баритон лирический','Баритон драматический','Бас'],
+  vibrato: ['Регулярное','Нерегулярное','Отсутствует'],
+  breathType: ['Диафрагмальное','Ключичное','Смешанное'],
+  support: ['Стабильная','Нестабильная','В процессе освоения'],
+  attack: ['Твёрдая','Мягкая','Придыхательная'],
+  larynx: ['Низкая','Средняя','Высокая'],
+  timbre: ['Тёмный','Светлый','Дымчатый','Звонкий','Металлический','Тёплый'],
+  problems: ['Нет уверенности в голосе','Интонация','Зажим гортани','Слабая опора','Плоский звук','Форсирование'],
+  compensations: ['Шея','Челюсть','Задержка перед фразой','Плечи','Брови/лицо'],
+  flags: ['Рекомендован осмотр','Требует внимания ЛОР','Активная динамика']
+};
+
+function getStudent(id){ return state.data.students.find(s=>s.id===id); }
+function initials(name){ return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function statusLabel(s){ return OPTIONS.status.find(x=>x[0]===s)?.[1] || s; }
+function scoreClass(score){ if(score===null||score===undefined) return 'none'; return score<5 ? 'low' : 'high'; }
+function scoreColor(score){ if(score===null||score===undefined) return '#C7BFB6'; return score<5 ? '#AE5F3F' : '#6C91A6'; }
+function lastSrez(s){ return s.srezy.length ? s.srezy[s.srezy.length-1] : null; }
+function prevScoreFor(s, name){ const prev = lastSrez(s); if(!prev) return null; const t = prev.topics.find(x=>x.name===name); return t ? t.score : null; }
+function topicsForLevel(s, level){
+  if(level==='ALL') return s.topics.slice().sort((a,b)=> LEVEL_ORDER.indexOf(a.level)-LEVEL_ORDER.indexOf(b.level));
+  return s.topics.filter(t=>t.level===level);
+}
+function availableToAdd(s, level){
+  const added = new Set(s.topics.filter(t=>t.level===level).map(t=>t.name));
+  return catalogNames(level).filter(n=>!added.has(n));
+}
+function applyTheme(){ document.body.className = state.data.theme==='dark' ? 'dark' : ''; }
+
+function render(){
+  applyTheme();
+  const app = document.getElementById('app');
+  const students = state.data.students;
+  const active = getStudent(state.activeStudentId);
+
+  app.innerHTML = `
+    <div class="sidebar" id="sidebarEl" style="width:${state.sidebarWidth}px">
+      <div class="sidebar-header">
+        <div><h1>База данных</h1><p>Лаборатория звука</p></div>
+        <button class="theme-toggle" id="themeToggle" title="Тёмная/светлая тема">${state.data.theme==='dark'?'☀️':'🌙'}</button>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" id="studentSearch" placeholder="Быстрый поиск по ученикам" value="${(state.search||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div class="search-meta" id="searchMeta"></div>
+      <div class="student-list" id="studentListWrap"></div>
+      <button class="add-student-btn" id="addStudentBtn">+ Добавить ученика</button>
+    </div>
+    <div class="resizer" id="resizer" title="Потяните, чтобы изменить ширину. Двойной клик — сбросить."></div>
+    <div class="main" id="mainArea"></div>
+  `;
+
+  document.getElementById('themeToggle').onclick = ()=>{
+    state.data.theme = state.data.theme==='dark' ? 'light' : 'dark';
+    saveData(); render();
+  };
+  const searchInput = document.getElementById('studentSearch');
+  searchInput.oninput = (e)=>{ state.search = e.target.value; renderStudentList(); };
+  renderStudentList();
+  ensureLessonCounts();
+  document.getElementById('addStudentBtn').onclick = addStudent;
+
+  const resizer = document.getElementById('resizer');
+  resizer.onmousedown = (e)=>{
+    e.preventDefault();
+    const startX = e.clientX, startW = state.sidebarWidth;
+    const sidebarEl = document.getElementById('sidebarEl');
+    function move(ev){
+      const w = Math.max(210, Math.min(520, startW + (ev.clientX - startX)));
+      state.sidebarWidth = w;
+      sidebarEl.style.width = w + 'px';
+    }
+    function up(){
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  };
+  resizer.ondblclick = ()=>{
+    state.sidebarWidth = 288;
+    document.getElementById('sidebarEl').style.width = '288px';
+  };
+
+  renderMain(active);
+}
+
+function addStudent(){
+  const name = prompt('Имя и фамилия ученика:');
+  if(!name || !name.trim()) return;
+  const id = 's' + Date.now();
+  state.data.students.push({
+    id, name: name.trim(), status: 'trial',
+    org: { schedule:'—', format:'Онлайн', source:'Прочее', freq:'Пробное занятие' },
+    voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
+    range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
+    timbre: [], problems: [], compensations: [], flags: [],
+    topics: [],
+    srezDate: null, srezy: [],
+    repertoire: { current:'', future:[] }
+  });
+  state.activeStudentId = id;
+  saveData(); render();
+}
+
+function renderMain(s){
+  const main = document.getElementById('mainArea');
+  if(!s){ main.innerHTML = `<div class="empty-state">Выберите ученика слева или добавьте нового.</div>`; return; }
+
+  main.innerHTML = `
+    <div class="top-row"><h2 class="editable" id="nameField">${s.name}</h2></div>
+    <div class="chip-row" id="chipRow"></div>
+    <div class="tabs">
+      <div class="tab ${state.activeTab==='profile'?'active':''}" data-tab="profile">Профиль</div>
+      <div class="tab ${state.activeTab==='card'?'active':''}" data-tab="card">Карта голоса</div>
+      <div class="tab ${state.activeTab==='srezy'?'active':''}" data-tab="srezy">Срезы и колесо баланса</div>
+      <div class="tab ${state.activeTab==='rep'?'active':''}" data-tab="rep">Репертуар</div>
+    </div>
+    <div id="tabContent"></div>
+  `;
+
+  document.getElementById('nameField').onclick = ()=>{
+    const v = prompt('Имя ученика:', s.name);
+    if(v && v.trim()){ s.name = v.trim(); saveData(); render(); }
+  };
+  document.querySelectorAll('.tab').forEach(el=>{
+    el.onclick = ()=>{
+      state.activeTab = el.dataset.tab; state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
+      renderMain(s);
+    };
+  });
+
+  renderChips(s);
+
+  if(state.activeTab==='profile') renderProfile(s);
+  else if(state.activeTab==='card') renderCard(s);
+  else if(state.activeTab==='srezy') renderSrezy(s);
+  else renderRepertoire(s);
+}
+
+function renderChips(s){
+  const row = document.getElementById('chipRow');
+  const statusChip = `<span class="chip status-${s.status} editable" id="statusChip">${statusLabel(s.status)}</span>`;
+  const freqChip = `<span class="chip editable" id="freqChip">${s.org.freq}</span>`;
+  const formatChip = `<span class="chip editable" id="formatChip">${s.org.format}</span>`;
+  const flagsChips = s.flags.map((f,i)=>`<span class="chip flag" data-flag-i="${i}">${f} ✕</span>`).join('');
+  const addFlagChip = `<span class="chip editable" id="addFlagChip" style="border-style:dashed;color:var(--muted);">+ метка</span>`;
+  row.innerHTML = statusChip + freqChip + formatChip + flagsChips + addFlagChip;
+
+  document.getElementById('statusChip').onclick = ()=>{
+    const opts = OPTIONS.status.map(o=>o[1]).join(' / ');
+    const v = prompt(`Статус (${opts}):`, statusLabel(s.status));
+    const match = OPTIONS.status.find(o=>o[1].toLowerCase()===((v||'').trim().toLowerCase()));
+    if(match){ s.status = match[0]; saveData(); render(); }
+  };
+  document.getElementById('freqChip').onclick = ()=>{
+    const idx = OPTIONS.freq.indexOf(s.org.freq);
+    s.org.freq = OPTIONS.freq[(idx+1) % OPTIONS.freq.length]; saveData(); render();
+  };
+  document.getElementById('formatChip').onclick = ()=>{
+    const idx = OPTIONS.format.indexOf(s.org.format);
+    s.org.format = OPTIONS.format[(idx+1) % OPTIONS.format.length]; saveData(); render();
+  };
+  document.getElementById('addFlagChip').onclick = ()=>{
+    const v = prompt('Новая метка (например: Рекомендован осмотр):');
+    if(v && v.trim()){ s.flags.push(v.trim()); saveData(); render(); }
+  };
+  row.querySelectorAll('[data-flag-i]').forEach(el=>{
+    el.onclick = ()=>{ s.flags.splice(parseInt(el.dataset.flagI),1); saveData(); render(); };
+  });
+}
+
+function renderProfile(s){
+  const c = document.getElementById('tabContent');
+  c.innerHTML = `
+    <div class="section">
+      <div class="section-title">Организация</div>
+      <div class="field-grid">
+        ${selectField('Расписание', OPTIONS.schedule, s.org.schedule, 'org-schedule')}
+        ${selectField('Откуда пришёл', OPTIONS.source, s.org.source, 'org-source')}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Голос</div>
+      <div class="field-grid">
+        ${selectField('Тип голоса', OPTIONS.voiceType, s.voice.type, 'voice-type')}
+        ${selectField('Вибрато', OPTIONS.vibrato, s.voice.vibrato, 'voice-vibrato')}
+        ${selectField('Тип дыхания', OPTIONS.breathType, s.voice.breathType, 'voice-breathType')}
+        ${selectField('Опора', OPTIONS.support, s.voice.support, 'voice-support')}
+        ${selectField('Атака', OPTIONS.attack, s.voice.attack, 'voice-attack')}
+        ${selectField('Гортань', OPTIONS.larynx, s.voice.larynx, 'voice-larynx')}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Диапазон и тесситура</div>
+      <div class="field-grid">
+        ${textField('Диапазон снизу', s.range.bottom, 'range-bottom')}
+        ${textField('Диапазон сверху', s.range.top, 'range-top')}
+        ${textField('Тесситура снизу', s.range.tessBottom, 'range-tessBottom')}
+        ${textField('Тесситура сверху', s.range.tessTop, 'range-tessTop')}
+        ${textField('Passaggio I', s.range.passaggio1, 'range-passaggio1')}
+        ${textField('Passaggio II', s.range.passaggio2, 'range-passaggio2')}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Мультиселекты (видно только админу)</div>
+      <div class="admin-note">Эти поля не показываются ученику в его версии кабинета.</div>
+      <div class="tag-group"><div class="tag-group-title">Тембр</div><div class="tags" id="tags-timbre">${renderTags(OPTIONS.timbre, s.timbre)}</div></div>
+      <div class="tag-group"><div class="tag-group-title">Проблемы в пении</div><div class="tags" id="tags-problems">${renderTags(OPTIONS.problems, s.problems)}</div></div>
+      <div class="tag-group"><div class="tag-group-title">Компенсации дыхания</div><div class="tags" id="tags-compensations">${renderTags(OPTIONS.compensations, s.compensations)}</div></div>
+    </div>
+  `;
+  c.querySelectorAll('select[data-field]').forEach(el=>{
+    el.onchange = ()=>{
+      const [group, key] = el.dataset.field.split('|');
+      s[group][key] = el.value; saveData(); render();
+    };
+  });
+  c.querySelectorAll('[data-text-field]').forEach(el=>{
+    el.onclick = ()=>{
+      const [group, key] = el.dataset.textField.split('|');
+      const v = prompt(el.dataset.label + ':', s[group][key]);
+      if(v!==null){ s[group][key]=v; saveData(); render(); }
+    };
+  });
+  ['timbre','problems','compensations'].forEach(cat=>{
+    document.querySelectorAll(`#tags-${cat} .tag`).forEach(el=>{
+      el.onclick = ()=>{
+        const val = el.dataset.val, arr = s[cat], idx = arr.indexOf(val);
+        if(idx>-1) arr.splice(idx,1); else arr.push(val);
+        saveData(); render();
+      };
+    });
+  });
+}
+function selectField(label, options, value, fieldKey){
+  const [group, key] = fieldKey.split('-');
+  const opts = ['<option value="" ' + (!value?'selected':'') + '>— не указано —</option>']
+    .concat(options.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`));
+  return `<div class="field"><label>${label}</label><select data-field="${group}|${key}">${opts.join('')}</select></div>`;
+}
+function textField(label, value, fieldKey){
+  const [group, key] = fieldKey.split('-');
+  return `<div class="field editable" data-text-field="${group}|${key}" data-label="${label}">
+    <label>${label}</label><div>${value || '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
+}
+function renderTags(options, selected){
+  return options.map(o=>`<span class="tag ${selected.includes(o)?'selected':''}" data-val="${o}">${o}</span>`).join('');
+}
+
+/* ---------- SREZY TAB ---------- */
+function renderSrezy(s){
+  const c = document.getElementById('tabContent');
+  const prev = lastSrez(s);
+  const levelTopics = topicsForLevel(s, state.activeLevel);
+  const isAll = state.activeLevel==='ALL';
+  const comparedSrezy = s.srezy.filter(sr=>state.compareIds.includes(sr.id));
+
+  let html = `
+    <div class="variant-switcher">
+      <button class="variant-btn ${state.data.variant==='wheel'?'active':''}" data-v="wheel">Вариант 1 · Колесо</button>
+      <button class="variant-btn ${state.data.variant==='scale'?'active':''}" data-v="scale">Вариант 2 · Шкалы</button>
+    </div>
+
+    <div class="level-switcher">
+      ${LEVEL_ORDER.map(lvl=>{
+        const cnt = topicsForLevel(s, lvl).length;
+        return `<button class="level-btn ${state.activeLevel===lvl?'active':''}" data-lvl="${lvl}" style="${state.activeLevel===lvl?`background:${LEVEL_COLORS[lvl]};`:''}">
+          <span class="lvl-swatch" style="background:${LEVEL_COLORS[lvl]}"></span>${LEVEL_LABELS[lvl]}<span class="lvl-count">(${cnt})</span>
+        </button>`;
+      }).join('')}
+      <button class="level-btn ${isAll?'active':''}" data-lvl="ALL" style="${isAll?'background:var(--terracotta-dark);':''}">
+        🔘 Все темы<span class="lvl-count">(${s.topics.length})</span>
+      </button>
+    </div>
+
+    <div class="date-bar">
+      <div>
+        <div class="cur-date">Текущий срез: ${s.srezDate ? s.srezDate : '<span style="color:var(--muted);font-weight:400;">дата не закреплена</span>'}</div>
+        ${comparedSrezy.length ? `<div class="prev-date">В сравнении: ${comparedSrezy.map(x=>x.date).join(', ')}</div>`
+          : (prev ? `<div class="prev-date">Автосравнение с предыдущим срезом от ${prev.date}</div>` : `<div class="prev-date">Предыдущих срезов ещё нет — это будет первая точка отсчёта</div>`)}
+      </div>
+      <button class="pin-btn" id="pinDateBtn">📌 Закрепить сегодняшнюю дату как срез</button>
+    </div>
+  `;
+
+  if(!isAll){
+    html += renderAddTopicWidget(s, state.activeLevel);
+  }
+
+  if(levelTopics.length===0 && !isAll){
+    html += `<div class="admin-note">В этом уровне пока нет добавленных тем — нажми «+» выше и выбери или впиши тему.</div>`;
+  } else if(levelTopics.length===0 && isAll){
+    html += `<div class="admin-note">Пока ни одна тема не добавлена ни в одном уровне.</div>`;
+  } else {
+    const compareList = comparedSrezy.length ? comparedSrezy : (prev ? [prev] : []);
+    const autoMode = comparedSrezy.length===0; // single-dashed auto style when no explicit compare selected
+    if(state.data.variant==='wheel') html += renderVariantWheel(s, compareList, levelTopics, isAll, autoMode);
+    else html += renderVariantScale(s, compareList, levelTopics, isAll, autoMode);
+  }
+
+  html += `
+    <div class="section" style="margin-top:30px;">
+      <div class="section-title">История срезов</div>
+      ${s.srezy.length===0
+        ? `<div class="admin-note">Срезов пока нет. Нажми «Закрепить сегодняшнюю дату как срез» выше, когда проведёшь диагностику.</div>`
+        : s.srezy.slice().reverse().map(srez=>{
+          const isCompared = state.compareIds.includes(srez.id);
+          return `
+          <div class="srez-card ${isCompared?'compared':''}">
+            <div class="srez-top">
+              <div class="srez-date">${srez.date}</div>
+              <div class="srez-actions">
+                <button class="srez-action-btn ${isCompared?'compare-active':''}" data-compare-id="${srez.id}">${isCompared?'✓ В сравнении':'Сравнить'}</button>
+                <button class="srez-action-btn" data-restore-id="${srez.id}">↺ Сделать текущим</button>
+                <button class="srez-action-btn danger" data-delete-id="${srez.id}">✕ Удалить</button>
+              </div>
+            </div>
+            <div class="srez-scores">
+              ${srez.topics.filter(t=> isAll ? true : t.level===state.activeLevel).map(t=>`<div class="srez-score-pill">${t.name}: <b>${t.score===null?'—':t.score}</b></div>`).join('')}
+            </div>
+          </div>
+        `;}).join('')
+      }
+    </div>
+  `;
+
+  c.innerHTML = html;
+
+  c.querySelectorAll('.variant-btn').forEach(el=>{
+    el.onclick = ()=>{ state.data.variant = el.dataset.v; state.openSliderTopicIndex=null; saveData(); renderSrezy(s); };
+  });
+  c.querySelectorAll('.level-btn').forEach(el=>{
+    el.onclick = ()=>{ state.activeLevel = el.dataset.lvl; state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[]; renderSrezy(s); };
+  });
+  document.getElementById('pinDateBtn').onclick = ()=>{
+    const today = new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'});
+    s.srezDate = today;
+    s.srezy.push({ id: nextSrezId(), date: today, topics: JSON.parse(JSON.stringify(s.topics)) });
+    saveData(); renderSrezy(s);
+  };
+
+  c.querySelectorAll('[data-compare-id]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.compareId;
+      const idx = state.compareIds.indexOf(id);
+      if(idx>-1) state.compareIds.splice(idx,1); else state.compareIds.push(id);
+      renderSrezy(s);
+    };
+  });
+  c.querySelectorAll('[data-restore-id]').forEach(el=>{
+    el.onclick = ()=>{
+      const srez = s.srezy.find(x=>x.id===el.dataset.restoreId);
+      if(!srez) return;
+      if(!confirm(`Сделать значения из среза ${srez.date} текущими? Текущие оценки будут перезаписаны для совпадающих тем.`)) return;
+      srez.topics.forEach(st=>{
+        const cur = s.topics.find(t=>t.name===st.name && t.level===st.level);
+        if(cur) cur.score = st.score;
+      });
+      saveData(); renderSrezy(s);
+    };
+  });
+  c.querySelectorAll('[data-delete-id]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.deleteId;
+      const srez = s.srezy.find(x=>x.id===id);
+      if(!srez) return;
+      if(!confirm(`Удалить срез от ${srez.date} из истории? Это действие необратимо.`)) return;
+      s.srezy = s.srezy.filter(x=>x.id!==id);
+      state.compareIds = state.compareIds.filter(cid=>cid!==id);
+      saveData(); renderSrezy(s);
+    };
+  });
+
+  attachTopicPickerHandlers(s, c);
+  attachHandlers(s, c, levelTopics);
+}
+
+function renderAddTopicWidget(s, level){
+  const options = availableToAdd(s, level);
+  return `
+    <div class="add-topic-wrap">
+      <button class="add-topic-plus" id="addTopicPlus" title="Добавить тему">+</button>
+      <span class="add-topic-label">Добавить тему в ${LEVEL_LABELS[level]}</span>
+      ${state.topicPickerOpen ? `
+        <div class="topic-popover">
+          <div class="topic-popover-title">Из каталога методики</div>
+          ${options.length
+            ? `<div class="topic-pick-list">${options.map(n=>`<span class="topic-pick-item" data-pick-name="${n}">${n}</span>`).join('')}</div>`
+            : `<div class="topic-pick-empty">Все темы каталога уже добавлены.</div>`
+          }
+          <div class="custom-topic-row">
+            <input type="text" class="custom-topic-input" id="customTopicInput" placeholder="Своя тема (если нужной нет в списке)">
+            <button class="custom-topic-btn" id="customTopicBtn">Добавить</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function attachTopicPickerHandlers(s, c){
+  const plusBtn = document.getElementById('addTopicPlus');
+  if(plusBtn){
+    plusBtn.onclick = ()=>{ state.topicPickerOpen = !state.topicPickerOpen; renderSrezy(s); };
+  }
+  c.querySelectorAll('[data-pick-name]').forEach(el=>{
+    el.onclick = ()=>{
+      s.topics.push({name: el.dataset.pickName, level: state.activeLevel, score:null});
+      state.topicPickerOpen = false;
+      saveData(); renderSrezy(s);
+    };
+  });
+  const customBtn = document.getElementById('customTopicBtn');
+  if(customBtn){
+    customBtn.onclick = ()=>{
+      const input = document.getElementById('customTopicInput');
+      const name = input.value.trim();
+      if(!name) return;
+      if(s.topics.some(t=>t.name===name && t.level===state.activeLevel)){
+        alert('Такая тема уже добавлена в этот уровень.');
+        return;
+      }
+      s.topics.push({name, level: state.activeLevel, score:null});
+      state.topicPickerOpen = false;
+      saveData(); renderSrezy(s);
+    };
+  }
+}
+
+function attachHandlers(s, c, levelTopics){
+  c.querySelectorAll('[data-topic-remove]').forEach(el=>{
+    el.onclick = (ev)=>{
+      ev.stopPropagation();
+      const i = parseInt(el.dataset.topicRemove);
+      const topic = levelTopics[i];
+      const idx = s.topics.findIndex(t=>t.name===topic.name && t.level===topic.level);
+      if(idx>-1) s.topics.splice(idx,1);
+      saveData(); renderSrezy(s);
+    };
+  });
+  c.querySelectorAll('[data-num-i]').forEach(el=>{
+    el.onchange = ()=>{
+      const i = parseInt(el.dataset.numI);
+      let v = parseInt(el.value);
+      if(isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(10, v));
+      levelTopics[i].score = v;
+      saveData(); renderSrezy(s);
+    };
+  });
+}
+
+function scoreInput(i, score){
+  const val = score===null ? '' : score;
+  const cls = scoreClass(score);
+  return `<input type="number" min="0" max="10" step="1" class="score-input ${cls}" data-num-i="${i}" value="${val}" placeholder="—">`;
+}
+
+/* ---- Variant "wheel" — compareList: array of {date, topics} to overlay ---- */
+function renderVariantWheel(s, compareList, levelTopics, isAll, autoMode){
+  const title = isAll ? 'Большое колесо — все добавленные темы' : `Колесо баланса — ${LEVEL_LABELS[state.activeLevel]}`;
+  return `
+    <div class="section">
+      <div class="section-title">${title}</div>
+      ${isAll ? `<div class="level-legend">${LEVEL_ORDER.map(l=>`<span class="legend-swatch"><span class="legend-line" style="border-top-color:${LEVEL_COLORS[l]};border-top-width:3px;"></span>${LEVEL_LABELS[l]}</span>`).join('')}</div>` : ''}
+      <div class="wheel-wrap">
+        <div class="wheel-svg">${renderWheelCompare(levelTopics, compareList, isAll)}</div>
+        <div class="wheel-legend">
+          ${levelTopics.map((t,i)=>{
+            const primaryCompare = compareList[0];
+            const prevScore = primaryCompare ? (primaryCompare.topics.find(x=>x.name===t.name)?.score ?? null) : null;
+            const delta = (t.score!==null && prevScore!==null) ? t.score - prevScore : null;
+            return `
+            <div class="topic-row">
+              <span class="topic-dot" style="background:${isAll ? LEVEL_COLORS[t.level] : scoreColor(t.score)}"></span>
+              <span class="topic-name">${t.name}${isAll ? ` <span style="color:var(--muted);font-weight:400;">(${t.level})</span>` : ''}</span>
+              ${delta!==null && delta!==0 ? `<span class="topic-delta ${delta>0?'up':'down'}">${delta>0?'▲':'▼'}${Math.abs(delta)}</span>` : ''}
+              ${scoreInput(i, t.score)}
+              <span class="topic-remove" data-topic-remove="${i}" title="Убрать тему из колеса">✕</span>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+      ${compareList.length ? `<div class="wheel-compare-legend">
+        ${compareList.map((cs,idx)=>`<span class="legend-swatch"><span class="legend-line dashed" style="border-top-color:${COMPARE_PALETTE[idx % COMPARE_PALETTE.length]};"></span> срез ${cs.date}</span>`).join('')}
+        <span class="legend-swatch"><span class="legend-line"></span> текущее состояние</span>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function renderWheelCompare(topics, compareList, isAll){
+  const n = Math.max(topics.length,1);
+  const size = isAll ? Math.max(360, n*11) : 280;
+  const center = size/2;
+  const maxR = isAll ? Math.max(140, n*6.2) : 105;
+  const maxScore = 10;
+  const angleStep = (2*Math.PI)/n;
+  let grid = '', labels = '', dots = '';
+
+  for(let ring=2; ring<=maxScore; ring+=2){
+    const r = (ring/maxScore)*maxR;
+    grid += `<circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--line)" stroke-width="1"/>`;
+  }
+  topics.forEach((t,i)=>{
+    const angle = -Math.PI/2 + i*angleStep;
+    const ex = center + maxR*Math.cos(angle), ey = center + maxR*Math.sin(angle);
+    grid += `<line x1="${center}" y1="${center}" x2="${ex}" y2="${ey}" stroke="var(--line)" stroke-width="1"/>`;
+    const lx = center + (maxR+20)*Math.cos(angle), ly = center + (maxR+20)*Math.sin(angle);
+    const cosA = Math.cos(angle);
+    const anchor = cosA > 0.2 ? 'start' : (cosA < -0.2 ? 'end' : 'middle');
+    const shortName = shortLabelFor(t);
+    labels += `<text x="${lx}" y="${ly}" font-size="9" fill="${isAll?LEVEL_COLORS[t.level]:'var(--muted)'}" font-weight="${isAll?'700':'500'}" text-anchor="${anchor}" dominant-baseline="middle">${shortName}</text>`;
+  });
+
+  function pointsFor(list){
+    return list.map((t,i)=>{
+      const score = t.score ?? 0;
+      const r = (score/maxScore)*maxR;
+      const angle = -Math.PI/2 + i*angleStep;
+      return {x: center + r*Math.cos(angle), y: center + r*Math.sin(angle)};
+    });
+  }
+
+  const curPts = pointsFor(topics);
+  curPts.forEach((p,i)=>{ dots += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${isAll?LEVEL_COLORS[topics[i].level]:scoreColor(topics[i].score)}"/>`; });
+  const curPoly = curPts.map(p=>`${p.x},${p.y}`).join(' ');
+
+  let comparePolys = '';
+  compareList.forEach((cs,idx)=>{
+    const aligned = topics.map(t=> cs.topics.find(pt=>pt.name===t.name) || {name:t.name, score:0});
+    const pts = pointsFor(aligned);
+    const color = COMPARE_PALETTE[idx % COMPARE_PALETTE.length];
+    comparePolys += `<polygon points="${pts.map(p=>`${p.x},${p.y}`).join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="5,3"/>`;
+  });
+
+  const pad = isAll ? 90 : 70;
+  return `<svg width="${size+pad}" height="${size+pad*0.7}" viewBox="-${pad/2} -${pad*0.35} ${size+pad} ${size+pad*0.7}">
+    ${grid}${comparePolys}
+    <polygon points="${curPoly}" fill="rgba(174,95,63,0.12)" stroke="var(--terracotta)" stroke-width="2"/>
+    ${dots}${labels}
+  </svg>`;
+}
+
+/* ---- Variant "scale" ---- */
+function renderVariantScale(s, compareList, levelTopics, isAll, autoMode){
+  const title = isAll ? 'Большая шкала — все добавленные темы' : `Шкалы 0–10 — ${LEVEL_LABELS[state.activeLevel]}`;
+  return `
+    <div class="section">
+      <div class="section-title">${title}</div>
+      ${levelTopics.map((t,i)=>{
+        const val = t.score ?? 0;
+        const color = t.score===null ? 'var(--line)' : (isAll ? LEVEL_COLORS[t.level] : scoreColor(t.score));
+        const markers = compareList.map((cs,idx)=>{
+          const cscore = cs.topics.find(x=>x.name===t.name)?.score;
+          if(cscore===null||cscore===undefined) return '';
+          const color2 = COMPARE_PALETTE[idx % COMPARE_PALETTE.length];
+          return `<div class="bullet-prev-marker" style="left:${cscore*10}%;background:${color2};" title="Срез ${cs.date}: ${cscore}"></div>`;
+        }).join('');
+        return `
+        <div class="bullet-row">
+          <div class="bullet-head">
+            <span class="bh-name">${t.name}${isAll ? ` <span style="color:${LEVEL_COLORS[t.level]};font-weight:700;">·${t.level}</span>` : ''}</span>
+            ${scoreInput(i, t.score)}
+            <span class="topic-remove" data-topic-remove="${i}" title="Убрать тему">✕</span>
+          </div>
+          <div class="bullet-track">
+            <div class="bullet-fill ${t.score===null?'none':''}" style="width:${val*10}%;background:${color};"></div>
+            ${markers}
+          </div>
+          <div class="bullet-scale"><span>0</span><span>2</span><span>4</span><span>5</span><span>6</span><span>8</span><span>10</span></div>
+        </div>
+      `;}).join('')}
+      ${compareList.length ? `<div class="wheel-compare-legend">
+        ${compareList.map((cs,idx)=>`<span class="legend-swatch"><span style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${COMPARE_PALETTE[idx % COMPARE_PALETTE.length]};"></span> срез ${cs.date}</span>`).join('')}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+/* ---------- REPERTOIRE TAB ---------- */
+function renderRepertoire(s){
+  const c = document.getElementById('tabContent');
+  c.innerHTML = `
+    <div class="rep-block">
+      <h4>Сейчас работаем над</h4>
+      <textarea class="rep-input" id="repCurrent" placeholder="Например: «Ты у меня одна», разбор дыхания и опоры на припеве">${s.repertoire.current||''}</textarea>
+    </div>
+    <div class="rep-block">
+      <h4>Хотим спеть в будущем</h4>
+      <ul class="song-list" id="futureList">
+        ${s.repertoire.future.map((song,i)=>`<li>${song} <span style="float:right;color:var(--muted);cursor:pointer;" data-remove-i="${i}">✕</span></li>`).join('') || '<li style="color:var(--muted);">Список пуст</li>'}
+      </ul>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <input type="text" id="futureInput" placeholder="Название песни / исполнитель" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-family:inherit;font-size:14px;background:var(--panel);color:var(--text);">
+        <button id="addFutureBtn" style="padding:9px 16px;border-radius:8px;border:none;background:var(--terracotta);color:#fff;font-weight:600;cursor:pointer;">Добавить</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('repCurrent').onblur = (e)=>{ s.repertoire.current = e.target.value; saveData(); };
+  document.getElementById('addFutureBtn').onclick = ()=>{
+    const input = document.getElementById('futureInput');
+    if(input.value.trim()){ s.repertoire.future.push(input.value.trim()); saveData(); renderRepertoire(s); }
+  };
+  c.querySelectorAll('[data-remove-i]').forEach(el=>{
+    el.onclick = ()=>{ s.repertoire.future.splice(parseInt(el.dataset.removeI),1); saveData(); renderRepertoire(s); };
+  });
+}
+
+/* ============================================================
+   CARD TAB — Анкета (первичная) + Динамика по занятиям
+   Реальный бэкенд: /api/intake и /api/lessons (Postgres)
+   ============================================================ */
+
+const INTAKE_OPTS = {
+  goal: ['Сцена','Реабилитация','Расширение диапазона','Подготовка к проекту'],
+  complaints: ['Хрипота','Усталость голоса','Потеря диапазона','Срывы'],
+  smoking: ['Не курит','Курит','Периодически'],
+  cvtModes: ['Neutral','Curbing','Overdrive','Edge'],
+  metallicBalance: ['Metallic','Non-metallic','Смешанный / переменный'],
+  laryngealPosition: ['Низкая','Средняя','Высокая'],
+  tensionAreas: ['Челюсть','Язык','Шея','Плечи'],
+  breathingType: ['Клавикулярное','Грудное','Опора (диафрагмально-рёберное)']
+};
+const PROGRESS_FLAGS = [['better','Лучше','flag-better'],['same','Без изменений','flag-same'],['worse','Хуже','flag-worse']];
+
+async function apiGet(url){
+  const r = await fetch(url);
+  if(!r.ok){ const t = await r.text().catch(()=> ''); throw new Error('HTTP '+r.status+' '+t); }
+  return r.json();
+}
+async function apiSend(url, method, body){
+  const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if(!r.ok){ const t = await r.text().catch(()=> ''); throw new Error('HTTP '+r.status+' '+t); }
+  return r.json();
+}
+
+function renderCard(s){
+  const c = document.getElementById('tabContent');
+  c.innerHTML = `<div class="card-loading">Загружаю анкету и историю занятий…</div>`;
+
+  Promise.all([
+    apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
+    apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
+  ]).then(([intake, lessons])=>{
+    state.cardCache[s.id] = { intake: intake && intake.intake, lessons: lessons && lessons.lessons || [] };
+    paintCard(s);
+  }).catch(err=>{
+    c.innerHTML = `<div class="card-error">Не удалось загрузить данные с сервера: ${String(err.message||err)}. База данных ещё не подключена к проекту — обратись к администратору, чтобы подключить Postgres в настройках Vercel.</div>`;
+  });
+}
+
+function paintCard(s){
+  const c = document.getElementById('tabContent');
+  const cache = state.cardCache[s.id] || {intake:null, lessons:[]};
+  const intake = cache.intake || {};
+  const lessons = cache.lessons || [];
+
+  c.innerHTML = `
+    <div class="section">
+      <div class="section-title">Анкета (первая встреча)</div>
+      ${!cache.intake ? `<div class="intake-empty">Анкета ещё не заполнена — заполни поля ниже, они сохранятся автоматически.</div>` : ''}
+      <div class="field-grid">
+        ${textField2('Возраст', intake.age, 'age', 'number')}
+        ${selectField2('Цель обучения', INTAKE_OPTS.goal, intake.goal, 'goal')}
+        ${textField2('Жанр / референсы', intake.genreRefs, 'genreRefs')}
+        ${textField2('Голосовая нагрузка вне пения (профессия)', intake.vocalLoadJob, 'vocalLoadJob')}
+      </div>
+      <div class="field-grid" style="margin-top:14px;">
+        ${textareaField2('Опыт пения до преподавателя (годы, с кем, что застряло)', intake.priorExperience, 'priorExperience')}
+        ${textareaField2('ЛОР/фониатр: был ли, диагноз (узелки, парез, рефлюкс…)', intake.entDiagnosis, 'entDiagnosis')}
+      </div>
+      <div class="tag-group" style="margin-top:14px;"><div class="tag-group-title">Жалобы</div><div class="tags" id="tags-complaints">${renderTags(INTAKE_OPTS.complaints, intake.complaints||[])}</div></div>
+      <div class="field-grid">
+        ${textField2('Длительность симптомов', intake.symptomDuration, 'symptomDuration')}
+        ${selectField2('Курение', INTAKE_OPTS.smoking, intake.smoking, 'smoking')}
+        ${textField2('Гидратация', intake.hydration, 'hydration')}
+        ${textField2('Сон', intake.sleep, 'sleep')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Голос на входе</div>
+      <div class="field-grid">
+        ${textField2('Диапазон: нижняя нота', intake.rangeLow, 'rangeLow')}
+        ${textField2('Диапазон: верхняя нота', intake.rangeHigh, 'rangeHigh')}
+        ${textField2('Тесситура комфорта', intake.tessituraComfort, 'tessituraComfort')}
+        ${textField2('Где ломается регистр (нота)', intake.registerBreakNote, 'registerBreakNote')}
+        ${selectField2('Metallic / non-metallic баланс', INTAKE_OPTS.metallicBalance, intake.metallicBalance, 'metallicBalance')}
+        ${selectField2('Ларингальная позиция в покое', INTAKE_OPTS.laryngealPosition, intake.laryngealPosition, 'laryngealPosition')}
+        ${selectField2('Тип дыхания', INTAKE_OPTS.breathingType, intake.breathingType, 'breathingType')}
+        ${textField2('Референс-аудио на входе (ссылка)', intake.referenceAudioUrl, 'referenceAudioUrl', 'url')}
+      </div>
+      <div class="tag-group" style="margin-top:14px;"><div class="tag-group-title">Доступные CVT-моды на старте</div><div class="tags" id="tags-cvtModesStart">${renderTags(INTAKE_OPTS.cvtModes, intake.cvtModesStart||[])}</div></div>
+      <div class="tag-group"><div class="tag-group-title">Зажимы</div><div class="tags" id="tags-tensionAreas">${renderTags(INTAKE_OPTS.tensionAreas, intake.tensionAreas||[])}</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Динамика по занятиям</div>
+      <div id="lessonsList">${renderLessonsList(lessons)}</div>
+      <button class="btn secondary" id="addLessonBtn" style="margin-top:10px;">+ Добавить занятие</button>
+      <div id="newLessonWrap"></div>
+    </div>
+  `;
+
+  wireCardHandlers(s);
+}
+
+function textField2(label, value, key, type){
+  type = type || 'text';
+  return `<div class="field editable" data-intake-field="${key}" data-label="${label}" data-type="${type}">
+    <label>${label}</label><div>${(value!==undefined && value!==null && value!=='') ? value : '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
+}
+function textareaField2(label, value, key){
+  return `<div class="field editable" data-intake-field="${key}" data-label="${label}" data-type="textarea">
+    <label>${label}</label><div style="white-space:pre-wrap;">${value ? value : '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
+}
+function selectField2(label, options, value, key){
+  const opts = ['<option value="" ' + (!value?'selected':'') + '>— не указано —</option>']
+    .concat(options.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`));
+  return `<div class="field"><label>${label}</label><select data-intake-select="${key}">${opts.join('')}</select></div>`;
+}
+
+function renderLessonsList(lessons){
+  if(!lessons.length) return `<div class="admin-note">Занятий пока не записано.</div>`;
+  return lessons.slice().sort((a,b)=> (b.lessonDate||'').localeCompare(a.lessonDate||'')).map(l=>{
+    const flag = PROGRESS_FLAGS.find(f=>f[0]===l.progressFlag) || [null,'—',''];
+    return `
+    <div class="lesson-card">
+      <div class="lesson-top">
+        <div class="lesson-date">${l.lessonDate||'—'} ${flag[0] ? `<span class="flag-dot ${flag[2]}"></span><span class="flag-label">${flag[1]}</span>` : ''}</div>
+        <span class="lesson-remove" data-remove-lesson="${l.id}">✕ удалить</span>
+      </div>
+      <div class="lesson-grid">
+        <div><b>CVT-моды</b>${(l.cvtModes||[]).join(', ') || '—'}</div>
+        <div><b>Effort level</b>${l.effortLevel!=null ? l.effortLevel+' / 6' : '—'}</div>
+        <div><b>Диапазон в работе</b>${l.rangeWorked||'—'}</div>
+        <div><b>Получилось</b>${l.whatWorked||'—'}</div>
+        <div><b>Не получилось</b>${l.whatDidnt||'—'}</div>
+        <div><b>Зажимы / новые проблемы</b>${l.newTension||'—'}</div>
+        <div><b>Домашнее задание</b>${l.homework||'—'}</div>
+        <div><b>Аудио/видео</b>${l.mediaUrl ? `<a href="${l.mediaUrl}" target="_blank" rel="noopener">ссылка</a>` : '—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function newLessonFormHtml(){
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <div class="new-lesson-form" id="newLessonForm">
+      <div class="field-grid">
+        <div><label>Дата</label><input type="date" id="nlDate" value="${today}"></div>
+        <div><label>Effort level (1–6)</label><select id="nlEffort">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===3?'selected':''}>${n}</option>`).join('')}</select></div>
+        <div><label>Прогресс</label><select id="nlFlag">${PROGRESS_FLAGS.map(f=>`<option value="${f[0]}">${f[1]}</option>`).join('')}</select></div>
+      </div>
+      <label>CVT-моды на занятии</label>
+      <div class="tags" id="nlCvtModes">${renderTags(INTAKE_OPTS.cvtModes, [])}</div>
+      <label>Диапазон в работе</label><input type="text" id="nlRange" placeholder="напр. ми м.о. – соль1.о.">
+      <label>Что получилось</label><textarea id="nlWorked" rows="2"></textarea>
+      <label>Что не получилось</label><textarea id="nlDidnt" rows="2"></textarea>
+      <label>Зажимы / новые проблемы</label><textarea id="nlTension" rows="2"></textarea>
+      <label>Домашнее задание</label><textarea id="nlHomework" rows="2"></textarea>
+      <label>Ссылка на аудио/видео</label><input type="url" id="nlMedia" placeholder="https://...">
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="btn" id="nlSave">Сохранить занятие</button>
+        <button class="btn secondary" id="nlCancel">Отмена</button>
+      </div>
+    </div>
+  `;
+}
+
+function wireCardHandlers(s){
+  const c = document.getElementById('tabContent');
+
+  // inline text/textarea intake fields (click to edit via prompt, matches site-wide pattern)
+  c.querySelectorAll('[data-intake-field]').forEach(el=>{
+    el.onclick = ()=>{
+      const key = el.dataset.intakeField, label = el.dataset.label, type = el.dataset.type;
+      const cache = state.cardCache[s.id];
+      const current = (cache.intake && cache.intake[key]) || '';
+      const v = prompt(label + ':', current);
+      if(v===null) return;
+      const value = type==='number' ? (v.trim()===''? null : Number(v)) : v;
+      saveIntakeField(s, key, value);
+    };
+  });
+  c.querySelectorAll('select[data-intake-select]').forEach(el=>{
+    el.onchange = ()=>{ saveIntakeField(s, el.dataset.intakeSelect, el.value || null); };
+  });
+  ['complaints','cvtModesStart','tensionAreas'].forEach(key=>{
+    document.querySelectorAll(`#tags-${key} .tag`).forEach(el=>{
+      el.onclick = ()=>{
+        const cache = state.cardCache[s.id];
+        const cur = (cache.intake && cache.intake[key]) || [];
+        const idx = cur.indexOf(el.dataset.val);
+        const next = idx>-1 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([el.dataset.val]);
+        saveIntakeField(s, key, next);
+      };
+    });
+  });
+
+  const addBtn = document.getElementById('addLessonBtn');
+  if(addBtn){
+    addBtn.onclick = ()=>{
+      document.getElementById('newLessonWrap').innerHTML = newLessonFormHtml();
+      const wrap = document.getElementById('newLessonWrap');
+      wrap.querySelectorAll('#nlCvtModes .tag').forEach(el=>{
+        el.onclick = ()=> el.classList.toggle('selected');
+      });
+      document.getElementById('nlCancel').onclick = ()=>{ wrap.innerHTML=''; };
+      document.getElementById('nlSave').onclick = ()=> saveNewLesson(s);
+      addBtn.style.display = 'none';
+    };
+  }
+
+  c.querySelectorAll('[data-remove-lesson]').forEach(el=>{
+    el.onclick = ()=>{
+      if(!confirm('Удалить эту запись о занятии?')) return;
+      apiSend('/api/lessons?id=' + encodeURIComponent(el.dataset.removeLesson), 'DELETE', {})
+        .then(()=> renderCard(s))
+        .catch(err=> alert('Не удалось удалить: ' + err.message));
+    };
+  });
+}
+
+function saveIntakeField(s, key, value){
+  const cache = state.cardCache[s.id] || (state.cardCache[s.id] = {intake:{}, lessons:[]});
+  cache.intake = Object.assign({}, cache.intake, {[key]: value});
+  const payload = Object.assign({studentId: s.id}, cache.intake);
+  apiSend('/api/intake', 'POST', payload)
+    .then(res=>{ cache.intake = res.intake; paintCard(s); })
+    .catch(err=>{ alert('Не удалось сохранить: ' + err.message); paintCard(s); });
+}
+
+function saveNewLesson(s){
+  const selectedModes = Array.from(document.querySelectorAll('#nlCvtModes .tag.selected')).map(el=>el.dataset.val);
+  const payload = {
+    studentId: s.id,
+    lessonDate: document.getElementById('nlDate').value,
+    effortLevel: Number(document.getElementById('nlEffort').value),
+    progressFlag: document.getElementById('nlFlag').value,
+    cvtModes: selectedModes,
+    rangeWorked: document.getElementById('nlRange').value,
+    whatWorked: document.getElementById('nlWorked').value,
+    whatDidnt: document.getElementById('nlDidnt').value,
+    newTension: document.getElementById('nlTension').value,
+    homework: document.getElementById('nlHomework').value,
+    mediaUrl: document.getElementById('nlMedia').value
+  };
+  const btn = document.getElementById('nlSave'); if(btn) btn.disabled = true;
+  apiSend('/api/lessons', 'POST', payload)
+    .then(()=> renderCard(s))
+    .catch(err=>{ alert('Не удалось сохранить занятие: ' + err.message); if(btn) btn.disabled = false; });
+}
+
+render();
+</script>
+</body>
+</html>

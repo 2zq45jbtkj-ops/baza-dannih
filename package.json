@@ -1,0 +1,11 @@
+{
+  "name": "baza-dannih",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  },
+  "dependencies": {
+    "pg": "^8.11.5"
+  }
+}
