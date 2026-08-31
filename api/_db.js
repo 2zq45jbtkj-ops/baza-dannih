@@ -34,6 +34,7 @@ async function ensureSchema(p) {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS schedule TEXT;`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS student_intake (
       student_id TEXT PRIMARY KEY,
