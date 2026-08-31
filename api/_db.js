@@ -27,6 +27,14 @@ function getPool() {
 async function ensureSchema(p) {
   if (ensured) return;
   await p.query(`
+    CREATE TABLE IF NOT EXISTS students (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'trial',
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await p.query(`
     CREATE TABLE IF NOT EXISTS student_intake (
       student_id TEXT PRIMARY KEY,
       age INTEGER,
