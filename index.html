@@ -473,12 +473,19 @@ function render(){
   renderMain(active);
 }
 
-function addStudent(){
+async function addStudent(){
   const name = prompt('Имя и фамилия ученика:');
   if(!name || !name.trim()) return;
-  const id = 's' + Date.now();
+  const trimmed = name.trim();
+  let id = 's' + Date.now();
+  try{
+    const resp = await apiSend('/api/students', 'POST', { name: trimmed, status: 'trial' });
+    if(resp && resp.student && resp.student.id) id = resp.student.id;
+  }catch(e){
+    alert('Не удалось сохранить ученика в базе данных: ' + (e.message||e) + '\nУченик добавлен только локально и пропадёт при следующей загрузке с другого устройства.');
+  }
   state.data.students.push({
-    id, name: name.trim(), status: 'trial',
+    id, name: trimmed, status: 'trial',
     org: { schedule:'—', format:'Онлайн', source:'Прочее', freq:'Пробное занятие' },
     voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
     range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
@@ -489,6 +496,41 @@ function addStudent(){
   });
   state.activeStudentId = id;
   saveData(); render();
+}
+async function syncStudentsFromServer(){
+  try{
+    const data = await apiGet('/api/students');
+    const serverList = (data && data.students) || [];
+    if(!serverList.length) return;
+    const localById = {};
+    state.data.students.forEach(s=>{ localById[s.id] = s; });
+    const merged = serverList.map(srv=>{
+      const loc = localById[srv.id];
+      if(loc){
+        loc.name = srv.name;
+        loc.status = srv.status;
+        return loc;
+      }
+      return {
+        id: srv.id, name: srv.name, status: srv.status,
+        org: { schedule:'—', format:'Онлайн', source:'Прочее', freq:'Пробное занятие' },
+        voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
+        range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
+        timbre: [], problems: [], compensations: [], flags: [],
+        topics: [], srezDate: null, srezy: [],
+        repertoire: { current:'', future:[] }
+      };
+    });
+    state.data.students = merged;
+    if(!state.activeStudentId || !merged.find(s=>s.id===state.activeStudentId)){
+      state.activeStudentId = merged[0] ? merged[0].id : null;
+    }
+    state.lessonCounts = {};
+    saveData();
+    render();
+  }catch(e){
+    // БД не подключена или недоступна — остаёмся на локальных/дефолтных данных
+  }
 }
 
 function renderMain(s){
@@ -1244,6 +1286,7 @@ function saveNewLesson(s){
 }
 
 render();
+syncStudentsFromServer();
 </script>
 </body>
 </html>
