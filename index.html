@@ -284,6 +284,9 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .kb-rec-btn{padding:0 22px;height:48px;border-radius:24px;border:none;font-size:14.5px;font-weight:800;letter-spacing:.02em;cursor:pointer;background:var(--terracotta-dark);color:#fff;}
 .kb-rec-btn.active{background:#E0553A;}
 .kb-rec-caption{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#A2968A;}
+.kb-rec-caption.saving{color:#D8A582;}
+.kb-rec-caption.saved{color:#8FBF8A;}
+.kb-rec-btn:disabled{opacity:.55;cursor:default;}
 .kb-rec-timer{font-family:'JetBrains Mono',monospace;font-size:25px;font-weight:500;color:#F7F2EB;letter-spacing:.02em;}
 .kb-rec-dot{width:11px;height:11px;border-radius:50%;background:#E0553A;animation:kbrecpulse 1.1s infinite;}
 @keyframes kbrecpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.82);}}
@@ -440,7 +443,8 @@ const state = {
   kabinetOpen: { general:true, measures:true, anamnesis:true, evt:true, qualities:true, record:true, files:true },
   kabinetCache: {},
   kabinetCompareOpen: false,
-  kabinetRec: { active:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
+  kabinetSaveSeq: {},
+  kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
 };
 state.activeStudentId = state.data.students[0]?.id || null;
 if(!state.data.variant) state.data.variant = 'wheel';
@@ -1583,9 +1587,21 @@ function saveKabinet(s, patch){
   const cache = kbCache(s);
   cache.intake = Object.assign({}, cache.intake, patch);
   const payload = Object.assign({studentId: s.id}, cache.intake);
-  apiSend('/api/intake', 'POST', payload)
-    .then(res=>{ cache.intake = res.intake; paintKabinet(s); })
-    .catch(err=>{ alert('Не удалось сохранить: ' + (err.message||err)); paintKabinet(s); });
+  // Guard against out-of-order responses: if a newer save for this student
+  // starts before this one resolves, this response must not overwrite the
+  // (newer) local state with a stale server snapshot.
+  const mySeq = (state.kabinetSaveSeq[s.id] = (state.kabinetSaveSeq[s.id] || 0) + 1);
+  return apiSend('/api/intake', 'POST', payload)
+    .then(res=>{
+      if(state.kabinetSaveSeq[s.id] === mySeq){ cache.intake = res.intake; }
+      paintKabinet(s);
+      return true;
+    })
+    .catch(err=>{
+      alert('Не удалось сохранить: ' + (err.message||err));
+      paintKabinet(s);
+      return false;
+    });
 }
 
 function paintKabinet(s){
@@ -1813,9 +1829,9 @@ function paintKabinet(s){
     ${open.record ? `
     <div class="kb-rec-box">
       <div class="kb-rec-top">
-        <button type="button" class="kb-rec-btn${rec.active?' active':''}" id="kbRecBtn">${rec.active?'Стоп':'Запись'}</button>
+        <button type="button" class="kb-rec-btn${rec.active?' active':''}" id="kbRecBtn" ${rec.saving?'disabled':''}>${rec.active?'Стоп':'Запись'}</button>
         <div style="flex:1;min-width:220px;">
-          <div class="kb-rec-caption">${rec.active?'Идёт запись':(takes.length?'Записано '+takes.length:'Нажмите, чтобы записать голос')}</div>
+          <div class="kb-rec-caption${rec.saving?' saving':''}${rec.justSaved?' saved':''}">${rec.active?'Идёт запись':(rec.saving?'Сохраняю запись…':(rec.justSaved?'Сохранено':(takes.length?'Записано '+takes.length:'Нажмите, чтобы записать голос')))}</div>
           <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
             <div class="kb-rec-timer" id="kbRecTimer">00:00</div>
             ${rec.active? `<div class="kb-rec-dot"></div>` : ''}
@@ -1997,7 +2013,7 @@ function wireKabinetHandlers(s){
       const id = Number(el.dataset.kbTakeDel);
       const cache = kbCache(s);
       const takes = (cache.intake.referenceTakes||[]).filter(t=>t.id!==id);
-      saveKabinet(s, {referenceTakes: takes});
+      kbSaveTakes(s, takes);
     };
   });
 
@@ -2021,9 +2037,28 @@ function kbUploadFile(s, file){
     const take = { id: Date.now(), name: file.name, meta: 'загружено · ' + Math.round(file.size/1024) + ' KB', dataUrl: reader.result, createdAt: new Date().toISOString() };
     const cache = kbCache(s);
     const takes = [take].concat(cache.intake.referenceTakes || []);
-    saveKabinet(s, {referenceTakes: takes});
+    kbSaveTakes(s, takes);
   };
   reader.readAsDataURL(file);
+}
+
+// Saves referenceTakes and drives the "Сохраняю…/Сохранено" status next to the
+// recorder, so a successful save is visibly confirmed instead of relying on the
+// take silently appearing in the list (which used to happen even before the
+// server call resolved and gave no signal that the save had actually landed).
+function kbSaveTakes(s, takes){
+  const rec = state.kabinetRec;
+  rec.saving = true;
+  rec.justSaved = false;
+  paintKabinet(s);
+  saveKabinet(s, {referenceTakes: takes}).then(ok=>{
+    rec.saving = false;
+    rec.justSaved = ok;
+    paintKabinet(s);
+    if(ok){
+      setTimeout(()=>{ rec.justSaved = false; paintKabinet(s); }, 2200);
+    }
+  });
 }
 
 function kbPad(n){ return n<10 ? '0'+n : String(n); }
@@ -2047,7 +2082,7 @@ function kbUpdateRecDom(){
 
 function kbStartRecording(s){
   const rec = state.kabinetRec;
-  if(rec.active) return;
+  if(rec.active || rec.saving) return;
   if(!navigator.mediaDevices || !window.MediaRecorder){
     rec.error = 'Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.';
     paintKabinet(s);
@@ -2075,7 +2110,7 @@ function kbStartRecording(s){
         const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString() };
         const cache = kbCache(s);
         const takes = [take].concat(cache.intake.referenceTakes || []);
-        saveKabinet(s, {referenceTakes: takes});
+        kbSaveTakes(s, takes);
       };
       reader.readAsDataURL(blob);
     };
