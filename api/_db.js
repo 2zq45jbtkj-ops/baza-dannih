@@ -107,6 +107,12 @@ async function ensureSchema(p) {
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS metallic_percent INTEGER DEFAULT 32;`);
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS reference_takes JSONB DEFAULT '[]';`);
 
+  // Цель обучения и жанр — переведены на множественный выбор (было TEXT, стало TEXT[]).
+  // Старые singular-колонки goal/genre остаются нетронутыми для обратной совместимости
+  // со старым (неиспользуемым) кодом вкладки «Дневник занятий».
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS goals TEXT[] DEFAULT '{}';`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS genres TEXT[] DEFAULT '{}';`);
+
   ensured = true;
 }
 

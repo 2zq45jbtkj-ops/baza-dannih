@@ -51,6 +51,10 @@ function rowToJson(row) {
     metallicPercent: row.metallic_percent === null || row.metallic_percent === undefined ? 32 : row.metallic_percent,
     referenceTakes: row.reference_takes || [],
 
+    // Множественный выбор — заменяют собой единичные goal/genre в Кабинете
+    goals: row.goals || [],
+    genres: row.genres || [],
+
     updatedAt: row.updated_at
   };
 }
@@ -119,7 +123,9 @@ module.exports = async (req, res) => {
         /* 42 */ JSON.stringify(b.modes && typeof b.modes === 'object' ? b.modes : {}),
         /* 43 */ JSON.stringify(b.anchors && typeof b.anchors === 'object' ? b.anchors : {}),
         /* 44 */ b.metallicPercent === undefined || b.metallicPercent === null || b.metallicPercent === '' ? 32 : Number(b.metallicPercent),
-        /* 45 */ JSON.stringify(Array.isArray(b.referenceTakes) ? b.referenceTakes : [])
+        /* 45 */ JSON.stringify(Array.isArray(b.referenceTakes) ? b.referenceTakes : []),
+        /* 46 */ Array.isArray(b.goals) ? b.goals : [],
+        /* 47 */ Array.isArray(b.genres) ? b.genres : []
       ];
 
       const r = await query(
@@ -133,6 +139,7 @@ module.exports = async (req, res) => {
            baseline_range_low, baseline_range_high, baseline_tess_low, baseline_tess_high, baseline_register_break,
            lar_status, diagnosis, alcohol, pms_factor,
            structures, qualities, modes, anchors, metallic_percent, reference_takes,
+           goals, genres,
            updated_at
          ) VALUES (
            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
@@ -140,6 +147,7 @@ module.exports = async (req, res) => {
            $31,$32,$33,$34,$35,
            $36,$37,$38,$39,
            $40,$41,$42,$43,$44,$45,
+           $46,$47,
            now()
          )
          ON CONFLICT (student_id) DO UPDATE SET
@@ -166,6 +174,7 @@ module.exports = async (req, res) => {
            structures = EXCLUDED.structures, qualities = EXCLUDED.qualities,
            modes = EXCLUDED.modes, anchors = EXCLUDED.anchors,
            metallic_percent = EXCLUDED.metallic_percent, reference_takes = EXCLUDED.reference_takes,
+           goals = EXCLUDED.goals, genres = EXCLUDED.genres,
            updated_at = now()
          RETURNING *`,
         params
