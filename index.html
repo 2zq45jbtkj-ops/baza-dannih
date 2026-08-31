@@ -218,6 +218,20 @@ body.dark .kb-summary-desc{color:#B8ADA1;}
 .kb-card.span2{grid-column:span 2;}
 .kb-card label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;margin-bottom:5px;}
 .kb-card-note{font-size:12px;color:var(--muted);margin-top:3px;}
+.kb-multi-field{position:relative;}
+.kb-multi-wrap{position:relative;margin-top:4px;}
+.kb-multi-trigger{width:100%;min-height:26px;border:none;background:none;padding:0;font-family:inherit;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;text-align:left;}
+.kb-multi-chips{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0;}
+.kb-multi-chip-tag{display:inline-block;padding:3px 9px;border-radius:7px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--text);line-height:1.3;}
+.kb-multi-chip-tag.warn{background:#F6EAE5;border-color:#E8CFC5;color:var(--terracotta-dark);}
+.kb-multi-placeholder{font-size:16px;font-weight:400;color:#B8ADA1;}
+.kb-multi-caret{font-size:10px;color:var(--muted);flex-shrink:0;margin-top:4px;}
+.kb-multi-dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,0.16);padding:6px;width:280px;max-width:min(360px,85vw);max-height:280px;overflow-y:auto;}
+.kb-multi-option{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left;font-family:inherit;font-size:14px;color:var(--text);}
+.kb-multi-option:hover{background:var(--bg);}
+.kb-multi-checkbox{width:16px;height:16px;flex-shrink:0;border-radius:4px;border:1.5px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;}
+.kb-multi-checkbox.on{background:var(--terracotta-dark);border-color:var(--terracotta-dark);position:relative;}
+.kb-multi-checkbox.on::after{content:'✓';color:#fff;font-size:11px;font-weight:700;line-height:1;}
 .kb-select,.kb-input,.kb-textarea{width:100%;border:none;background:none;font-size:16px;font-weight:600;color:var(--text);font-family:inherit;padding:0;appearance:none;cursor:pointer;}
 .kb-input,.kb-textarea{cursor:text;}
 .kb-textarea{resize:vertical;min-height:44px;line-height:1.45;}
@@ -445,6 +459,7 @@ const state = {
   kabinetCompareOpen: false,
   kabinetSaveSeq: {},
   kabinetSaveChain: {},
+  kabinetMultiOpen: { goals:false, genres:false, complaints:false },
   kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
 };
 state.activeStudentId = state.data.students[0]?.id || null;
@@ -1536,14 +1551,47 @@ function kbSelectOptions(list, value){
   return [empty].concat(list.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`)).join('');
 }
 
-// Multi-select as a wrap of toggle chips (same visual language as the
-// "Жалобы" chips in Голосовой анамнез) — used for fields where a student
-// can have more than one value (Цель обучения, Жанр).
-function kbChipMultiField(fieldKey, options, values){
+// Exposed dropdown menu, multi-select (Material-style): the field itself is
+// a compact text-field-looking control that shows the *selected* values as
+// small chip tags right inside it (nothing when empty, just a placeholder).
+// Clicking it drops a vertical list below with a checkbox per option;
+// checking/unchecking toggles that value immediately and the list stays
+// open for picking several. Any click outside collapses it back down to
+// just the field with its chips. Used for every field where a student can
+// genuinely have more than one value at once (Цель обучения, Жанр, Жалобы).
+function kbMultiControl(fieldKey, options, selected, warn){
+  const open = !!state.kabinetMultiOpen[fieldKey];
+  const chipCls = 'kb-multi-chip-tag' + (warn ? ' warn' : '');
+  return `
+    <div class="kb-multi-wrap">
+      <button type="button" class="kb-multi-trigger" data-kb-multi-toggle="${fieldKey}">
+        ${selected.length
+          ? `<span class="kb-multi-chips">${selected.map(v=>`<span class="${chipCls}">${v}</span>`).join('')}</span>`
+          : `<span class="kb-multi-placeholder">— выбрать —</span>`}
+        <span class="kb-multi-caret">${open?'▴':'▾'}</span>
+      </button>
+      ${open ? `
+      <div class="kb-multi-dropdown">
+        ${options.map(o=>{
+          const checked = selected.indexOf(o)>=0;
+          return `<button type="button" class="kb-multi-option" data-kb-multi="${fieldKey}" data-kb-value="${o}">
+            <span class="kb-multi-checkbox${checked?' on':''}"></span>
+            <span class="kb-multi-option-label">${o}</span>
+          </button>`;
+        }).join('')}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function kbMultiFieldBox(label, fieldKey, options, values){
   const selected = Array.isArray(values) ? values : [];
-  return `<div class="kb-chip-row" style="margin-top:4px;">
-    ${options.map(o=>`<button type="button" class="kb-chip${selected.indexOf(o)>=0?' on':''}" data-kb-multi="${fieldKey}" data-kb-value="${o}">${o}</button>`).join('')}
-  </div>`;
+  return `
+    <div class="kb-card kb-multi-field">
+      <label>${label}</label>
+      ${kbMultiControl(fieldKey, options, selected)}
+    </div>
+  `;
 }
 
 function kbNeutralStructures(){
@@ -1648,14 +1696,8 @@ function paintKabinet(s){
         <select class="kb-select" data-kb-field="voiceType">${kbSelectOptions(KB_OPTS.voiceType, intake.voiceType)}</select>
         <div class="kb-card-note">оценка педагога, не поле из бота</div>
       </div>
-      <div class="kb-card span2">
-        <label>Цель обучения</label>
-        ${kbChipMultiField('goals', KB_OPTS.goal, intake.goals)}
-      </div>
-      <div class="kb-card span2">
-        <label>Жанр</label>
-        ${kbChipMultiField('genres', KB_OPTS.genre, intake.genres)}
-      </div>
+      ${kbMultiFieldBox('Цель обучения', 'goals', KB_OPTS.goal, intake.goals)}
+      ${kbMultiFieldBox('Жанр', 'genres', KB_OPTS.genre, intake.genres)}
       <div class="kb-card">
         <label>Опыт пения до меня</label>
         <select class="kb-select" data-kb-field="experienceLevel">${kbSelectOptions(KB_OPTS.experienceLevel, intake.experienceLevel)}</select>
@@ -1738,9 +1780,7 @@ function paintKabinet(s){
     <div class="kb-anamnesis-box">
       <div>
         <div class="kb-block-title">Жалобы</div>
-        <div class="kb-chip-row">
-          ${KB_COMPLAINTS.map(k=>`<button type="button" class="kb-chip${complaints.indexOf(k)>=0?' on warn':''}" data-kb-complaint="${k}">${k}</button>`).join('')}
-        </div>
+        ${kbMultiControl('complaints', KB_COMPLAINTS, complaints, true)}
       </div>
       <div class="kb-subgrid">
         <div class="kb-subcard"><label>Длительность симптомов</label><select class="kb-select" data-kb-field="symptomDuration">${kbSelectOptions(KB_OPTS.duration, intake.symptomDuration)}</select></div>
@@ -1958,19 +1998,10 @@ function wireKabinetHandlers(s){
   const compareBtn = c.querySelector('[data-kb-compare-toggle]');
   if(compareBtn) compareBtn.onclick = ()=>{ state.kabinetCompareOpen = !state.kabinetCompareOpen; paintKabinet(s); };
 
-  c.querySelectorAll('[data-kb-complaint]').forEach(el=>{
-    el.onclick = ()=>{
-      const cache = kbCache(s);
-      const cur = cache.intake.complaints || [];
-      const k = el.dataset.kbComplaint;
-      const idx = cur.indexOf(k);
-      const next = idx>=0 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([k]);
-      saveKabinet(s, {complaints: next});
-    };
-  });
 
   c.querySelectorAll('[data-kb-multi]').forEach(el=>{
-    el.onclick = ()=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
       const cache = kbCache(s);
       const key = el.dataset.kbMulti;
       const cur = cache.intake[key] || [];
@@ -1980,6 +2011,18 @@ function wireKabinetHandlers(s){
       saveKabinet(s, {[key]: next});
     };
   });
+
+  c.querySelectorAll('[data-kb-multi-toggle]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.kbMultiToggle;
+      const wasOpen = state.kabinetMultiOpen[key];
+      Object.keys(state.kabinetMultiOpen).forEach(k=>{ state.kabinetMultiOpen[k] = false; });
+      state.kabinetMultiOpen[key] = !wasOpen;
+      paintKabinet(s);
+    };
+  });
+
 
   const resetBtn = c.querySelector('[data-kb-reset-structures]');
   if(resetBtn) resetBtn.onclick = ()=> saveKabinet(s, {structures: kbNeutralStructures()});
@@ -2192,6 +2235,15 @@ function kbTeardownRecorder(){
   if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; }
   rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
 }
+
+// Close an open Цель обучения / Жанр popover on any click outside it.
+document.addEventListener('click', ()=>{
+  const anyOpen = Object.keys(state.kabinetMultiOpen).some(k=>state.kabinetMultiOpen[k]);
+  if(!anyOpen) return;
+  Object.keys(state.kabinetMultiOpen).forEach(k=>{ state.kabinetMultiOpen[k] = false; });
+  const s = state.data.students.find(x=>x.id===state.activeStudentId);
+  if(s && state.activeTab==='profile') paintKabinet(s);
+});
 
 render();
 syncStudentsFromServer();
