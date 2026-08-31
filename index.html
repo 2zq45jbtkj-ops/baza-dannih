@@ -227,6 +227,7 @@ body.dark .kb-summary-desc{color:#B8ADA1;}
 .kb-multi-placeholder{font-size:16px;font-weight:400;color:#B8ADA1;}
 .kb-multi-caret{font-size:10px;color:var(--muted);flex-shrink:0;margin-top:4px;}
 .kb-multi-dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,0.16);padding:6px;width:280px;max-width:min(360px,85vw);max-height:280px;overflow-y:auto;}
+.kb-dict-dropdown{position:absolute;left:8px;right:8px;top:100%;z-index:30;margin-top:6px;max-height:268px;overflow:auto;background:#fff;border:1px solid #E4DCD1;border-radius:12px;box-shadow:0 12px 28px rgba(35,32,29,0.16);padding:6px;display:flex;flex-direction:column;}
 .kb-multi-option{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left;font-family:inherit;font-size:14px;color:var(--text);}
 .kb-multi-option:hover{background:var(--bg);}
 .kb-multi-checkbox{width:16px;height:16px;flex-shrink:0;border-radius:4px;border:1.5px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;}
@@ -1508,6 +1509,19 @@ const KB_OPTS = {
 
 const KB_COMPLAINTS = ['Хрипота','Усталость голоса','Потеря диапазона','Срывы','Ком в горле','Боль после нагрузки'];
 
+// Справочник — общий (не per-student) список вариантов для Цель обучения/
+// Жанр: core приходит из KB_OPTS выше и не меняется; pinned/added накапливает
+// преподаватель и хранится в Postgres (таблица field_dicts), общий для всех
+// учеников. Загружается один раз при первом заходе на вкладку Кабинет.
+state.kbDicts = {
+  goals: { core: KB_OPTS.goal.slice(), pinned: [], added: [] },
+  genres: { core: KB_OPTS.genre.slice(), pinned: [], added: [] }
+};
+state.kbDictsLoaded = false;
+// Один общий "открытый справочник" за раз — так же, как в исходном
+// dc.html-компоненте (там тоже одно общее dd-состояние на все поля).
+state.kabinetDictDD = { openKey: null, adding: false, draft: '', error: '', confirm: null };
+
 const KB_STRUCTURES = [
   { key:'tvf_onset', label:'Голосовые складки — атака', hint:'атака и снятие звука', options:['одновременная','глоттальная','аспирированная'], neutral:'одновременная' },
   { key:'tvf_body', label:'Голосовые складки — масса', hint:'толщина и упругость', options:['тонкие','толстые','жёсткие','вялые'], neutral:'тонкие' },
@@ -1594,6 +1608,143 @@ function kbMultiFieldBox(label, fieldKey, options, values){
   `;
 }
 
+// The real "Справочник" component from Справочник.dc.html — pin-to-main
+// ("основное" badge), inline add-your-own with ✓/✕, two-step delete confirm.
+// Ported verbatim from the mockup's dictField()/commitDict() logic, with one
+// deliberate change: onSelect toggles membership in an array and leaves the
+// dropdown open, instead of setting a single value and closing — because
+// Цель обучения/Жанр are multi-select here, not single-select like the
+// mockup's original use of this component.
+function kbDictRows(fieldKey){
+  const d = state.kbDicts[fieldKey];
+  return d.core.map(l=>({label:l, kind:'core'}))
+    .concat(d.pinned.map(l=>({label:l, kind:'pinned'})))
+    .concat(d.added.map(l=>({label:l, kind:'added'})));
+}
+
+function kbSpravochnikField(label, fieldKey, values){
+  const selected = Array.isArray(values) ? values : [];
+  const dd = state.kabinetDictDD;
+  const isAdding = dd.openKey === fieldKey && dd.adding;
+  const isOpen = dd.openKey === fieldKey && !dd.adding;
+
+  const valueHtml = selected.length
+    ? `<span class="kb-multi-chips">${selected.map(v=>`<span class="kb-multi-chip-tag">${v}</span>`).join('')}</span>`
+    : `<span class="kb-multi-placeholder">— выбрать —</span>`;
+
+  const addingHtml = `
+    <div style="margin-top:6px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="text" class="kb-dict-draft" data-kb-dict-draft="${fieldKey}" placeholder="Введите свой вариант" value="${dd.draft||''}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #D9CFC2;border-radius:9px;background:#fff;font-size:14px;font-weight:600;color:#23201D;">
+        <button type="button" data-kb-dict-commit="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:none;background:#4E7047;color:#fff;font-size:14px;cursor:pointer;">✓</button>
+        <button type="button" data-kb-dict-cancel-add="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:1px solid #E4DCD1;background:#fff;color:#8A8076;font-size:13px;cursor:pointer;">✕</button>
+      </div>
+      ${dd.error && dd.openKey===fieldKey ? `<div style="font-size:12px;color:#A8452C;margin-top:5px;">${dd.error}</div>` : ''}
+    </div>
+  `;
+
+  const triggerHtml = `
+    <button type="button" class="kb-multi-trigger" data-kb-dict-toggle="${fieldKey}">
+      ${valueHtml}
+      <span class="kb-multi-caret">${isOpen?'▲':'▼'}</span>
+    </button>
+  `;
+
+  const rows = kbDictRows(fieldKey);
+  const dropdownHtml = `
+    <div class="kb-dict-dropdown">
+      ${rows.map(r=>{
+        const confirming = dd.confirm === fieldKey + '::' + r.label;
+        if(confirming){
+          const inUse = selected.indexOf(r.label) >= 0;
+          return `
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="flex:1;padding:8px 10px;background:#F6EAE5;border-radius:9px;">
+              <div style="font-size:12.5px;color:#A8452C;font-weight:600;line-height:1.35;">${inUse ? 'Удалить «'+r.label+'»? Значение стоит в карточке — оно останется там обычным текстом.' : 'Удалить «'+r.label+'» из справочника?'}</div>
+              <div style="display:flex;gap:6px;margin-top:7px;">
+                <button type="button" data-kb-dict-delete-confirm="${fieldKey}" data-kb-value="${r.label}" style="padding:6px 12px;border-radius:8px;border:none;background:#A8452C;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;">Удалить</button>
+                <button type="button" data-kb-dict-delete-cancel="${fieldKey}" style="padding:6px 12px;border-radius:8px;border:1px solid #E0CDC4;background:#fff;color:#8A8076;font-size:12.5px;font-weight:700;cursor:pointer;">Отмена</button>
+              </div>
+            </div>
+          </div>`;
+        }
+        const isSelected = selected.indexOf(r.label) >= 0;
+        const rowStyle = 'display:flex;align-items:center;justify-content:space-between;gap:10px;flex:1;min-width:0;padding:9px 10px;border:none;border-radius:9px;cursor:pointer;text-align:left;font-size:14px;background:'
+          + (isSelected?'#F1EDE5':'transparent') + ';color:#23201D;font-weight:' + (isSelected?'700':'600') + ';';
+        const pinStyle = 'width:28px;height:28px;flex:none;border-radius:8px;border:none;background:none;cursor:pointer;font-size:13px;color:' + (r.kind==='pinned' ? '#A8452C' : '#C0B4A6') + ';';
+        return `
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button type="button" data-kb-dict-select="${fieldKey}" data-kb-value="${r.label}" style="${rowStyle}">
+            <span>${r.label}</span>
+            ${r.kind==='core' ? `<span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#C0B4A6;">основное</span>` : ''}
+          </button>
+          ${r.kind!=='core' ? `<button type="button" data-kb-dict-pin="${fieldKey}" data-kb-value="${r.label}" title="${r.kind==='pinned'?'Открепить':'Закрепить в основных'}" style="${pinStyle}">${r.kind==='pinned'?'★':'☆'}</button>` : ''}
+          ${r.kind!=='core' ? `<button type="button" data-kb-dict-delete-ask="${fieldKey}" data-kb-value="${r.label}" title="Удалить вариант" style="width:28px;height:28px;flex:none;border-radius:8px;border:none;background:none;color:#C0B4A6;font-size:13px;cursor:pointer;">✕</button>` : ''}
+        </div>`;
+      }).join('')}
+      <div style="height:1px;background:#EFE7DC;margin:6px 4px;"></div>
+      <button type="button" data-kb-dict-start-add="${fieldKey}" style="padding:9px 10px;border:none;background:none;border-radius:9px;color:#A8452C;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;">+ Добавить свой вариант</button>
+    </div>
+  `;
+
+  return `
+    <div class="kb-card kb-multi-field">
+      <label>${label}</label>
+      ${isAdding ? addingHtml : triggerHtml}
+      ${isOpen ? dropdownHtml : ''}
+    </div>
+  `;
+}
+
+function kbCommitDictAdd(fieldKey, s){
+  const dd = state.kabinetDictDD;
+  const raw = (dd.draft || '').trim();
+  if(!raw){ state.kabinetDictDD = Object.assign({}, dd, {error:'Пустое значение добавить нельзя.'}); paintKabinet(s); return; }
+  const d = state.kbDicts[fieldKey];
+  const all = d.core.concat(d.pinned, d.added);
+  if(all.some(x=>x.toLowerCase()===raw.toLowerCase())){
+    state.kabinetDictDD = Object.assign({}, dd, {error:'Такой вариант уже есть в списке.'});
+    paintKabinet(s);
+    return;
+  }
+  const nextDict = { core: d.core, pinned: d.pinned, added: d.added.concat([raw]) };
+  state.kbDicts[fieldKey] = nextDict;
+  state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+  saveFieldDict(fieldKey, nextDict);
+  const cache = kbCache(s);
+  const cur = cache.intake[fieldKey] || [];
+  if(cur.indexOf(raw) === -1){
+    saveKabinet(s, {[fieldKey]: cur.concat([raw])});
+  } else {
+    paintKabinet(s);
+  }
+}
+
+function kbTogglePin(fieldKey, label, s){
+  const d = state.kbDicts[fieldKey];
+  const isPinned = d.pinned.indexOf(label) >= 0;
+  const next = isPinned
+    ? { core: d.core, pinned: d.pinned.filter(x=>x!==label), added: d.added.concat([label]) }
+    : { core: d.core, pinned: d.pinned.concat([label]), added: d.added.filter(x=>x!==label) };
+  state.kbDicts[fieldKey] = next;
+  saveFieldDict(fieldKey, next);
+  paintKabinet(s);
+}
+
+function kbDeleteDictOption(fieldKey, label, s){
+  const d = state.kbDicts[fieldKey];
+  const next = { core: d.core, pinned: d.pinned.filter(x=>x!==label), added: d.added.filter(x=>x!==label) };
+  state.kbDicts[fieldKey] = next;
+  state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm:null});
+  saveFieldDict(fieldKey, next);
+  paintKabinet(s);
+}
+
+function saveFieldDict(fieldKey, dict){
+  apiSend('/api/dicts', 'POST', { fieldKey, pinned: dict.pinned, added: dict.added })
+    .catch(err=>{ alert('Не удалось сохранить справочник: ' + (err.message||err)); });
+}
+
 function kbNeutralStructures(){
   const out = {};
   KB_STRUCTURES.forEach(st=>{ out[st.key] = st.neutral; });
@@ -1622,16 +1773,28 @@ function kbSection(key, label, hint, extraBtnsHtml){
 
 function renderKabinet(s){
   const c = document.getElementById('tabContent');
-  if(state.kabinetCache[s.id]){ paintKabinet(s); return; }
+  const needDicts = !state.kbDictsLoaded;
+  if(state.kabinetCache[s.id] && !needDicts){ paintKabinet(s); return; }
   c.innerHTML = `<div class="kb-loading">Загружаю анкету…</div>`;
-  Promise.all([
-    apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
-    apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
-  ]).then(([intakeRes, lessonsRes])=>{
+  const cached = state.kabinetCache[s.id];
+  const tasks = [
+    cached ? Promise.resolve({intake: cached.intake}) : apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
+    cached ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
+  ];
+  if(needDicts) tasks.push(apiGet('/api/dicts'));
+  Promise.all(tasks).then(([intakeRes, lessonsRes, dictsRes])=>{
     state.kabinetCache[s.id] = {
       intake: (intakeRes && intakeRes.intake) || {},
       lessons: (lessonsRes && lessonsRes.lessons) || []
     };
+    if(needDicts){
+      const server = (dictsRes && dictsRes.dicts) || {};
+      Object.keys(state.kbDicts).forEach(k=>{
+        const row = server[k];
+        if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]});
+      });
+      state.kbDictsLoaded = true;
+    }
     paintKabinet(s);
   }).catch(err=>{
     c.innerHTML = `<div class="card-error">Не удалось загрузить анкету: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`;
@@ -1696,8 +1859,8 @@ function paintKabinet(s){
         <select class="kb-select" data-kb-field="voiceType">${kbSelectOptions(KB_OPTS.voiceType, intake.voiceType)}</select>
         <div class="kb-card-note">оценка педагога, не поле из бота</div>
       </div>
-      ${kbMultiFieldBox('Цель обучения', 'goals', KB_OPTS.goal, intake.goals)}
-      ${kbMultiFieldBox('Жанр', 'genres', KB_OPTS.genre, intake.genres)}
+      ${kbSpravochnikField('Цель обучения', 'goals', intake.goals)}
+      ${kbSpravochnikField('Жанр', 'genres', intake.genres)}
       <div class="kb-card">
         <label>Опыт пения до меня</label>
         <select class="kb-select" data-kb-field="experienceLevel">${kbSelectOptions(KB_OPTS.experienceLevel, intake.experienceLevel)}</select>
@@ -2023,6 +2186,89 @@ function wireKabinetHandlers(s){
     };
   });
 
+  // Справочник (Цель обучения / Жанр): open/close, select-toggle, pin,
+  // delete-with-confirm, inline add-your-own.
+  c.querySelectorAll('[data-kb-dict-toggle]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.kbDictToggle;
+      const dd = state.kabinetDictDD;
+      const wasOpen = dd.openKey === key && !dd.adding;
+      state.kabinetDictDD = { openKey: wasOpen ? null : key, adding:false, draft:'', error:'', confirm:null };
+      paintKabinet(s);
+    };
+  });
+
+  c.querySelectorAll('[data-kb-dict-select]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.kbDictSelect;
+      const label = el.dataset.kbValue;
+      const cache = kbCache(s);
+      const cur = cache.intake[key] || [];
+      const idx = cur.indexOf(label);
+      const next = idx>=0 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([label]);
+      saveKabinet(s, {[key]: next});
+    };
+  });
+
+  c.querySelectorAll('[data-kb-dict-pin]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      kbTogglePin(el.dataset.kbDictPin, el.dataset.kbValue, s);
+    };
+  });
+
+  c.querySelectorAll('[data-kb-dict-delete-ask]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm: el.dataset.kbDictDeleteAsk + '::' + el.dataset.kbValue});
+      paintKabinet(s);
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-delete-cancel]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm:null});
+      paintKabinet(s);
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-delete-confirm]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      kbDeleteDictOption(el.dataset.kbDictDeleteConfirm, el.dataset.kbValue, s);
+    };
+  });
+
+  c.querySelectorAll('[data-kb-dict-start-add]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      state.kabinetDictDD = { openKey: el.dataset.kbDictStartAdd, adding:true, draft:'', error:'', confirm:null };
+      paintKabinet(s);
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-cancel-add]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+      paintKabinet(s);
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-draft]').forEach(el=>{
+    el.onclick = (e)=> e.stopPropagation();
+    el.oninput = ()=>{ state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {draft: el.value, error:''}); };
+    el.onkeydown = (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); kbCommitDictAdd(el.dataset.kbDictDraft, s); }
+      if(e.key === 'Escape'){ state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null }; paintKabinet(s); }
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-commit]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      kbCommitDictAdd(el.dataset.kbDictCommit, s);
+    };
+  });
+
 
   const resetBtn = c.querySelector('[data-kb-reset-structures]');
   if(resetBtn) resetBtn.onclick = ()=> saveKabinet(s, {structures: kbNeutralStructures()});
@@ -2236,11 +2482,14 @@ function kbTeardownRecorder(){
   rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
 }
 
-// Close an open Цель обучения / Жанр popover on any click outside it.
+// Close an open Жалобы popover, or an open Справочник dropdown
+// (Цель обучения / Жанр), on any click outside it.
 document.addEventListener('click', ()=>{
-  const anyOpen = Object.keys(state.kabinetMultiOpen).some(k=>state.kabinetMultiOpen[k]);
-  if(!anyOpen) return;
+  const anyMultiOpen = Object.keys(state.kabinetMultiOpen).some(k=>state.kabinetMultiOpen[k]);
+  const anyDictOpen = !!state.kabinetDictDD.openKey;
+  if(!anyMultiOpen && !anyDictOpen) return;
   Object.keys(state.kabinetMultiOpen).forEach(k=>{ state.kabinetMultiOpen[k] = false; });
+  state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
   const s = state.data.students.find(x=>x.id===state.activeStudentId);
   if(s && state.activeTab==='profile') paintKabinet(s);
 });
