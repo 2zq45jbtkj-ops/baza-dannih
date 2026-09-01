@@ -220,20 +220,13 @@ body.dark .kb-summary-desc{color:#B8ADA1;}
 .kb-card label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;margin-bottom:5px;}
 .kb-card-note{font-size:12px;color:var(--muted);margin-top:3px;}
 .kb-multi-field{position:relative;}
-.kb-multi-wrap{position:relative;margin-top:4px;}
+.kb-dict-wrap{position:relative;}
 .kb-multi-trigger{width:100%;min-height:26px;border:none;background:none;padding:0;font-family:inherit;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;text-align:left;}
 .kb-multi-chips{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0;}
 .kb-multi-chip-tag{display:inline-block;padding:3px 9px;border-radius:7px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--text);line-height:1.3;}
-.kb-multi-chip-tag.warn{background:#F6EAE5;border-color:#E8CFC5;color:var(--terracotta-dark);}
 .kb-multi-placeholder{font-size:16px;font-weight:400;color:#B8ADA1;}
 .kb-multi-caret{font-size:10px;color:var(--muted);flex-shrink:0;margin-top:4px;}
-.kb-multi-dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,0.16);padding:6px;width:280px;max-width:min(360px,85vw);max-height:280px;overflow-y:auto;}
 .kb-dict-dropdown{position:absolute;left:8px;right:8px;top:100%;z-index:30;margin-top:6px;max-height:268px;overflow:auto;background:#fff;border:1px solid #E4DCD1;border-radius:12px;box-shadow:0 12px 28px rgba(35,32,29,0.16);padding:6px;display:flex;flex-direction:column;}
-.kb-multi-option{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left;font-family:inherit;font-size:14px;color:var(--text);}
-.kb-multi-option:hover{background:var(--bg);}
-.kb-multi-checkbox{width:16px;height:16px;flex-shrink:0;border-radius:4px;border:1.5px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;}
-.kb-multi-checkbox.on{background:var(--terracotta-dark);border-color:var(--terracotta-dark);position:relative;}
-.kb-multi-checkbox.on::after{content:'✓';color:#fff;font-size:11px;font-weight:700;line-height:1;}
 .kb-select,.kb-input,.kb-textarea{width:100%;border:none;background:none;font-size:16px;font-weight:600;color:var(--text);font-family:inherit;padding:0;appearance:none;cursor:pointer;}
 .kb-input,.kb-textarea{cursor:text;}
 .kb-textarea{resize:vertical;min-height:44px;line-height:1.45;}
@@ -461,7 +454,6 @@ const state = {
   kabinetCompareOpen: false,
   kabinetSaveSeq: {},
   kabinetSaveChain: {},
-  kabinetMultiOpen: { goals:false, genres:false, complaints:false },
   kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
 };
 state.activeStudentId = state.data.students[0]?.id || null;
@@ -1509,17 +1501,30 @@ const KB_OPTS = {
   breath: ['Клавикулярное','Грудное','Смешанное','Опора (апподжо)']
 };
 
-const KB_COMPLAINTS = ['Хрипота','Усталость голоса','Потеря диапазона','Срывы','Ком в горле','Боль после нагрузки'];
+const KB_COMPLAINTS = [
+  'Хрипота','Усталость голоса','Потеря диапазона','Срывы / трещины голоса','Ком в горле',
+  'Боль после нагрузки','Придыхательность','Зажатость в горле','Голос садится к вечеру',
+  'Осиплость по утрам','Дрожь голоса','Изжога / рефлюкс','Боль при глотании',
+  'Частое прочищение горла','Одышка при пении','Быстрая усталость на высоких нотах'
+];
 
-// Справочник — общий (не per-student) список вариантов для Цель обучения/
-// Жанр: core приходит из KB_OPTS выше и не меняется; pinned/added накапливает
+// Справочник — общий (не per-student) список вариантов для полей, где
+// студент может выбрать несколько значений и добавить свой вариант (Цель
+// обучения, Жанр, Возраст, Тип голоса на слух, Жалобы). core приходит из
+// KB_OPTS/KB_COMPLAINTS и не меняется; pinned/added накапливает
 // преподаватель и хранится в Postgres (таблица field_dicts), общий для всех
 // учеников. Загружается один раз при первом заходе на вкладку Кабинет.
+//
+// Стандарт проекта: любое новое поле в Кабинете, где ученик может иметь
+// несколько значений из списка + добавлять свои варианты, должно
+// использовать этот же компонент (kbSpravochnikField / kbDictRows /
+// kbCommitDictAdd и т.д.) — не изобретать отдельный UI.
 state.kbDicts = {
   goals: { core: KB_OPTS.goal.slice(), pinned: [], added: [] },
   genres: { core: KB_OPTS.genre.slice(), pinned: [], added: [] },
   age: { core: KB_OPTS.age.slice(), pinned: [], added: [] },
-  voiceType: { core: KB_OPTS.voiceType.slice(), pinned: [], added: [] }
+  voiceType: { core: KB_OPTS.voiceType.slice(), pinned: [], added: [] },
+  complaints: { core: KB_COMPLAINTS.slice(), pinned: [], added: [] }
 };
 state.kbDictsLoaded = false;
 // Один общий "открытый справочник" за раз — так же, как в исходном
@@ -1569,49 +1574,6 @@ function kbSelectOptions(list, value){
   return [empty].concat(list.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`)).join('');
 }
 
-// Exposed dropdown menu, multi-select (Material-style): the field itself is
-// a compact text-field-looking control that shows the *selected* values as
-// small chip tags right inside it (nothing when empty, just a placeholder).
-// Clicking it drops a vertical list below with a checkbox per option;
-// checking/unchecking toggles that value immediately and the list stays
-// open for picking several. Any click outside collapses it back down to
-// just the field with its chips. Used for every field where a student can
-// genuinely have more than one value at once (Цель обучения, Жанр, Жалобы).
-function kbMultiControl(fieldKey, options, selected, warn){
-  const open = !!state.kabinetMultiOpen[fieldKey];
-  const chipCls = 'kb-multi-chip-tag' + (warn ? ' warn' : '');
-  return `
-    <div class="kb-multi-wrap">
-      <button type="button" class="kb-multi-trigger" data-kb-multi-toggle="${fieldKey}">
-        ${selected.length
-          ? `<span class="kb-multi-chips">${selected.map(v=>`<span class="${chipCls}">${v}</span>`).join('')}</span>`
-          : `<span class="kb-multi-placeholder">— выбрать —</span>`}
-        <span class="kb-multi-caret">${open?'▴':'▾'}</span>
-      </button>
-      ${open ? `
-      <div class="kb-multi-dropdown">
-        ${options.map(o=>{
-          const checked = selected.indexOf(o)>=0;
-          return `<button type="button" class="kb-multi-option" data-kb-multi="${fieldKey}" data-kb-value="${o}">
-            <span class="kb-multi-checkbox${checked?' on':''}"></span>
-            <span class="kb-multi-option-label">${o}</span>
-          </button>`;
-        }).join('')}
-      </div>` : ''}
-    </div>
-  `;
-}
-
-function kbMultiFieldBox(label, fieldKey, options, values){
-  const selected = Array.isArray(values) ? values : [];
-  return `
-    <div class="kb-card kb-multi-field">
-      <label>${label}</label>
-      ${kbMultiControl(fieldKey, options, selected)}
-    </div>
-  `;
-}
-
 // The real "Справочник" component from Справочник.dc.html — pin-to-main
 // ("основное" badge), inline add-your-own with ✓/✕, two-step delete confirm.
 // Ported verbatim from the mockup's dictField()/commitDict() logic, with one
@@ -1646,7 +1608,11 @@ function kbDictAddingHtml(fieldKey){
   `;
 }
 
-function kbSpravochnikField(label, fieldKey, values){
+// Core control only (trigger + dropdown), no card/label wrapper — reusable
+// both inside a .kb-card grid cell (kbSpravochnikField below) and inside a
+// custom container that has its own label styling (e.g. Жалобы's
+// .kb-block-title inside .kb-anamnesis-box).
+function kbSpravochnikControl(fieldKey, values){
   const selected = Array.isArray(values) ? values : [];
   const dd = state.kabinetDictDD;
   const isAdding = dd.openKey === fieldKey && dd.adding;
@@ -1703,10 +1669,21 @@ function kbSpravochnikField(label, fieldKey, values){
   `;
 
   return `
-    <div class="kb-card kb-multi-field">
-      <label>${label}</label>
+    <div class="kb-dict-wrap">
       ${isAdding ? addingHtml : triggerHtml}
       ${isOpen ? dropdownHtml : ''}
+    </div>
+  `;
+}
+
+// Standard multi-select Справочник field, wrapped in a .kb-card with its
+// own label — use this for any new "pick several from a list + add your
+// own" field inside the ОБЩЕЕ-style grid layout.
+function kbSpravochnikField(label, fieldKey, values){
+  return `
+    <div class="kb-card kb-multi-field">
+      <label>${label}</label>
+      ${kbSpravochnikControl(fieldKey, values)}
     </div>
   `;
 }
@@ -2021,7 +1998,7 @@ function paintKabinet(s){
     <div class="kb-anamnesis-box">
       <div>
         <div class="kb-block-title">Жалобы</div>
-        ${kbMultiControl('complaints', KB_COMPLAINTS, complaints, true)}
+        ${kbSpravochnikControl('complaints', complaints)}
       </div>
       <div class="kb-subgrid">
         <div class="kb-subcard"><label>Длительность симптомов</label><select class="kb-select" data-kb-field="symptomDuration">${kbSelectOptions(KB_OPTS.duration, intake.symptomDuration)}</select></div>
@@ -2245,29 +2222,6 @@ function wireKabinetHandlers(s){
   if(compareBtn) compareBtn.onclick = ()=>{ state.kabinetCompareOpen = !state.kabinetCompareOpen; paintKabinet(s); };
 
 
-  c.querySelectorAll('[data-kb-multi]').forEach(el=>{
-    el.onclick = (e)=>{
-      e.stopPropagation();
-      const cache = kbCache(s);
-      const key = el.dataset.kbMulti;
-      const cur = cache.intake[key] || [];
-      const v = el.dataset.kbValue;
-      const idx = cur.indexOf(v);
-      const next = idx>=0 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([v]);
-      saveKabinet(s, {[key]: next});
-    };
-  });
-
-  c.querySelectorAll('[data-kb-multi-toggle]').forEach(el=>{
-    el.onclick = (e)=>{
-      e.stopPropagation();
-      const key = el.dataset.kbMultiToggle;
-      const wasOpen = state.kabinetMultiOpen[key];
-      Object.keys(state.kabinetMultiOpen).forEach(k=>{ state.kabinetMultiOpen[k] = false; });
-      state.kabinetMultiOpen[key] = !wasOpen;
-      paintKabinet(s);
-    };
-  });
 
   // Справочник (Цель обучения / Жанр): open/close, select-toggle, pin,
   // delete-with-confirm, inline add-your-own.
@@ -2575,13 +2529,11 @@ function kbTeardownRecorder(){
   rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
 }
 
-// Close an open Жалобы popover, or an open Справочник dropdown
-// (Цель обучения / Жанр), on any click outside it.
+// Close an open Справочник dropdown (Цель обучения / Жанр / Возраст /
+// Тип голоса на слух / Жалобы / any future field using this component)
+// on any click outside it.
 document.addEventListener('click', ()=>{
-  const anyMultiOpen = Object.keys(state.kabinetMultiOpen).some(k=>state.kabinetMultiOpen[k]);
-  const anyDictOpen = !!state.kabinetDictDD.openKey;
-  if(!anyMultiOpen && !anyDictOpen) return;
-  Object.keys(state.kabinetMultiOpen).forEach(k=>{ state.kabinetMultiOpen[k] = false; });
+  if(!state.kabinetDictDD.openKey) return;
   state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
   const s = state.data.students.find(x=>x.id===state.activeStudentId);
   if(s && state.activeTab==='profile') paintKabinet(s);
