@@ -1948,14 +1948,14 @@ function paintKabinet(s){
       ${kbSpravochnikSingleField('Возраст', 'age', intake.age!=null ? String(intake.age) : '')}
       ${kbSpravochnikSingleField('Тип голоса на слух', 'voiceType', intake.voiceType, '<div class="kb-card-note">оценка педагога, не поле из бота</div>')}
       ${kbSpravochnikField('Цель обучения', 'goals', intake.goals)}
-      ${kbSpravochnikField('Жанр', 'genres', intake.genres)}
       <div class="kb-card">
         <label>Опыт пения до меня</label>
         <select class="kb-select" data-kb-field="experienceLevel">${kbSelectOptions(KB_OPTS.experienceLevel, intake.experienceLevel)}</select>
       </div>
+      ${kbSpravochnikField('Жанр', 'genres', intake.genres)}
       <div class="kb-card span2">
-        <label>На чём застряла</label>
-        <textarea class="kb-textarea" rows="2" data-kb-field="stuckNote" placeholder="коротко: где предел и в чём затык">${intake.stuckNote||''}</textarea>
+        <label>Репертуар</label>
+        <textarea class="kb-textarea" rows="2" data-kb-field="repertoire" placeholder="какие песни и артисты хочет разбирать">${intake.repertoire||''}</textarea>
       </div>
       <div class="kb-grid-row3">
         <div class="kb-card">
