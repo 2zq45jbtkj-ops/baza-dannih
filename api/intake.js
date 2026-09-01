@@ -55,6 +55,10 @@ function rowToJson(row) {
     goals: row.goals || [],
     genres: row.genres || [],
 
+    // Заменяет старое поле "На чём застряла" (stuckNote/stuck_note остаётся
+    // в базе нетронутым, просто больше не показывается в Кабинете)
+    repertoire: row.repertoire,
+
     updatedAt: row.updated_at
   };
 }
@@ -125,7 +129,8 @@ module.exports = async (req, res) => {
         /* 44 */ b.metallicPercent === undefined || b.metallicPercent === null || b.metallicPercent === '' ? 32 : Number(b.metallicPercent),
         /* 45 */ JSON.stringify(Array.isArray(b.referenceTakes) ? b.referenceTakes : []),
         /* 46 */ Array.isArray(b.goals) ? b.goals : [],
-        /* 47 */ Array.isArray(b.genres) ? b.genres : []
+        /* 47 */ Array.isArray(b.genres) ? b.genres : [],
+        /* 48 */ b.repertoire || null
       ];
 
       const r = await query(
@@ -139,7 +144,7 @@ module.exports = async (req, res) => {
            baseline_range_low, baseline_range_high, baseline_tess_low, baseline_tess_high, baseline_register_break,
            lar_status, diagnosis, alcohol, pms_factor,
            structures, qualities, modes, anchors, metallic_percent, reference_takes,
-           goals, genres,
+           goals, genres, repertoire,
            updated_at
          ) VALUES (
            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
@@ -147,7 +152,7 @@ module.exports = async (req, res) => {
            $31,$32,$33,$34,$35,
            $36,$37,$38,$39,
            $40,$41,$42,$43,$44,$45,
-           $46,$47,
+           $46,$47,$48,
            now()
          )
          ON CONFLICT (student_id) DO UPDATE SET
@@ -174,7 +179,7 @@ module.exports = async (req, res) => {
            structures = EXCLUDED.structures, qualities = EXCLUDED.qualities,
            modes = EXCLUDED.modes, anchors = EXCLUDED.anchors,
            metallic_percent = EXCLUDED.metallic_percent, reference_takes = EXCLUDED.reference_takes,
-           goals = EXCLUDED.goals, genres = EXCLUDED.genres,
+           goals = EXCLUDED.goals, genres = EXCLUDED.genres, repertoire = EXCLUDED.repertoire,
            updated_at = now()
          RETURNING *`,
         params

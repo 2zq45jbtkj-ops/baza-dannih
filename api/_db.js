@@ -126,6 +126,11 @@ async function ensureSchema(p) {
     );
   `);
 
+  // "На чём застряла" (stuck_note) заменена в Кабинете на "Репертуар" —
+  // отдельная новая колонка, старая stuck_note не трогается/не удаляется
+  // (данные там остаются на случай, если пригодятся отдельно).
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS repertoire TEXT;`);
+
   ensured = true;
 }
 
