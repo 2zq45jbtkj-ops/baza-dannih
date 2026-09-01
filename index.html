@@ -214,6 +214,7 @@ body.dark .kb-summary-desc{color:#B8ADA1;}
 .kb-ghost-btn:hover{background:var(--bg);}
 .kb-ghost-btn.active{background:#2C2724;border-color:#2C2724;color:#F7F2EB;}
 .kb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:10px;}
+.kb-grid-row3{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:10px;}
 .kb-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px;position:relative;}
 .kb-card.span2{grid-column:span 2;}
 .kb-card label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#A09488;margin-bottom:5px;}
@@ -1956,25 +1957,27 @@ function paintKabinet(s){
         <label>На чём застряла</label>
         <textarea class="kb-textarea" rows="2" data-kb-field="stuckNote" placeholder="коротко: где предел и в чём затык">${intake.stuckNote||''}</textarea>
       </div>
-      <div class="kb-card">
-        <label>Диапазон по факту</label>
-        <div class="kb-pair">
-          <select class="kb-select" data-kb-field="rangeLow">${kbSelectOptions(KB_NOTES, intake.rangeLow)}</select>
-          <select class="kb-select" data-kb-field="rangeHigh">${kbSelectOptions(KB_NOTES, intake.rangeHigh)}</select>
+      <div class="kb-grid-row3">
+        <div class="kb-card">
+          <label>Диапазон по факту</label>
+          <div class="kb-pair">
+            <select class="kb-select" data-kb-field="rangeLow">${kbSelectOptions(KB_NOTES, intake.rangeLow)}</select>
+            <select class="kb-select" data-kb-field="rangeHigh">${kbSelectOptions(KB_NOTES, intake.rangeHigh)}</select>
+          </div>
         </div>
-      </div>
-      <div class="kb-card">
-        <label>Тесситура комфорта</label>
-        <div class="kb-pair">
-          <select class="kb-select" data-kb-field="tessLow">${kbSelectOptions(KB_NOTES, intake.tessLow)}</select>
-          <select class="kb-select" data-kb-field="tessHigh">${kbSelectOptions(KB_NOTES, intake.tessHigh)}</select>
+        <div class="kb-card">
+          <label>Тесситура комфорта</label>
+          <div class="kb-pair">
+            <select class="kb-select" data-kb-field="tessLow">${kbSelectOptions(KB_NOTES, intake.tessLow)}</select>
+            <select class="kb-select" data-kb-field="tessHigh">${kbSelectOptions(KB_NOTES, intake.tessHigh)}</select>
+          </div>
         </div>
-      </div>
-      <div class="kb-card">
-        <label>Где ломается регистр</label>
-        <div class="kb-pair">
-          <select class="kb-select" data-kb-field="registerBreakLow">${kbSelectOptions(KB_NOTES, intake.registerBreakLow)}</select>
-          <select class="kb-select" data-kb-field="registerBreakHigh">${kbSelectOptions(KB_NOTES, intake.registerBreakHigh)}</select>
+        <div class="kb-card">
+          <label>Где ломается регистр</label>
+          <div class="kb-pair">
+            <select class="kb-select" data-kb-field="registerBreakLow">${kbSelectOptions(KB_NOTES, intake.registerBreakLow)}</select>
+            <select class="kb-select" data-kb-field="registerBreakHigh">${kbSelectOptions(KB_NOTES, intake.registerBreakHigh)}</select>
+          </div>
         </div>
       </div>
     </div>
