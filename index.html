@@ -1524,7 +1524,26 @@ state.kbDicts = {
   genres: { core: KB_OPTS.genre.slice(), pinned: [], added: [] },
   age: { core: KB_OPTS.age.slice(), pinned: [], added: [] },
   voiceType: { core: KB_OPTS.voiceType.slice(), pinned: [], added: [] },
-  complaints: { core: KB_COMPLAINTS.slice(), pinned: [], added: [] }
+  complaints: { core: KB_COMPLAINTS.slice(), pinned: [], added: [] },
+  // Full audit pass: every remaining single-value field in Кабинет that was
+  // still a plain native <select> also gets its own Справочник dictionary.
+  experienceLevel: { core: KB_OPTS.experienceLevel.slice(), pinned: [], added: [] },
+  rangeLow: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  rangeHigh: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  tessLow: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  tessHigh: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  registerBreakLow: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  registerBreakHigh: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  symptomDuration: { core: KB_OPTS.duration.slice(), pinned: [], added: [] },
+  larStatus: { core: KB_OPTS.lar.slice(), pinned: [], added: [] },
+  vocalLoadJob: { core: KB_OPTS.load.slice(), pinned: [], added: [] },
+  hydration: { core: KB_OPTS.hydration.slice(), pinned: [], added: [] },
+  sleep: { core: KB_OPTS.sleep.slice(), pinned: [], added: [] },
+  diagnosis: { core: KB_OPTS.diagnosis.slice(), pinned: [], added: [] },
+  smoking: { core: KB_OPTS.smoking.slice(), pinned: [], added: [] },
+  alcohol: { core: KB_OPTS.alcohol.slice(), pinned: [], added: [] },
+  pmsFactor: { core: KB_OPTS.pmsFactor.slice(), pinned: [], added: [] },
+  breathingType: { core: KB_OPTS.breath.slice(), pinned: [], added: [] }
 };
 state.kbDictsLoaded = false;
 // Один общий "открытый справочник" за раз — так же, как в исходном
@@ -1569,11 +1588,6 @@ const KB_STATE_COLORS = {
   'нет': ['#FAF7F2','#EAE2D7','#A09488']
 };
 
-function kbSelectOptions(list, value){
-  const empty = '<option value="" ' + (!value?'selected':'') + '>— выбрать —</option>';
-  return [empty].concat(list.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`)).join('');
-}
-
 // The real "Справочник" component from Справочник.dc.html — pin-to-main
 // ("основное" badge), inline add-your-own with ✓/✕, two-step delete confirm.
 // Ported verbatim from the mockup's dictField()/commitDict() logic, with one
@@ -1585,7 +1599,11 @@ function kbSelectOptions(list, value){
 // has exactly one value here, so onSelect keeps the mockup's original
 // behaviour (set the value, close the dropdown) instead of the toggle-and-
 // stay-open adaptation used for the multi-select fields above.
-const KB_SINGLE_DICT_FIELDS = new Set(['age', 'voiceType']);
+const KB_SINGLE_DICT_FIELDS = new Set([
+  'age', 'voiceType', 'experienceLevel', 'rangeLow', 'rangeHigh', 'tessLow', 'tessHigh',
+  'registerBreakLow', 'registerBreakHigh', 'symptomDuration', 'larStatus', 'vocalLoadJob',
+  'hydration', 'sleep', 'diagnosis', 'smoking', 'alcohol', 'pmsFactor', 'breathingType'
+]);
 
 function kbDictRows(fieldKey){
   const d = state.kbDicts[fieldKey];
@@ -1693,7 +1711,11 @@ function kbSpravochnikField(label, fieldKey, values){
 // clicking a row sets the value and closes the dropdown. Pin/add/delete and
 // the shared field_dicts persistence work exactly the same as the
 // multi-select version.
-function kbSpravochnikSingleField(label, fieldKey, value, noteHtml){
+// Bare single-select control (trigger + dropdown, no card/label) — reusable
+// standalone (kbSpravochnikSingleField below) or side-by-side inside a
+// .kb-pair (e.g. each note of Диапазон по факту / Тесситура / Где ломается
+// регистр is its own independent single-select field sharing one card).
+function kbSpravochnikSingleControl(fieldKey, value){
   const dd = state.kabinetDictDD;
   const isAdding = dd.openKey === fieldKey && dd.adding;
   const isOpen = dd.openKey === fieldKey && !dd.adding;
@@ -1749,10 +1771,23 @@ function kbSpravochnikSingleField(label, fieldKey, value, noteHtml){
   `;
 
   return `
-    <div class="kb-card kb-multi-field">
-      <label>${label}</label>
+    <div class="kb-dict-wrap" style="flex:1;min-width:0;">
       ${isAdding ? addingHtml : triggerHtml}
       ${isOpen ? dropdownHtml : ''}
+    </div>
+  `;
+}
+
+// Standard single-select Справочник field wrapped in its own .kb-card+label
+// — use for any standalone "pick exactly one, add your own" field.
+function kbSpravochnikSingleField(label, fieldKey, value, noteHtml){
+  const dd = state.kabinetDictDD;
+  const isAdding = dd.openKey === fieldKey && dd.adding;
+  const isOpen = dd.openKey === fieldKey && !dd.adding;
+  return `
+    <div class="kb-card kb-multi-field">
+      <label>${label}</label>
+      ${kbSpravochnikSingleControl(fieldKey, value)}
       ${!isAdding && !isOpen && noteHtml ? noteHtml : ''}
     </div>
   `;
@@ -1925,10 +1960,7 @@ function paintKabinet(s){
       ${kbSpravochnikSingleField('Возраст', 'age', intake.age!=null ? String(intake.age) : '')}
       ${kbSpravochnikSingleField('Тип голоса на слух', 'voiceType', intake.voiceType, '<div class="kb-card-note">оценка педагога, не поле из бота</div>')}
       ${kbSpravochnikField('Цель обучения', 'goals', intake.goals)}
-      <div class="kb-card">
-        <label>Опыт пения до меня</label>
-        <select class="kb-select" data-kb-field="experienceLevel">${kbSelectOptions(KB_OPTS.experienceLevel, intake.experienceLevel)}</select>
-      </div>
+      ${kbSpravochnikSingleField('Опыт пения до меня', 'experienceLevel', intake.experienceLevel)}
       ${kbSpravochnikField('Жанр', 'genres', intake.genres)}
       <div class="kb-card span2">
         <label>Репертуар</label>
@@ -1938,22 +1970,22 @@ function paintKabinet(s){
         <div class="kb-card">
           <label>Диапазон по факту</label>
           <div class="kb-pair">
-            <select class="kb-select" data-kb-field="rangeLow">${kbSelectOptions(KB_NOTES, intake.rangeLow)}</select>
-            <select class="kb-select" data-kb-field="rangeHigh">${kbSelectOptions(KB_NOTES, intake.rangeHigh)}</select>
+            ${kbSpravochnikSingleControl('rangeLow', intake.rangeLow)}
+            ${kbSpravochnikSingleControl('rangeHigh', intake.rangeHigh)}
           </div>
         </div>
         <div class="kb-card">
           <label>Тесситура комфорта</label>
           <div class="kb-pair">
-            <select class="kb-select" data-kb-field="tessLow">${kbSelectOptions(KB_NOTES, intake.tessLow)}</select>
-            <select class="kb-select" data-kb-field="tessHigh">${kbSelectOptions(KB_NOTES, intake.tessHigh)}</select>
+            ${kbSpravochnikSingleControl('tessLow', intake.tessLow)}
+            ${kbSpravochnikSingleControl('tessHigh', intake.tessHigh)}
           </div>
         </div>
         <div class="kb-card">
           <label>Где ломается регистр</label>
           <div class="kb-pair">
-            <select class="kb-select" data-kb-field="registerBreakLow">${kbSelectOptions(KB_NOTES, intake.registerBreakLow)}</select>
-            <select class="kb-select" data-kb-field="registerBreakHigh">${kbSelectOptions(KB_NOTES, intake.registerBreakHigh)}</select>
+            ${kbSpravochnikSingleControl('registerBreakLow', intake.registerBreakLow)}
+            ${kbSpravochnikSingleControl('registerBreakHigh', intake.registerBreakHigh)}
           </div>
         </div>
       </div>
@@ -2001,11 +2033,11 @@ function paintKabinet(s){
         ${kbSpravochnikControl('complaints', complaints)}
       </div>
       <div class="kb-subgrid">
-        <div class="kb-subcard"><label>Длительность симптомов</label><select class="kb-select" data-kb-field="symptomDuration">${kbSelectOptions(KB_OPTS.duration, intake.symptomDuration)}</select></div>
-        <div class="kb-subcard"><label>ЛОР / фониатр</label><select class="kb-select" data-kb-field="larStatus">${kbSelectOptions(KB_OPTS.lar, intake.larStatus)}</select></div>
-        <div class="kb-subcard"><label>Нагрузка на голос вне пения</label><select class="kb-select" data-kb-field="vocalLoadJob">${kbSelectOptions(KB_OPTS.load, intake.vocalLoadJob)}</select></div>
-        <div class="kb-subcard"><label>Гидратация</label><select class="kb-select" data-kb-field="hydration">${kbSelectOptions(KB_OPTS.hydration, intake.hydration)}</select></div>
-        <div class="kb-subcard"><label>Сон</label><select class="kb-select" data-kb-field="sleep">${kbSelectOptions(KB_OPTS.sleep, intake.sleep)}</select></div>
+        <div class="kb-subcard"><label>Длительность симптомов</label>${kbSpravochnikSingleControl('symptomDuration', intake.symptomDuration)}</div>
+        <div class="kb-subcard"><label>ЛОР / фониатр</label>${kbSpravochnikSingleControl('larStatus', intake.larStatus)}</div>
+        <div class="kb-subcard"><label>Нагрузка на голос вне пения</label>${kbSpravochnikSingleControl('vocalLoadJob', intake.vocalLoadJob)}</div>
+        <div class="kb-subcard"><label>Гидратация</label>${kbSpravochnikSingleControl('hydration', intake.hydration)}</div>
+        <div class="kb-subcard"><label>Сон</label>${kbSpravochnikSingleControl('sleep', intake.sleep)}</div>
       </div>
       <div class="kb-admin-block">
         <div class="kb-admin-title-row">
@@ -2013,10 +2045,10 @@ function paintKabinet(s){
           <span class="kb-admin-badge">только педагог</span>
         </div>
         <div class="kb-subgrid">
-          <div class="kb-subcard"><label>Диагноз</label><select class="kb-select" data-kb-field="diagnosis">${kbSelectOptions(KB_OPTS.diagnosis, intake.diagnosis)}</select></div>
-          <div class="kb-subcard"><label>Курение</label><select class="kb-select" data-kb-field="smoking">${kbSelectOptions(KB_OPTS.smoking, intake.smoking)}</select></div>
-          <div class="kb-subcard"><label>Алкоголь</label><select class="kb-select" data-kb-field="alcohol">${kbSelectOptions(KB_OPTS.alcohol, intake.alcohol)}</select></div>
-          <div class="kb-subcard"><label>ПМС-фактор</label><select class="kb-select" data-kb-field="pmsFactor">${kbSelectOptions(KB_OPTS.pmsFactor, intake.pmsFactor)}</select></div>
+          <div class="kb-subcard"><label>Диагноз</label>${kbSpravochnikSingleControl('diagnosis', intake.diagnosis)}</div>
+          <div class="kb-subcard"><label>Курение</label>${kbSpravochnikSingleControl('smoking', intake.smoking)}</div>
+          <div class="kb-subcard"><label>Алкоголь</label>${kbSpravochnikSingleControl('alcohol', intake.alcohol)}</div>
+          <div class="kb-subcard"><label>ПМС-фактор</label>${kbSpravochnikSingleControl('pmsFactor', intake.pmsFactor)}</div>
         </div>
       </div>
     </div>` : ''}
@@ -2031,10 +2063,7 @@ function paintKabinet(s){
     `)}
     ${open.evt ? `
     <div class="kb-grid" style="margin-bottom:10px;">
-      <div class="kb-card">
-        <label>Дыхание · опора</label>
-        <select class="kb-select" data-kb-field="breathingType">${kbSelectOptions(KB_OPTS.breath, intake.breathingType)}</select>
-      </div>
+      ${kbSpravochnikSingleField('Дыхание · опора', 'breathingType', intake.breathingType)}
     </div>
     <div class="kb-structure-grid">
       ${KB_STRUCTURES.map(st=>`
