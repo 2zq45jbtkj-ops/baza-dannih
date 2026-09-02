@@ -2023,6 +2023,7 @@ function paintKabinet(s){
   `;
 
   const structures = Object.assign({}, kbNeutralStructures(), intake.structures||{});
+  const anchors = Object.assign({}, intake.anchors||{});
   const evtHtml = `
     ${kbSection('evt','EVT · КАРТА СТРУКТУР','условие каждой структуры на старте — нажмите, чтобы отметить', `
       <button type="button" class="kb-ghost-btn" data-kb-reset-structures="1">Сбросить в нейтраль</button>
@@ -2052,12 +2053,17 @@ function paintKabinet(s){
           </div>
         </div>
       `).join('')}
+    </div>
+    <div class="kb-anchors-card" style="margin-top:10px;">
+      <div class="kb-block-title">Анкеровка</div>
+      <div class="kb-chip-row">
+        ${KB_ANCHOR_KEYS.map(k=>`<button type="button" class="kb-chip${anchors[k]?' on':''}" data-kb-anchor="${k}">${k}</button>`).join('')}
+      </div>
     </div>` : ''}
   `;
 
   const qualities = Object.assign({}, intake.qualities||{});
   const modes = Object.assign({}, intake.modes||{});
-  const anchors = Object.assign({}, intake.anchors||{});
   const metallic = intake.metallicPercent==null ? 32 : intake.metallicPercent;
   const qualitiesHtml = `
     ${kbSection('qualities','КАЧЕСТВА ГОЛОСА И ИНСТРУМЕНТЫ CVT','')}
@@ -2097,12 +2103,6 @@ function paintKabinet(s){
           <input type="range" class="kb-metal" min="0" max="100" step="1" value="${metallic}" id="kbMetallicSlider">
           <div class="kb-metallic-scale"><span>non-metallic</span><span>metallic</span></div>
           <div class="kb-metallic-note" id="kbMetallicNote">${kbMetallicNote(metallic)}</div>
-        </div>
-        <div class="kb-anchors-card">
-          <div class="kb-block-title">Якоря (Anchoring) на старте</div>
-          <div class="kb-chip-row">
-            ${KB_ANCHOR_KEYS.map(k=>`<button type="button" class="kb-chip${anchors[k]?' on':''}" data-kb-anchor="${k}">${k}</button>`).join('')}
-          </div>
         </div>
       </div>
     </div>` : ''}
