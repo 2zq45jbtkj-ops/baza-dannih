@@ -475,6 +475,13 @@ function pluralRu(n, forms){
   return forms[2];
 }
 function lessonsLabel(n){ return n + ' ' + pluralRu(n, ['занятие','занятия','занятий']); }
+function invalidateLessonCount(s){
+  // Badge count is fetched once and cached; call this after any lesson
+  // add/delete so the sidebar and card-header counts stay in sync with
+  // the actual rows instead of showing a stale number until page reload.
+  delete state.lessonCounts[s.id];
+  ensureLessonCounts();
+}
 function ensureLessonCounts(){
   state.data.students.forEach(s=>{
     if(state.lessonCounts[s.id]!==undefined) return;
@@ -1284,7 +1291,7 @@ function paintCard(s){
       ${!cache.intake ? `<div class="intake-empty">Анкета ещё не заполнена — заполни поля ниже, они сохранятся автоматически.</div>` : ''}
       <div class="field-grid">
         ${textField2('Возраст', intake.age, 'age', 'number')}
-        ${selectField2('Цель обучения', INTAKE_OPTS.goal, intake.goal, 'goal')}
+        ${readonlyField2('Цель обучения', (intake.goals && intake.goals.length) ? intake.goals.join(', ') : null)}
         ${textField2('Жанр / референсы', intake.genreRefs, 'genreRefs')}
         ${textField2('Голосовая нагрузка вне пения (профессия)', intake.vocalLoadJob, 'vocalLoadJob')}
       </div>
@@ -1341,6 +1348,13 @@ function selectField2(label, options, value, key){
   const opts = ['<option value="" ' + (!value?'selected':'') + '>— не указано —</option>']
     .concat(options.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`));
   return `<div class="field"><label>${label}</label><select data-intake-select="${key}">${opts.join('')}</select></div>`;
+}
+// Read-only summary field — for values now owned/edited on the Кабинет tab
+// (e.g. Цель обучения, which moved from a single legacy `goal` column to
+// the multi-select `goals` array). Displays the real current value instead
+// of the old single-value column that Кабинет no longer writes to.
+function readonlyField2(label, value){
+  return `<div class="field"><label>${label}</label><div>${(value!==undefined && value!==null && value!=='') ? value : '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
 }
 
 function renderLessonsList(lessons){
@@ -1440,7 +1454,7 @@ function wireCardHandlers(s){
     el.onclick = ()=>{
       if(!confirm('Удалить эту запись о занятии?')) return;
       apiSend('/api/lessons?id=' + encodeURIComponent(el.dataset.removeLesson), 'DELETE', {})
-        .then(()=> renderCard(s))
+        .then(()=> { renderCard(s); invalidateLessonCount(s); })
         .catch(err=> alert('Не удалось удалить: ' + err.message));
     };
   });
@@ -1472,7 +1486,7 @@ function saveNewLesson(s){
   };
   const btn = document.getElementById('nlSave'); if(btn) btn.disabled = true;
   apiSend('/api/lessons', 'POST', payload)
-    .then(()=> renderCard(s))
+    .then(()=> { renderCard(s); invalidateLessonCount(s); })
     .catch(err=>{ alert('Не удалось сохранить занятие: ' + err.message); if(btn) btn.disabled = false; });
 }
 
