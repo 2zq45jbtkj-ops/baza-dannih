@@ -2081,11 +2081,14 @@ function paintKabinet(s){
           </div>
         </div>
       `).join('')}
-    </div>
-    <div class="kb-anchors-card" style="margin-top:10px;">
-      <div class="kb-block-title">Анкеровка</div>
-      <div class="kb-chip-row">
-        ${KB_ANCHOR_KEYS.map(k=>`<button type="button" class="kb-chip${anchors[k]?' on':''}" data-kb-anchor="${k}">${k}</button>`).join('')}
+      <div class="kb-structure-card">
+        <div class="kb-structure-top">
+          <div class="kb-structure-label">Анкеровка</div>
+          <div class="kb-structure-hint">точки опоры</div>
+        </div>
+        <div class="kb-structure-opts">
+          ${KB_ANCHOR_KEYS.map(k=>`<button type="button" class="kb-small-btn${anchors[k]?' on':''}" data-kb-anchor="${k}">${k}</button>`).join('')}
+        </div>
       </div>
     </div>` : ''}
   `;
