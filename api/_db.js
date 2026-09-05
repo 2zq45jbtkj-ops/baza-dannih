@@ -131,6 +131,25 @@ async function ensureSchema(p) {
   // (данные там остаются на случай, если пригодятся отдельно).
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS repertoire TEXT;`);
 
+  // Дневник занятий — реальная форма из «Кабинет ученика EVT.dc.html»
+  // («Новая запись» + «Записи занятий»). Старые колонки effort_level/
+  // range_worked/what_worked/what_didnt/new_tension/media_url/progress_flag
+  // остаются нетронутыми (были частью прежней самодельной версии вкладки,
+  // которая не соответствовала макету) — просто больше не используются
+  // новым кодом. cvt_modes и homework — те же колонки, что и раньше,
+  // переиспользуются под «Моды CVT» и «Домашнее задание» из нового макета.
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS topic TEXT;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS work_low TEXT;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS work_high TEXT;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS goal TEXT;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS structures TEXT[] DEFAULT '{}';`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS intensity INTEGER;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS grade INTEGER;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS anchors TEXT[] DEFAULT '{}';`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS new_problem TEXT;`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS takes JSONB DEFAULT '[]';`);
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();`);
+
   ensured = true;
 }
 
