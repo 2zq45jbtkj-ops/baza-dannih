@@ -178,22 +178,6 @@ textarea.rep-input{width:100%;border:1px solid var(--line);border-radius:8px;pad
 .btn{padding:9px 16px;border-radius:8px;border:none;background:var(--terracotta);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;}
 .btn.secondary{background:var(--panel);color:var(--text);border:1px solid var(--line);}
 .btn:disabled{opacity:.55;cursor:default;}
-.lesson-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
-.lesson-top{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;}
-.lesson-date{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;}
-.flag-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
-.flag-better{background:#4C9A5B;} .flag-same{background:#C9A227;} .flag-worse{background:#B23A3A;}
-.flag-label{font-size:12px;color:var(--muted);}
-.lesson-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;font-size:13px;margin-top:6px;}
-.lesson-grid div b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;}
-.lesson-remove{color:var(--muted);cursor:pointer;font-size:12px;}
-.lesson-remove:hover{color:var(--terracotta-dark);}
-.new-lesson-form{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:16px;margin-top:14px;}
-.new-lesson-form .field-grid{margin-bottom:10px;}
-.new-lesson-form textarea, .new-lesson-form input[type=text], .new-lesson-form input[type=date], .new-lesson-form input[type=url]{
-  width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13.5px;background:var(--bg);color:var(--text);
-}
-.new-lesson-form label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:4px;margin-top:10px;}
 
 /* ---------- KABINET (anketa accordion) ---------- */
 .kb-loading{padding:30px 0;color:var(--muted);font-size:13.5px;}
@@ -464,7 +448,16 @@ const state = {
   kabinetCompareOpen: false,
   kabinetSaveSeq: {},
   kabinetSaveChain: {},
-  kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }
+  kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null },
+  diaryCache: {},
+  diaryDrafts: {},
+  diaryRec: {},
+  diaryEditing: {},
+  diaryEditDrafts: {},
+  diaryEditRec: {},
+  dnSaveChain: {},
+  dnSaveSeq: {},
+  dnPending: {}
 };
 state.activeStudentId = state.data.students[0]?.id || null;
 if(!state.data.variant) state.data.variant = 'wheel';
@@ -801,7 +794,7 @@ function renderMain(s){
   }
 
   if(state.activeTab==='profile') renderKabinet(s);
-  else if(state.activeTab==='card') renderCard(s);
+  else if(state.activeTab==='card') renderDiary(s);
   else if(state.activeTab==='srezy') renderSrezy(s);
   else renderRepertoire(s);
 }
@@ -1251,18 +1244,6 @@ function renderRepertoire(s){
    Реальный бэкенд: /api/intake и /api/lessons (Postgres)
    ============================================================ */
 
-const INTAKE_OPTS = {
-  goal: ['Сцена','Реабилитация','Расширение диапазона','Подготовка к проекту'],
-  complaints: ['Хрипота','Усталость голоса','Потеря диапазона','Срывы'],
-  smoking: ['Не курит','Курит','Периодически'],
-  cvtModes: ['Neutral','Curbing','Overdrive','Edge'],
-  metallicBalance: ['Metallic','Non-metallic','Смешанный / переменный'],
-  laryngealPosition: ['Низкая','Средняя','Высокая'],
-  tensionAreas: ['Челюсть','Язык','Шея','Плечи'],
-  breathingType: ['Клавикулярное','Грудное','Опора (диафрагмально-рёберное)']
-};
-const PROGRESS_FLAGS = [['better','Лучше','flag-better'],['same','Без изменений','flag-same'],['worse','Хуже','flag-worse']];
-
 async function apiGet(url){
   const r = await fetch(url);
   if(!r.ok){ const t = await r.text().catch(()=> ''); throw new Error('HTTP '+r.status+' '+t); }
@@ -1274,231 +1255,880 @@ async function apiSend(url, method, body){
   return r.json();
 }
 
-function renderCard(s){
-  const c = document.getElementById('tabContent');
-  c.innerHTML = `<div class="card-loading">Загружаю анкету и историю занятий…</div>`;
+/* ============================================================
+   ДНЕВНИК ЗАНЯТИЙ (session diary) — вкладка «Дневник занятий»
+   Собрано строго по верстке из «Кабинет ученика EVT.dc.html»:
+   форма «Новая запись», «Тренд по срезам», «Записи занятий».
+   Реальный бэкенд: /api/lessons (Postgres). Диапазон в работе и
+   Новые проблемы — тот же компонент Справочник (kbSpravochnikSingleControl),
+   что и везде в Кабинете. Рекордер — тот же MediaRecorder-код и тот же
+   race-safe autosave, что и «Референс-запись на входе» в Кабинете, только
+   второй независимый экземпляр на запись занятия.
+   ============================================================ */
 
-  Promise.all([
-    apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
-    apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
-  ]).then(([intake, lessons])=>{
-    state.cardCache[s.id] = { intake: intake && intake.intake, lessons: lessons && lessons.lessons || [] };
-    paintCard(s);
+const DN_DICT_FIELDS = new Set(['dnWorkLow','dnWorkHigh','dnNewProblem']);
+
+function dnCache(s){
+  return state.diaryCache[s.id] || (state.diaryCache[s.id] = {lessons:[]});
+}
+
+function dnBlankDraft(){
+  const today = new Date().toISOString().slice(0,10);
+  return {
+    id: null, date: today, topic: '', workLow: '', workHigh: '', goal: '',
+    structures: [], intensity: null, grade: null, cvtModes: [], anchors: [],
+    newProblem: '', hw: '', takes: [], _creating: null
+  };
+}
+function dnDraft(s){
+  if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft();
+  return state.diaryDrafts[s.id];
+}
+function dnBlankRec(){
+  return { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null };
+}
+function dnRec(s){
+  if(!state.diaryRec[s.id]) state.diaryRec[s.id] = dnBlankRec();
+  return state.diaryRec[s.id];
+}
+function dnEditRec(lessonId){
+  if(!state.diaryEditRec[lessonId]) state.diaryEditRec[lessonId] = dnBlankRec();
+  return state.diaryEditRec[lessonId];
+}
+function dnEditDraft(lessonId){
+  return state.diaryEditDrafts[lessonId] || (state.diaryEditDrafts[lessonId] = {});
+}
+
+function renderDiary(s){
+  const c = document.getElementById('tabContent');
+  const needDicts = !state.kbDictsLoaded;
+  if(state.diaryCache[s.id] && !needDicts){ paintDiary(s); return; }
+  c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`;
+  const cached = state.diaryCache[s.id];
+  const tasks = [
+    cached ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
+  ];
+  if(needDicts) tasks.push(apiGet('/api/dicts'));
+  Promise.all(tasks).then(([lessonsRes, dictsRes])=>{
+    state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] };
+    if(needDicts){
+      const server = (dictsRes && dictsRes.dicts) || {};
+      Object.keys(state.kbDicts).forEach(k=>{
+        const row = server[k];
+        if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]});
+      });
+      state.kbDictsLoaded = true;
+    }
+    paintDiary(s);
   }).catch(err=>{
-    c.innerHTML = `<div class="card-error">Не удалось загрузить данные с сервера: ${String(err.message||err)}. База данных ещё не подключена к проекту — обратись к администратору, чтобы подключить Postgres в настройках Vercel.</div>`;
+    c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`;
   });
 }
 
-function paintCard(s){
+function paintDiary(s){
   const c = document.getElementById('tabContent');
-  const cache = state.cardCache[s.id] || {intake:null, lessons:[]};
-  const intake = cache.intake || {};
+  const cache = dnCache(s);
   const lessons = cache.lessons || [];
+  const draft = dnDraft(s);
+  const editingId = state.diaryEditing[s.id] || null;
 
   c.innerHTML = `
-    <div class="section">
-      <div class="section-title">Анкета (первая встреча)</div>
-      ${!cache.intake ? `<div class="intake-empty">Анкета ещё не заполнена — заполни поля ниже, они сохранятся автоматически.</div>` : ''}
-      <div class="field-grid">
-        ${textField2('Возраст', intake.age, 'age', 'number')}
-        ${readonlyField2('Цель обучения', (intake.goals && intake.goals.length) ? intake.goals.join(', ') : null)}
-        ${textField2('Жанр / референсы', intake.genreRefs, 'genreRefs')}
-        ${textField2('Голосовая нагрузка вне пения (профессия)', intake.vocalLoadJob, 'vocalLoadJob')}
-      </div>
-      <div class="field-grid" style="margin-top:14px;">
-        ${textareaField2('Опыт пения до преподавателя (годы, с кем, что застряло)', intake.priorExperience, 'priorExperience')}
-        ${textareaField2('ЛОР/фониатр: был ли, диагноз (узелки, парез, рефлюкс…)', intake.entDiagnosis, 'entDiagnosis')}
-      </div>
-      <div class="tag-group" style="margin-top:14px;"><div class="tag-group-title">Жалобы</div><div class="tags" id="tags-complaints">${renderTags(INTAKE_OPTS.complaints, intake.complaints||[])}</div></div>
-      <div class="field-grid">
-        ${textField2('Длительность симптомов', intake.symptomDuration, 'symptomDuration')}
-        ${selectField2('Курение', INTAKE_OPTS.smoking, intake.smoking, 'smoking')}
-        ${textField2('Гидратация', intake.hydration, 'hydration')}
-        ${textField2('Сон', intake.sleep, 'sleep')}
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Голос на входе</div>
-      <div class="field-grid">
-        ${textField2('Диапазон: нижняя нота', intake.rangeLow, 'rangeLow')}
-        ${textField2('Диапазон: верхняя нота', intake.rangeHigh, 'rangeHigh')}
-        ${textField2('Тесситура комфорта', intake.tessituraComfort, 'tessituraComfort')}
-        ${textField2('Где ломается регистр (нота)', intake.registerBreakNote, 'registerBreakNote')}
-        ${selectField2('Metallic / non-metallic баланс', INTAKE_OPTS.metallicBalance, intake.metallicBalance, 'metallicBalance')}
-        ${selectField2('Ларингальная позиция в покое', INTAKE_OPTS.laryngealPosition, intake.laryngealPosition, 'laryngealPosition')}
-        ${selectField2('Тип дыхания', INTAKE_OPTS.breathingType, intake.breathingType, 'breathingType')}
-        ${textField2('Референс-аудио на входе (ссылка)', intake.referenceAudioUrl, 'referenceAudioUrl', 'url')}
-      </div>
-      <div class="tag-group" style="margin-top:14px;"><div class="tag-group-title">Доступные CVT-моды на старте</div><div class="tags" id="tags-cvtModesStart">${renderTags(INTAKE_OPTS.cvtModes, intake.cvtModesStart||[])}</div></div>
-      <div class="tag-group"><div class="tag-group-title">Зажимы</div><div class="tags" id="tags-tensionAreas">${renderTags(INTAKE_OPTS.tensionAreas, intake.tensionAreas||[])}</div></div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Динамика по занятиям</div>
-      <div id="lessonsList">${renderLessonsList(lessons)}</div>
-      <button class="btn secondary" id="addLessonBtn" style="margin-top:10px;">+ Добавить занятие</button>
-      <div id="newLessonWrap"></div>
+    <div class="kb-wrap">
+      ${dnFormHtml(s, draft)}
+      ${dnTrendSectionHtml(lessons)}
+      ${dnHistorySectionHtml(s, lessons, editingId)}
     </div>
   `;
-
-  wireCardHandlers(s);
+  wireDiaryHandlers(s);
 }
 
-function textField2(label, value, key, type){
-  type = type || 'text';
-  return `<div class="field editable" data-intake-field="${key}" data-label="${label}" data-type="${type}">
-    <label>${label}</label><div>${(value!==undefined && value!==null && value!=='') ? value : '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
+function dnFieldInputStyle(){
+  return 'width:100%;height:46px;box-sizing:border-box;padding:11px 13px;border:1px solid #E4DCD1;border-radius:11px;background:#FAF7F2;font-size:15px;font-weight:600;color:#23201D;';
 }
-function textareaField2(label, value, key){
-  return `<div class="field editable" data-intake-field="${key}" data-label="${label}" data-type="textarea">
-    <label>${label}</label><div style="white-space:pre-wrap;">${value ? value : '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
+function dnLabelStyle(){
+  return 'display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#A09488;margin-bottom:6px;';
 }
-function selectField2(label, options, value, key){
-  const opts = ['<option value="" ' + (!value?'selected':'') + '>— не указано —</option>']
-    .concat(options.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`));
-  return `<div class="field"><label>${label}</label><select data-intake-select="${key}">${opts.join('')}</select></div>`;
-}
-// Read-only summary field — for values now owned/edited on the Кабинет tab
-// (e.g. Цель обучения, which moved from a single legacy `goal` column to
-// the multi-select `goals` array). Displays the real current value instead
-// of the old single-value column that Кабинет no longer writes to.
-function readonlyField2(label, value){
-  return `<div class="field"><label>${label}</label><div>${(value!==undefined && value!==null && value!=='') ? value : '<span style="color:var(--muted);font-weight:400;">— не указано —</span>'}</div></div>`;
+function dnUpperLabel(text){
+  return `<div style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#A09488;margin-bottom:8px;">${text}</div>`;
 }
 
-function renderLessonsList(lessons){
-  if(!lessons.length) return `<div class="admin-note">Занятий пока не записано.</div>`;
-  return lessons.slice().sort((a,b)=> (b.lessonDate||'').localeCompare(a.lessonDate||'')).map(l=>{
-    const flag = PROGRESS_FLAGS.find(f=>f[0]===l.progressFlag) || [null,'—',''];
-    return `
-    <div class="lesson-card">
-      <div class="lesson-top">
-        <div class="lesson-date">${l.lessonDate||'—'} ${flag[0] ? `<span class="flag-dot ${flag[2]}"></span><span class="flag-label">${flag[1]}</span>` : ''}</div>
-        <span class="lesson-remove" data-remove-lesson="${l.id}">✕ удалить</span>
-      </div>
-      <div class="lesson-grid">
-        <div><b>CVT-моды</b>${(l.cvtModes||[]).join(', ') || '—'}</div>
-        <div><b>Effort level</b>${l.effortLevel!=null ? l.effortLevel+' / 6' : '—'}</div>
-        <div><b>Диапазон в работе</b>${l.rangeWorked||'—'}</div>
-        <div><b>Получилось</b>${l.whatWorked||'—'}</div>
-        <div><b>Не получилось</b>${l.whatDidnt||'—'}</div>
-        <div><b>Зажимы / новые проблемы</b>${l.newTension||'—'}</div>
-        <div><b>Домашнее задание</b>${l.homework||'—'}</div>
-        <div><b>Аудио/видео</b>${l.mediaUrl ? `<a href="${l.mediaUrl}" target="_blank" rel="noopener">ссылка</a>` : '—'}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function newLessonFormHtml(){
-  const today = new Date().toISOString().slice(0,10);
+function dnFormHtml(s, draft){
+  const ctx = 'new';
+  const recKey = 'new_' + s.id;
   return `
-    <div class="new-lesson-form" id="newLessonForm">
-      <div class="field-grid">
-        <div><label>Дата</label><input type="date" id="nlDate" value="${today}"></div>
-        <div><label>Effort level (1–6)</label><select id="nlEffort">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===3?'selected':''}>${n}</option>`).join('')}</select></div>
-        <div><label>Прогресс</label><select id="nlFlag">${PROGRESS_FLAGS.map(f=>`<option value="${f[0]}">${f[1]}</option>`).join('')}</select></div>
+  <section style="background: #fff; border: 1px solid #ECE5DB; border-radius: 18px; padding: 22px 24px;">
+    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px;">
+      <div style="font-size: 16px; font-weight: 800;">Новая запись</div>
+      <div style="font-size: 12.5px; color: #B8ADA1;">короткие поля, 30 секунд после занятия</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px;">
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Дата</span>
+        <input type="date" data-dn-field="date" data-dn-ctx="${ctx}" value="${draft.date||''}" style="${dnFieldInputStyle()}" />
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Тема / модуль</span>
+        <input type="text" list="dn-wheel-topics" data-dn-field="topic" data-dn-ctx="${ctx}" placeholder="из Колеса баланса или своя" value="${draft.topic||''}" style="${dnFieldInputStyle()}" />
+        <datalist id="dn-wheel-topics"></datalist>
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Диапазон в работе</span>
+        <div style="display: flex; align-items: center; gap: 14px; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+          <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkLow', draft.workLow)}</div>
+          <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkHigh', draft.workHigh)}</div>
+        </div>
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Цель урока</span>
+        <input type="text" data-dn-field="goal" data-dn-ctx="${ctx}" placeholder="что делаем и какую задачу закрываем" value="${draft.goal||''}" style="${dnFieldInputStyle()}" />
+      </label>
+    </div>
+
+    <div style="margin-top: 20px;">
+      ${dnUpperLabel('Фигуры и структуры, применяемые в записи')}
+      <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 5px 8px; justify-content: start; justify-items: start;">
+        ${KB_STRUCTURES.map(st=>`<button type="button" class="kb-small-btn${draft.structures.indexOf(st.key)>=0?' on':''}" data-dn-toggle-structure="${st.key}" data-dn-ctx="${ctx}">${st.label}</button>`).join('')}
       </div>
-      <label>CVT-моды на занятии</label>
-      <div class="tags" id="nlCvtModes">${renderTags(INTAKE_OPTS.cvtModes, [])}</div>
-      <label>Диапазон в работе</label><input type="text" id="nlRange" placeholder="напр. ми м.о. – соль1.о.">
-      <label>Что получилось</label><textarea id="nlWorked" rows="2"></textarea>
-      <label>Что не получилось</label><textarea id="nlDidnt" rows="2"></textarea>
-      <label>Зажимы / новые проблемы</label><textarea id="nlTension" rows="2"></textarea>
-      <label>Домашнее задание</label><textarea id="nlHomework" rows="2"></textarea>
-      <label>Ссылка на аудио/видео</label><input type="url" id="nlMedia" placeholder="https://...">
-      <div style="margin-top:14px;display:flex;gap:8px;">
-        <button class="btn" id="nlSave">Сохранить занятие</button>
-        <button class="btn secondary" id="nlCancel">Отмена</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+      <div>
+        ${dnUpperLabel('Интенсивность урока (1–10)')}
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${draft.intensity===n?' on':''}" data-dn-set-num="intensity:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
+        </div>
       </div>
+      <div>
+        ${dnUpperLabel('Оценка занятия (1–10)')}
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${draft.grade===n?' on':''}" data-dn-set-num="grade:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        ${dnUpperLabel('Моды CVT')}
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+          ${KB_MODE_KEYS.map(m=>`<button type="button" class="kb-small-btn${draft.cvtModes.indexOf(m)>=0?' on':''}" data-dn-toggle-mode="${m}" data-dn-ctx="${ctx}">${m}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        ${dnUpperLabel('Анкеровка')}
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+          ${KB_ANCHOR_KEYS.map(a=>`<button type="button" class="kb-small-btn${draft.anchors.indexOf(a)>=0?' on':''}" data-dn-toggle-anchor="${a}" data-dn-ctx="${ctx}">${a}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px;">
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Новые проблемы</span>
+        <div style="display: flex; align-items: center; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+          <div data-dn-ctx="${ctx}" style="flex:1;">${kbSpravochnikSingleControl('dnNewProblem', draft.newProblem)}</div>
+        </div>
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Домашнее задание</span>
+        <input type="text" list="dn-hw-topics" data-dn-field="hw" data-dn-ctx="${ctx}" placeholder="впишите вручную или выберите тему из мини-приложения Telegram" value="${draft.hw||''}" style="${dnFieldInputStyle()}" />
+        <datalist id="dn-hw-topics"></datalist>
+      </label>
+    </div>
+
+    ${dnRecorderHtml(recKey, dnRec(s), draft.takes||[])}
+
+    <div style="display: flex; align-items: center; gap: 14px; margin-top: 20px; justify-content: flex-end;">
+      <span style="font-size: 13px; color: #B8ADA1;">Изменения сохраняются автоматически</span>
+      <button type="button" style="padding: 13px 26px; border: none; border-radius: 12px; background: #A8452C; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;" data-dn-save-lesson="1">Сохранить занятие</button>
+    </div>
+  </section>
+  `;
+}
+
+function dnRecorderHtml(recKey, rec, takes){
+  const takesArr = takes || [];
+  return `
+    <div style="background: #2C2724; border-radius: 14px; padding: 16px 18px; margin-top: 20px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <button type="button" class="kb-rec-btn${rec.active?' active':''}" data-dn-rec-btn="${recKey}" ${rec.saving?'disabled':''}>${rec.active?'Стоп':'Запись'}</button>
+        <div style="flex: 1; min-width: 200px;">
+          <div class="kb-rec-caption${rec.saving?' saving':''}${rec.justSaved?' saved':''}">${rec.active?'Идёт запись':(rec.saving?'Сохраняю запись…':(rec.justSaved?'Сохранено':(takesArr.length?'Записано '+takesArr.length:'Нажмите, чтобы записать голос')))}</div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 5px;">
+            <div class="kb-rec-timer" data-dn-rec-timer="${recKey}">${kbPad(Math.floor(rec.seconds/60))}:${kbPad(rec.seconds%60)}</div>
+            ${rec.active? `<div class="kb-rec-dot"></div>` : ''}
+          </div>
+        </div>
+        <div class="kb-rec-bars" data-dn-rec-bars="${recKey}">${Array.from({length:28}).map((_,i)=>`<div class="kb-rec-bar" style="height:${[6,12,9,15,7,11,8,14,6,10,13,8,11,7,12,9,15,6,10,8,13,7,11,9,6,12,8,10][i%28]}px;"></div>`).join('')}</div>
+      </div>
+      ${rec.error? `<div class="kb-rec-error">${rec.error}</div>` : ''}
+      ${takesArr.length? `
+      <div class="kb-rec-takes">
+        ${takesArr.map(t=>`
+          <div class="kb-rec-take-row">
+            <div>
+              <div class="kb-rec-take-name">${t.name}</div>
+              <div class="kb-rec-take-meta">${t.meta}</div>
+            </div>
+            <audio controls src="${t.dataUrl}" style="flex:1;min-width:260px;height:38px;"></audio>
+            <a class="kb-rec-take-dl" href="${t.dataUrl}" download="${t.name}">Скачать</a>
+            <button type="button" class="kb-rec-take-del" data-dn-take-del="${recKey}" data-take-id="${t.id}">Удалить</button>
+          </div>
+        `).join('')}
+      </div>` : ''}
     </div>
   `;
 }
 
-function wireCardHandlers(s){
-  const c = document.getElementById('tabContent');
+function dnGradeColor(g){
+  if(g>=7) return '#4E7047';
+  if(g>=4) return '#8B8177';
+  return '#A8452C';
+}
+function dnGradeBand(g){
+  if(g==null) return null;
+  if(g>=7) return {color:'#4E7047', bg:'#EFF4ED', border:'#D9E4D5'};
+  if(g>=4) return {color:'#8B8177', bg:'#F1EDE6', border:'#E4DCD1'};
+  return {color:'#A8452C', bg:'#FBEFEA', border:'#EFD4C6'};
+}
+function dnTrendSvg(graded){
+  const w = 360, h = 90, pad = 10;
+  if(!graded.length){
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="flex:none;"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#EFE7DC" stroke-width="2"/></svg>`;
+  }
+  const n = graded.length;
+  const stepX = n>1 ? (w - pad*2)/(n-1) : 0;
+  const yFor = (g)=> h - pad - ((g-1)/9)*(h-pad*2);
+  const pts = graded.map((l,i)=> [pad + i*stepX, yFor(l.grade)]);
+  const pathD = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const areaD = pathD + ` L ${pts[pts.length-1][0].toFixed(1)} ${h-pad} L ${pts[0][0].toFixed(1)} ${h-pad} Z`;
+  const dots = pts.map((p,i)=> `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${dnGradeColor(graded[i].grade)}" />`).join('');
+  return `
+    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="flex:none;">
+      <path d="${areaD}" fill="#F1EDE5" stroke="none" />
+      <path d="${pathD}" fill="none" stroke="#C9BCAE" stroke-width="1.6" />
+      ${dots}
+    </svg>
+  `;
+}
+function dnTrendSectionHtml(lessons){
+  const graded = (lessons||[]).filter(l=>l.grade!=null).slice().sort((a,b)=> (a.lessonDate||'').localeCompare(b.lessonDate||'') || (a.id-b.id));
+  const total = graded.reduce((sum,l)=> sum+(l.grade||0), 0);
+  const avg = graded.length ? (total/graded.length) : 0;
+  const summary = graded.length
+    ? `Накоплено ${total} ${pluralRu(total, ['балл','балла','баллов'])} за ${lessonsLabel(graded.length)}, средняя оценка ${avg.toFixed(1)} из 10.`
+    : 'Оценок пока нет — появятся после первых занятий с проставленной «Оценкой занятия».';
+  return `
+    <section>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap;">
+        <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; color: #A09488;">Тренд по срезам</div>
+        <div style="display: flex; gap: 16px; font-size: 12.5px; color: #9A8E82; font-weight: 600;">
+          <span style="color: #4E7047;">● 7–10</span>
+          <span style="color: #8B8177;">● 4–6</span>
+          <span style="color: #A8452C;">● 1–3</span>
+        </div>
+      </div>
+      <div style="background: #fff; border: 1px solid #ECE5DB; border-radius: 16px; padding: 18px 20px; display: flex; align-items: center; gap: 22px; flex-wrap: wrap;">
+        ${dnTrendSvg(graded)}
+        <div style="font-size: 14px; color: #6E645A; line-height: 1.5; flex: 1; min-width: 220px;">${summary}</div>
+      </div>
+    </section>
+  `;
+}
 
-  // inline text/textarea intake fields (click to edit via prompt, matches site-wide pattern)
-  c.querySelectorAll('[data-intake-field]').forEach(el=>{
-    el.onclick = ()=>{
-      const key = el.dataset.intakeField, label = el.dataset.label, type = el.dataset.type;
-      const cache = state.cardCache[s.id];
-      const current = (cache.intake && cache.intake[key]) || '';
-      const v = prompt(label + ':', current);
-      if(v===null) return;
-      const value = type==='number' ? (v.trim()===''? null : Number(v)) : v;
-      saveIntakeField(s, key, value);
-    };
-  });
-  c.querySelectorAll('select[data-intake-select]').forEach(el=>{
-    el.onchange = ()=>{ saveIntakeField(s, el.dataset.intakeSelect, el.value || null); };
-  });
-  ['complaints','cvtModesStart','tensionAreas'].forEach(key=>{
-    document.querySelectorAll(`#tags-${key} .tag`).forEach(el=>{
-      el.onclick = ()=>{
-        const cache = state.cardCache[s.id];
-        const cur = (cache.intake && cache.intake[key]) || [];
-        const idx = cur.indexOf(el.dataset.val);
-        const next = idx>-1 ? cur.slice(0,idx).concat(cur.slice(idx+1)) : cur.concat([el.dataset.val]);
-        saveIntakeField(s, key, next);
-      };
+function dnFmtDate(d){
+  if(!d) return '—';
+  const parts = String(d).slice(0,10).split('-');
+  return parts.length===3 ? parts[2]+'.'+parts[1]+'.'+parts[0] : d;
+}
+function dnIntensityBarHtml(n){
+  const v = n||0;
+  const cells = Array.from({length:10}).map((_,i)=> `<span style="display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:2px;background:${i<v?'#A8452C':'#EFE7DC'};"></span>`).join('');
+  return `<div style="display:flex;align-items:center;gap:8px;">${cells}<span style="font-size:12.5px;font-weight:700;color:var(--text);">${n!=null?n+'/10':'—'}</span></div>`;
+}
+function dnStructuresModesText(l){
+  const structLabels = (l.structures||[]).map(k=>{ const st = KB_STRUCTURES.find(x=>x.key===k); return st?st.label:k; });
+  const parts = structLabels.concat(l.cvtModes||[]).concat(l.anchors||[]);
+  return parts.length ? parts.join(', ') : '—';
+}
+const DN_DETAIL_LABEL_STYLE = 'display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;';
+
+function dnHistoryCardHtml(l){
+  const band = dnGradeBand(l.grade);
+  return `
+  <div style="background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;">
+    <div style="display:grid;grid-template-columns:78px minmax(0,1fr) max-content max-content;align-items:center;gap:10px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#9A8E82;">${dnFmtDate(l.lessonDate)}</div>
+      <div style="font-size:16px;font-weight:700;">${l.topic || '—'}</div>
+      ${band ? `<span style="padding:4px 10px;border-radius:8px;background:${band.bg};border:1px solid ${band.border};color:${band.color};font-size:12.5px;font-weight:700;">${l.grade}/10</span>` : `<span style="font-size:12.5px;color:#C0B4A6;">—</span>`}
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="kb-ghost-btn" data-dn-edit-start="${l.id}">Редактировать</button>
+        <button type="button" class="kb-ghost-btn" title="Удалить занятие" data-dn-delete="${l.id}">✕</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;font-size:13px;margin-top:12px;">
+      <div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>
+      <div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div>
+      <div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(l.workLow||l.workHigh) ? (l.workLow||'—')+' — '+(l.workHigh||'—') : '—'}</div>
+      <div><b style="${DN_DETAIL_LABEL_STYLE}">Структуры / моды</b>${dnStructuresModesText(l)}</div>
+      ${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
+      <div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div>
+    </div>
+    ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=>`<audio controls src="${t.dataUrl}" style="width:100%;height:34px;"></audio>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function dnEditCardHtml(l){
+  const ed = dnEditDraft(l.id);
+  const ctx = 'edit:' + l.id;
+  const recKey = 'edit_' + l.id;
+  const rec = dnEditRec(l.id);
+  return `
+  <div style="background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px;">
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Дата</span>
+        <input type="date" data-dn-field="date" data-dn-ctx="${ctx}" value="${ed.date||''}" style="${dnFieldInputStyle()}" />
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Тема / модуль</span>
+        <input type="text" list="dn-wheel-topics" data-dn-field="topic" data-dn-ctx="${ctx}" placeholder="из Колеса баланса или своя" value="${ed.topic||''}" style="${dnFieldInputStyle()}" />
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Диапазон в работе</span>
+        <div style="display: flex; align-items: center; gap: 14px; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+          <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkLow', ed.workLow)}</div>
+          <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkHigh', ed.workHigh)}</div>
+        </div>
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Цель урока</span>
+        <input type="text" data-dn-field="goal" data-dn-ctx="${ctx}" placeholder="что делаем и какую задачу закрываем" value="${ed.goal||''}" style="${dnFieldInputStyle()}" />
+      </label>
+    </div>
+
+    <div style="margin-top: 20px;">
+      ${dnUpperLabel('Фигуры и структуры, применяемые в записи')}
+      <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 5px 8px; justify-content: start; justify-items: start;">
+        ${KB_STRUCTURES.map(st=>`<button type="button" class="kb-small-btn${(ed.structures||[]).indexOf(st.key)>=0?' on':''}" data-dn-toggle-structure="${st.key}" data-dn-ctx="${ctx}">${st.label}</button>`).join('')}
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+      <div>
+        ${dnUpperLabel('Интенсивность урока (1–10)')}
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${ed.intensity===n?' on':''}" data-dn-set-num="intensity:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        ${dnUpperLabel('Оценка занятия (1–10)')}
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${ed.grade===n?' on':''}" data-dn-set-num="grade:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        ${dnUpperLabel('Моды CVT')}
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+          ${KB_MODE_KEYS.map(m=>`<button type="button" class="kb-small-btn${(ed.cvtModes||[]).indexOf(m)>=0?' on':''}" data-dn-toggle-mode="${m}" data-dn-ctx="${ctx}">${m}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        ${dnUpperLabel('Анкеровка')}
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+          ${KB_ANCHOR_KEYS.map(a=>`<button type="button" class="kb-small-btn${(ed.anchors||[]).indexOf(a)>=0?' on':''}" data-dn-toggle-anchor="${a}" data-dn-ctx="${ctx}">${a}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px;">
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Новые проблемы</span>
+        <div style="display: flex; align-items: center; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+          <div data-dn-ctx="${ctx}" style="flex:1;">${kbSpravochnikSingleControl('dnNewProblem', ed.newProblem)}</div>
+        </div>
+      </label>
+      <label style="display: block;">
+        <span style="${dnLabelStyle()}">Домашнее задание</span>
+        <input type="text" list="dn-hw-topics" data-dn-field="hw" data-dn-ctx="${ctx}" placeholder="впишите вручную или выберите тему из мини-приложения Telegram" value="${ed.hw||''}" style="${dnFieldInputStyle()}" />
+      </label>
+    </div>
+
+    ${dnRecorderHtml(recKey, rec, ed.takes||[])}
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:20px;justify-content:flex-end;">
+      <button type="button" class="kb-ghost-btn" data-dn-delete="${l.id}">Удалить занятие</button>
+      <button type="button" class="kb-ghost-btn" data-dn-edit-cancel="${l.id}">Отмена</button>
+      <button type="button" style="padding: 13px 26px; border: none; border-radius: 12px; background: #A8452C; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;" data-dn-edit-save="${l.id}">Сохранить изменения</button>
+    </div>
+  </div>`;
+}
+
+function dnHistorySectionHtml(s, lessons, editingId){
+  const sorted = (lessons||[]).slice().sort((a,b)=> (b.lessonDate||'').localeCompare(a.lessonDate||'') || (b.id - a.id));
+  return `
+    <section>
+      <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; color: #A09488; margin-bottom: 14px;">Записи занятий</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${sorted.length ? sorted.map(l=> String(editingId)===String(l.id) ? dnEditCardHtml(l) : dnHistoryCardHtml(l)).join('') : `<div class="admin-note">Занятий пока не записано.</div>`}
+      </div>
+    </section>
+  `;
+}
+
+/* ---- persistence: race-safe per-lesson-id save chain, mirrors
+   saveKabinet/kbFlushKabinet's fix for out-of-order POSTs ---- */
+function dnQueueSave(lessonId, patch, onResult){
+  state.dnPending[lessonId] = Object.assign({}, state.dnPending[lessonId], patch);
+  const prevChain = state.dnSaveChain[lessonId] || Promise.resolve();
+  const thisSave = prevChain.then(()=> dnFlush(lessonId, onResult));
+  state.dnSaveChain[lessonId] = thisSave.catch(()=>{});
+  return thisSave;
+}
+function dnFlush(lessonId, onResult){
+  const payload = state.dnPending[lessonId] || {};
+  state.dnPending[lessonId] = {};
+  const mySeq = (state.dnSaveSeq[lessonId] = (state.dnSaveSeq[lessonId]||0) + 1);
+  return apiSend('/api/lessons?id=' + encodeURIComponent(lessonId), 'PATCH', payload)
+    .then(res=>{
+      if(state.dnSaveSeq[lessonId] === mySeq && onResult){ onResult(res.lesson); }
+      return res.lesson;
+    })
+    .catch(err=>{
+      alert('Не удалось сохранить занятие: ' + (err.message||err));
+      throw err;
     });
-  });
+}
 
-  const addBtn = document.getElementById('addLessonBtn');
-  if(addBtn){
-    addBtn.onclick = ()=>{
-      document.getElementById('newLessonWrap').innerHTML = newLessonFormHtml();
-      const wrap = document.getElementById('newLessonWrap');
-      wrap.querySelectorAll('#nlCvtModes .tag').forEach(el=>{
-        el.onclick = ()=> el.classList.toggle('selected');
+function dnDraftToPayload(s, draft){
+  return {
+    studentId: s.id,
+    lessonDate: draft.date,
+    topic: draft.topic || null,
+    workLow: draft.workLow || null,
+    workHigh: draft.workHigh || null,
+    goal: draft.goal || null,
+    structures: draft.structures || [],
+    intensity: draft.intensity,
+    grade: draft.grade,
+    cvtModes: draft.cvtModes || [],
+    anchors: draft.anchors || [],
+    newProblem: draft.newProblem || null,
+    hw: draft.hw || null,
+    takes: draft.takes || []
+  };
+}
+function dnEnsureDraftRow(s){
+  const draft = dnDraft(s);
+  if(draft.id) return Promise.resolve(draft.id);
+  if(draft._creating) return draft._creating;
+  draft._creating = apiSend('/api/lessons', 'POST', dnDraftToPayload(s, draft)).then(res=>{
+    draft.id = res.lesson.id;
+    draft._creating = null;
+    invalidateLessonCount(s);
+    return draft.id;
+  }).catch(err=>{
+    draft._creating = null;
+    throw err;
+  });
+  return draft._creating;
+}
+function dnAutosave(s, patch){
+  const draft = dnDraft(s);
+  Object.assign(draft, patch);
+  dnEnsureDraftRow(s).then(lessonId=>{
+    dnQueueSave(lessonId, patch, ()=>{});
+  }).catch(err=>{ alert('Не удалось создать запись занятия: ' + (err.message||err)); });
+}
+
+function dnFinalizeSave(s){
+  const draft = dnDraft(s);
+  const btn = document.querySelector('[data-dn-save-lesson]');
+  if(btn) btn.disabled = true;
+  const finish = (lesson)=>{
+    const cache = dnCache(s);
+    cache.lessons = [lesson].concat((cache.lessons||[]).filter(l=>String(l.id)!==String(lesson.id)));
+    delete state.diaryDrafts[s.id];
+    delete state.diaryRec[s.id];
+    delete state.kabinetCache[s.id];
+    invalidateLessonCount(s);
+    paintDiary(s);
+  };
+  if(draft.id){
+    dnQueueSave(draft.id, dnDraftToPayload(s, draft), finish).catch(()=>{ if(btn) btn.disabled=false; });
+  } else {
+    apiSend('/api/lessons', 'POST', dnDraftToPayload(s, draft)).then(res=> finish(res.lesson))
+      .catch(err=>{ alert('Не удалось сохранить занятие: ' + (err.message||err)); if(btn) btn.disabled=false; });
+  }
+}
+
+/* ---- recorder: same MediaRecorder setup/limits/filename pattern as
+   kbStartRecording/kbStopRecording/kbTeardownRecorder/kbUpdateRecDom,
+   generalized to run as an independent instance per recKey ---- */
+function dnUpdateRecDom(recKey, rec){
+  const timerEl = document.querySelector(`[data-dn-rec-timer="${recKey}"]`);
+  if(timerEl) timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60);
+  const barsWrap = document.querySelector(`[data-dn-rec-bars="${recKey}"]`);
+  if(barsWrap){
+    const bars = barsWrap.children;
+    const levels = rec.levels;
+    for(let i=0;i<bars.length;i++){
+      const v = levels[levels.length - bars.length + i] || 0;
+      const h = Math.max(3, Math.round(v*38));
+      bars[i].style.height = h + 'px';
+      bars[i].style.background = '#E0553A';
+    }
+  }
+}
+function dnStartRecording(recKey, rec, opts){
+  if(rec.active || rec.saving) return;
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    rec.error = 'Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.';
+    opts.onRepaint();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    rec.stream = stream;
+    const mr = new MediaRecorder(stream);
+    rec.chunks = [];
+    mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
+    mr.onstop = ()=>{
+      const blob = new Blob(rec.chunks, {type: mr.mimeType || 'audio/webm'});
+      const secs = rec.seconds;
+      const d = new Date();
+      const fileName = kbPad(d.getDate())+'.'+kbPad(d.getMonth()+1)+'.'+d.getFullYear()+'_'+opts.fileTag+'.webm';
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const dataUrl = reader.result;
+        dnTeardownRecorder(rec);
+        if(dataUrl.length > 5800000){
+          rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.';
+          opts.onRepaint();
+          return;
+        }
+        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString() };
+        opts.onSaveTake(take);
+      };
+      reader.readAsDataURL(blob);
+    };
+    rec.mediaRecorder = mr;
+    mr.start();
+    rec.active = true; rec.seconds = 0; rec.error = ''; rec.levels = [];
+    opts.onRepaint();
+    rec.timer = setInterval(()=>{ rec.seconds++; dnUpdateRecDom(recKey, rec); }, 1000);
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      rec.ctx = ctx;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      rec.levelTimer = setInterval(()=>{
+        analyser.getByteTimeDomainData(data);
+        let peak = 0;
+        for(let i=0;i<data.length;i++) peak = Math.max(peak, Math.abs(data[i]-128)/128);
+        rec.levels = rec.levels.concat([peak]).slice(-28);
+        dnUpdateRecDom(recKey, rec);
+      }, 90);
+    }catch(e){ /* визуализация не критична для работы записи */ }
+  }).catch(()=>{
+    rec.error = 'Нет доступа к микрофону. Разрешите запись в настройках браузера и попробуйте снова.';
+    opts.onRepaint();
+  });
+}
+function dnStopRecording(rec){
+  if(rec.timer) clearInterval(rec.timer);
+  if(rec.levelTimer) clearInterval(rec.levelTimer);
+  if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop();
+  else dnTeardownRecorder(rec);
+}
+function dnTeardownRecorder(rec){
+  if(rec.timer) clearInterval(rec.timer);
+  if(rec.levelTimer) clearInterval(rec.levelTimer);
+  if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; }
+  if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; }
+  rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
+}
+function dnSaveTakes(rec, ensureRowFn, getTakes, applyTakes, repaint){
+  rec.saving = true; rec.justSaved = false; repaint();
+  ensureRowFn().then(lessonId=>{
+    const takes = getTakes();
+    return dnQueueSave(lessonId, {takes}, applyTakes);
+  }).then(()=>{
+    rec.saving = false; rec.justSaved = true; repaint();
+    setTimeout(()=>{ rec.justSaved = false; repaint(); }, 2200);
+  }).catch(err=>{
+    rec.saving = false; rec.error = 'Не удалось сохранить запись: ' + (err.message||err);
+    repaint();
+  });
+}
+
+function dnLessonToEditDraft(l){
+  return {
+    date: l.lessonDate, topic: l.topic||'', workLow: l.workLow||'', workHigh: l.workHigh||'',
+    goal: l.goal||'', structures: (l.structures||[]).slice(), intensity: l.intensity, grade: l.grade,
+    cvtModes: (l.cvtModes||[]).slice(), anchors: (l.anchors||[]).slice(), newProblem: l.newProblem||'',
+    hw: l.hw||'', takes: (l.takes||[]).slice()
+  };
+}
+
+function dnApplyDictValue(s, ctx, fieldKey, label){
+  const shortKey = fieldKey==='dnWorkLow'?'workLow':fieldKey==='dnWorkHigh'?'workHigh':'newProblem';
+  if(ctx==='new'){
+    dnAutosave(s, {[shortKey]: label});
+  } else if(ctx && ctx.indexOf('edit:')===0){
+    dnEditDraft(ctx.slice(5))[shortKey] = label;
+  }
+  paintDiary(s);
+}
+
+function dnCommitDictAdd(fieldKey, s){
+  const dd = state.kabinetDictDD;
+  const raw = (dd.draft || '').trim();
+  if(!raw){ state.kabinetDictDD = Object.assign({}, dd, {error:'Пустое значение добавить нельзя.'}); paintDiary(s); return; }
+  const d = state.kbDicts[fieldKey];
+  const all = d.core.concat(d.pinned, d.added);
+  if(all.some(x=>x.toLowerCase()===raw.toLowerCase())){
+    state.kabinetDictDD = Object.assign({}, dd, {error:'Такой вариант уже есть в списке.'});
+    paintDiary(s);
+    return;
+  }
+  const wrap = document.querySelector(`[data-kb-dict-draft="${fieldKey}"]`);
+  const ctxEl = wrap && wrap.closest('[data-dn-ctx]');
+  const ctx = ctxEl ? ctxEl.dataset.dnCtx : 'new';
+  const nextDict = { core: d.core, pinned: d.pinned, added: d.added.concat([raw]) };
+  state.kbDicts[fieldKey] = nextDict;
+  state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+  saveFieldDict(fieldKey, nextDict);
+  dnApplyDictValue(s, ctx, fieldKey, raw);
+}
+
+function dnRecorderWire(s, recKey, rec, ctx, getTakesArr, setTakesArr, syncAfterSave){
+  const btn = document.querySelector(`[data-dn-rec-btn="${recKey}"]`);
+  if(btn){
+    btn.onclick = ()=>{
+      if(rec.active){ dnStopRecording(rec); return; }
+      dnStartRecording(recKey, rec, {
+        fileTag: (s.name||'student').replace(/\s+/g,'_') + '_zanyatie',
+        onRepaint: ()=> paintDiary(s),
+        onSaveTake: (take)=>{
+          const ensureFn = ctx==='new' ? (()=>dnEnsureDraftRow(s)) : (()=>Promise.resolve(ctx.slice(5)));
+          dnSaveTakes(rec, ensureFn,
+            ()=>{ const next = [take].concat(getTakesArr()||[]); setTakesArr(next); return next; },
+            (lesson)=>{ if(lesson) syncAfterSave(lesson); },
+            ()=> paintDiary(s)
+          );
+        }
       });
-      document.getElementById('nlCancel').onclick = ()=>{ wrap.innerHTML=''; };
-      document.getElementById('nlSave').onclick = ()=> saveNewLesson(s);
-      addBtn.style.display = 'none';
     };
   }
-
-  c.querySelectorAll('[data-remove-lesson]').forEach(el=>{
+  document.querySelectorAll(`[data-dn-take-del="${recKey}"]`).forEach(el=>{
     el.onclick = ()=>{
-      if(!confirm('Удалить эту запись о занятии?')) return;
-      apiSend('/api/lessons?id=' + encodeURIComponent(el.dataset.removeLesson), 'DELETE', {})
-        .then(()=> { renderCard(s); invalidateLessonCount(s); })
-        .catch(err=> alert('Не удалось удалить: ' + err.message));
+      const takeId = Number(el.dataset.takeId);
+      const next = (getTakesArr()||[]).filter(t=>t.id!==takeId);
+      setTakesArr(next);
+      if(ctx==='new'){
+        const draft = dnDraft(s);
+        if(draft.id) dnQueueSave(draft.id, {takes: next}, ()=>{});
+      } else if(ctx && ctx.indexOf('edit:')===0){
+        dnQueueSave(ctx.slice(5), {takes: next}, (lesson)=> syncAfterSave(lesson));
+      }
+      paintDiary(s);
     };
   });
 }
 
-function saveIntakeField(s, key, value){
-  const cache = state.cardCache[s.id] || (state.cardCache[s.id] = {intake:{}, lessons:[]});
-  cache.intake = Object.assign({}, cache.intake, {[key]: value});
-  const payload = Object.assign({studentId: s.id}, cache.intake);
-  apiSend('/api/intake', 'POST', payload)
-    .then(res=>{ cache.intake = res.intake; paintCard(s); })
-    .catch(err=>{ alert('Не удалось сохранить: ' + err.message); paintCard(s); });
+function wireDiaryHandlers(s){
+  const c = document.getElementById('tabContent');
+
+  // Справочник (Диапазон в работе / Новые проблемы): та же общая логика
+  // открытия/выбора/pin/delete/add-своё, что и в Кабинете — общее состояние
+  // state.kabinetDictDD (один открытый справочник на всё приложение) и общий
+  // словарь state.kbDicts (общая таблица field_dicts на бэкенде).
+  c.querySelectorAll('[data-kb-dict-toggle]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.kbDictToggle;
+      const dd = state.kabinetDictDD;
+      const wasOpen = dd.openKey === key && !dd.adding;
+      state.kabinetDictDD = { openKey: wasOpen ? null : key, adding:false, draft:'', error:'', confirm:null };
+      paintDiary(s);
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-select-one]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.kbDictSelectOne;
+      const label = el.dataset.kbValue;
+      state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+      const ctxEl = el.closest('[data-dn-ctx]');
+      const ctx = ctxEl ? ctxEl.dataset.dnCtx : 'new';
+      dnApplyDictValue(s, ctx, key, label);
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-pin]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); kbTogglePin(el.dataset.kbDictPin, el.dataset.kbValue, s); };
+  });
+  c.querySelectorAll('[data-kb-dict-delete-ask]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm: el.dataset.kbDictDeleteAsk + '::' + el.dataset.kbValue}); paintDiary(s); };
+  });
+  c.querySelectorAll('[data-kb-dict-delete-cancel]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm:null}); paintDiary(s); };
+  });
+  c.querySelectorAll('[data-kb-dict-delete-confirm]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); kbDeleteDictOption(el.dataset.kbDictDeleteConfirm, el.dataset.kbValue, s); };
+  });
+  c.querySelectorAll('[data-kb-dict-start-add]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = { openKey: el.dataset.kbDictStartAdd, adding:true, draft:'', error:'', confirm:null }; paintDiary(s); };
+  });
+  c.querySelectorAll('[data-kb-dict-cancel-add]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null }; paintDiary(s); };
+  });
+  c.querySelectorAll('[data-kb-dict-draft]').forEach(el=>{
+    el.onclick = (e)=> e.stopPropagation();
+    el.oninput = ()=>{ state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {draft: el.value, error:''}); };
+    el.onkeydown = (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); dnCommitDictAdd(el.dataset.kbDictDraft, s); }
+      if(e.key === 'Escape'){ state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null }; paintDiary(s); }
+    };
+  });
+  c.querySelectorAll('[data-kb-dict-commit]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); dnCommitDictAdd(el.dataset.kbDictCommit, s); };
+  });
+
+  // текстовые/date-поля (буфер в draft или editDraft, автосохранение при change)
+  c.querySelectorAll('[data-dn-field]').forEach(el=>{
+    el.onchange = ()=>{
+      const key = el.dataset.dnField, ctx = el.dataset.dnCtx, val = el.value;
+      if(ctx==='new'){ dnAutosave(s, {[key]: val}); }
+      else if(ctx && ctx.indexOf('edit:')===0){ dnEditDraft(ctx.slice(5))[key] = val; }
+    };
+  });
+
+  // toggle-кнопки: структуры / моды CVT / анкеровка (множественный выбор)
+  function toggleArrayHandler(key){
+    return (el)=>{
+      el.onclick = ()=>{
+        const ctx = el.dataset.dnCtx;
+        const value = el.dataset.dnToggleStructure || el.dataset.dnToggleMode || el.dataset.dnToggleAnchor;
+        if(ctx==='new'){
+          const draft = dnDraft(s);
+          const cur = draft[key]||[];
+          const idx = cur.indexOf(value);
+          const next = idx>=0?cur.slice(0,idx).concat(cur.slice(idx+1)):cur.concat([value]);
+          dnAutosave(s, {[key]: next});
+        } else if(ctx && ctx.indexOf('edit:')===0){
+          const ed = dnEditDraft(ctx.slice(5));
+          const cur = ed[key]||[];
+          const idx = cur.indexOf(value);
+          ed[key] = idx>=0?cur.slice(0,idx).concat(cur.slice(idx+1)):cur.concat([value]);
+        }
+        paintDiary(s);
+      };
+    };
+  }
+  c.querySelectorAll('[data-dn-toggle-structure]').forEach(toggleArrayHandler('structures'));
+  c.querySelectorAll('[data-dn-toggle-mode]').forEach(toggleArrayHandler('cvtModes'));
+  c.querySelectorAll('[data-dn-toggle-anchor]').forEach(toggleArrayHandler('anchors'));
+
+  // числовые toggle-кнопки: интенсивность / оценка (одиночный выбор, повторный клик снимает)
+  c.querySelectorAll('[data-dn-set-num]').forEach(el=>{
+    el.onclick = ()=>{
+      const [key, nStr] = el.dataset.dnSetNum.split(':');
+      const n = Number(nStr);
+      const ctx = el.dataset.dnCtx;
+      if(ctx==='new'){
+        const draft = dnDraft(s);
+        dnAutosave(s, {[key]: draft[key]===n?null:n});
+      } else if(ctx && ctx.indexOf('edit:')===0){
+        const ed = dnEditDraft(ctx.slice(5));
+        ed[key] = ed[key]===n ? null : n;
+      }
+      paintDiary(s);
+    };
+  });
+
+  // рекордер новой записи
+  const draft = dnDraft(s);
+  dnRecorderWire(s, 'new_'+s.id, dnRec(s), 'new',
+    ()=> dnDraft(s).takes,
+    (next)=>{ dnDraft(s).takes = next; },
+    ()=>{}
+  );
+
+  // рекордер текущей открытой инлайн-редакции (если есть)
+  const editingId = state.diaryEditing[s.id];
+  if(editingId){
+    dnRecorderWire(s, 'edit_'+editingId, dnEditRec(editingId), 'edit:'+editingId,
+      ()=> dnEditDraft(editingId).takes,
+      (next)=>{ dnEditDraft(editingId).takes = next; },
+      (lesson)=>{
+        const cache = dnCache(s);
+        cache.lessons = (cache.lessons||[]).map(l=> String(l.id)===String(lesson.id) ? lesson : l);
+      }
+    );
+  }
+
+  // «Сохранить занятие» — финальный флаш новой записи + сброс формы
+  const saveBtn = c.querySelector('[data-dn-save-lesson]');
+  if(saveBtn) saveBtn.onclick = ()=> dnFinalizeSave(s);
+
+  // история: редактировать / отмена / сохранить изменения / удалить
+  c.querySelectorAll('[data-dn-edit-start]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.dnEditStart;
+      const cache = dnCache(s);
+      const lesson = (cache.lessons||[]).find(l=>String(l.id)===String(id));
+      if(!lesson) return;
+      state.diaryEditDrafts[id] = dnLessonToEditDraft(lesson);
+      state.diaryEditing[s.id] = id;
+      paintDiary(s);
+    };
+  });
+  c.querySelectorAll('[data-dn-edit-cancel]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.dnEditCancel;
+      delete state.diaryEditDrafts[id];
+      delete state.diaryEditRec[id];
+      state.diaryEditing[s.id] = null;
+      paintDiary(s);
+    };
+  });
+  c.querySelectorAll('[data-dn-edit-save]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.dnEditSave;
+      const ed = dnEditDraft(id);
+      el.disabled = true;
+      dnQueueSave(id, {
+        lessonDate: ed.date, topic: ed.topic||null, workLow: ed.workLow||null, workHigh: ed.workHigh||null,
+        goal: ed.goal||null, structures: ed.structures||[], intensity: ed.intensity, grade: ed.grade,
+        cvtModes: ed.cvtModes||[], anchors: ed.anchors||[], newProblem: ed.newProblem||null, hw: ed.hw||null
+      }, (lesson)=>{
+        const cache = dnCache(s);
+        cache.lessons = (cache.lessons||[]).map(l=> String(l.id)===String(lesson.id) ? lesson : l);
+        delete state.diaryEditDrafts[id];
+        delete state.diaryEditRec[id];
+        delete state.kabinetCache[s.id];
+        state.diaryEditing[s.id] = null;
+        paintDiary(s);
+      }).catch(()=>{ el.disabled=false; });
+    };
+  });
+  c.querySelectorAll('[data-dn-delete]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.dnDelete;
+      if(!confirm('Удалить это занятие?')) return;
+      apiSend('/api/lessons?id='+encodeURIComponent(id), 'DELETE', {}).then(()=>{
+        const cache = dnCache(s);
+        cache.lessons = (cache.lessons||[]).filter(l=>String(l.id)!==String(id));
+        delete state.diaryEditDrafts[id];
+        delete state.diaryEditRec[id];
+        if(state.diaryEditing[s.id]===id) state.diaryEditing[s.id] = null;
+        delete state.kabinetCache[s.id];
+        invalidateLessonCount(s);
+        paintDiary(s);
+      }).catch(err=> alert('Не удалось удалить занятие: ' + (err.message||err)));
+    };
+  });
 }
 
-function saveNewLesson(s){
-  const selectedModes = Array.from(document.querySelectorAll('#nlCvtModes .tag.selected')).map(el=>el.dataset.val);
-  const payload = {
-    studentId: s.id,
-    lessonDate: document.getElementById('nlDate').value,
-    effortLevel: Number(document.getElementById('nlEffort').value),
-    progressFlag: document.getElementById('nlFlag').value,
-    cvtModes: selectedModes,
-    rangeWorked: document.getElementById('nlRange').value,
-    whatWorked: document.getElementById('nlWorked').value,
-    whatDidnt: document.getElementById('nlDidnt').value,
-    newTension: document.getElementById('nlTension').value,
-    homework: document.getElementById('nlHomework').value,
-    mediaUrl: document.getElementById('nlMedia').value
-  };
-  const btn = document.getElementById('nlSave'); if(btn) btn.disabled = true;
-  apiSend('/api/lessons', 'POST', payload)
-    .then(()=> { renderCard(s); invalidateLessonCount(s); })
-    .catch(err=>{ alert('Не удалось сохранить занятие: ' + err.message); if(btn) btn.disabled = false; });
-}
 
 /* ============================================================
    KABINET — вкладка «Кабинет», аккордеон анкеты (7 секций)
@@ -1567,7 +2197,12 @@ state.kbDicts = {
   smoking: { core: KB_OPTS.smoking.slice(), pinned: [], added: [] },
   alcohol: { core: KB_OPTS.alcohol.slice(), pinned: [], added: [] },
   pmsFactor: { core: KB_OPTS.pmsFactor.slice(), pinned: [], added: [] },
-  breathingType: { core: KB_OPTS.breath.slice(), pinned: [], added: [] }
+  breathingType: { core: KB_OPTS.breath.slice(), pinned: [], added: [] },
+  // Дневник занятий — «Диапазон в работе» (2 инстанса, общий словарь нот)
+  // и «Новые проблемы» используют тот же компонент Справочник.
+  dnWorkLow: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  dnWorkHigh: { core: KB_NOTES.slice(), pinned: [], added: [] },
+  dnNewProblem: { core: KB_COMPLAINTS.slice(), pinned: [], added: [] }
 };
 state.kbDictsLoaded = false;
 // Один общий "открытый справочник" за раз — так же, как в исходном
@@ -1828,6 +2463,10 @@ function kbCommitDictAdd(fieldKey, s){
   }
 }
 
+function kbRepaintCurrent(s){
+  if(state.activeTab==='card') paintDiary(s); else paintKabinet(s);
+}
+
 function kbTogglePin(fieldKey, label, s){
   const d = state.kbDicts[fieldKey];
   const isPinned = d.pinned.indexOf(label) >= 0;
@@ -1836,7 +2475,7 @@ function kbTogglePin(fieldKey, label, s){
     : { core: d.core, pinned: d.pinned.concat([label]), added: d.added.filter(x=>x!==label) };
   state.kbDicts[fieldKey] = next;
   saveFieldDict(fieldKey, next);
-  paintKabinet(s);
+  kbRepaintCurrent(s);
 }
 
 function kbDeleteDictOption(fieldKey, label, s){
@@ -1845,7 +2484,7 @@ function kbDeleteDictOption(fieldKey, label, s){
   state.kbDicts[fieldKey] = next;
   state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm:null});
   saveFieldDict(fieldKey, next);
-  paintKabinet(s);
+  kbRepaintCurrent(s);
 }
 
 function saveFieldDict(fieldKey, dict){
@@ -2176,12 +2815,21 @@ function paintKabinet(s){
     </div>` : ''}
   `;
 
-  const files = lessons.map(l=>({
-    name: (l.lessonDate||'').split('-').reverse().join('.') + '_' + (s.name||'').replace(/\s+/g,'_') + (l.mediaUrl?'.webm':''),
-    topic: l.rangeWorked || l.whatWorked || '—',
-    url: l.mediaUrl || '',
-    hasAudio: !!l.mediaUrl
-  }));
+  // Каждое занятие теперь может содержать несколько записей («takes» из
+  // рекордера в Дневнике занятий) — разворачиваем их в отдельные строки.
+  // Старые занятия (сделанные ещё прежней версией вкладки) хранят одну
+  // ссылку в mediaUrl — показываем и её тоже, для обратной совместимости.
+  const files = [];
+  lessons.forEach(l=>{
+    const dateStr = (l.lessonDate||'').split('-').reverse().join('.');
+    const topic = l.topic || l.rangeWorked || l.whatWorked || '—';
+    (l.takes||[]).forEach(t=>{
+      files.push({ name: t.name || (dateStr+'_'+(s.name||'').replace(/\s+/g,'_')+'.webm'), topic, url: t.dataUrl, hasAudio: true });
+    });
+    if(l.mediaUrl){
+      files.push({ name: dateStr+'_'+(s.name||'').replace(/\s+/g,'_')+'.webm', topic, url: l.mediaUrl, hasAudio: true });
+    }
+  });
   const filesHtml = `
     ${kbSection('files','ЗАПИСИ С УРОКОВ','дата_имя ученика')}
     ${open.files ? `
@@ -2567,7 +3215,9 @@ document.addEventListener('click', ()=>{
   if(!state.kabinetDictDD.openKey) return;
   state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
   const s = state.data.students.find(x=>x.id===state.activeStudentId);
-  if(s && state.activeTab==='profile') paintKabinet(s);
+  if(!s) return;
+  if(state.activeTab==='profile') paintKabinet(s);
+  else if(state.activeTab==='card') paintDiary(s);
 });
 
 render();
