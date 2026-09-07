@@ -320,6 +320,19 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 @media (pointer: coarse) {
   input, select, textarea { font-size: 16px !important; }
 }
+/* Native <input type="date"> (Dnevnik zanyatiy "Дата" field) ships its own
+   OS/browser-level control chrome that ignores our height/padding on some
+   mobile browsers (mobile Safari especially), so it can render taller/
+   differently-proportioned than the plain text inputs sitting next to it
+   in the same grid row even though both share the exact same inline style.
+   Resetting -webkit-appearance/appearance to none strips that native sizing
+   without touching the calendar-picker-indicator icon or the native picker
+   dropdown itself, which stay fully functional. */
+input[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
+}
 </style>
 </head>
 <body>
