@@ -287,6 +287,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .kb-rec-timer{font-family:'JetBrains Mono',monospace;font-size:25px;font-weight:500;color:#F7F2EB;letter-spacing:.02em;}
 .kb-rec-dot{width:11px;height:11px;border-radius:50%;background:#E0553A;animation:kbrecpulse 1.1s infinite;}
 @keyframes kbrecpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.82);}}
+  @keyframes recpulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 .kb-rec-bars{display:flex;gap:4px;align-items:center;height:40px;}
 .kb-rec-bar{width:3px;border-radius:2px;background:#5E544B;transition:height .09s;}
 .kb-rec-takes{margin-top:18px;padding-top:16px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;}
@@ -1283,18 +1284,69 @@ async function apiSend(url, method, body){
    ============================================================ */
 
 const DN_DICT_FIELDS = new Set(['dnWorkLow','dnWorkHigh','dnNewProblem']);
+  const DN_STEP_NOTES = ['E2','F2','G2','A2','B2','C3','D3','E3','F3','G3','A3','B3','C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5','C6'];
+  const DN_TOOL_GROUPS = [
+    { label: 'SOVT и разогрев', items: ['Соломинка / SOVT', 'Bubble tube', 'Lip trill', 'Хамминг'] },
+    { label: 'Дыхание и опора', items: ['Апподжо: дыхание', 'Дыхание на 4/4', 'Опора на «с»'] },
+    { label: 'Регистры', items: ['Сирена на «ng»', 'Микст-переход', 'Глиссандо вверх-вниз'] },
+    { label: 'Артикуляция и подача', items: ['Твэнг', 'Речевой перенос', 'Скороговорка на опоре'] },
+    { label: 'Ритм и репертуар', items: ['Стаккато-арпеджио', 'Метроном 60', 'Работа с текстом', 'Куплет целиком'] }
+    ];
+  const DN_PROBLEM_GROUPS = [
+    { label: 'Дыхание и опора', items: ['Утечка воздуха', 'Нестабильная опора', 'Форсирование громкости'] },
+    { label: 'Гортань', items: ['Подъём гортани', 'Зажим корня языка', 'Сжатие ложных складок'] },
+    { label: 'Регистры', items: ['Ломка на переходе', 'Проваливание в фальцет', 'Потеря микста'] },
+    { label: 'Резонанс и тембр', items: ['Гнусавость', 'Глухой звук', 'Тремор на длинных'] }
+    ];
+  const DN_LEVEL_DATA = [
+    { code: 'Уровень A', hint: 'База: дыхание, разогрев, ретракция', topics: ['Дыхание: апподжо 4×8', 'SOVT: соломинка 5 мин', 'Ретракция: беззвучный смех'] },
+    { code: 'Уровень B', hint: 'Контроль: опора, переходы, твэнг', topics: ['Сирена на «ng» через переход', 'Опора на «с», 4 подхода', 'Твэнг: 3 подхода по 8'] },
+    { code: 'Уровень C', hint: 'Сцена: микст, динамика, стаккато', topics: ['Микст на форте', 'Стаккато-арпеджио в темпе', 'Динамика: p → f на одной ноте'] },
+    { code: 'Уровень D', hint: 'Репертуар: текст, подача, запись', topics: ['Куплет наизусть a cappella', 'Песня целиком с записью', 'Работа с текстом и подачей'] }
+    ];
+  function dnArrowStyle(enabled){
+      return 'width:20px;height:15px;padding:0;border-radius:4px;border:1px solid #EDE6DC;background:#fff;font-size:8px;line-height:1;cursor:'+(enabled?'pointer':'default')+';color:'+(enabled?'#8A7E74':'#DCD3C7')+';';
+  }
+  function dnResultBtnStyle(active, accent){
+      return 'width:32px;height:38px;border-radius:9px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border:1px solid '+(active?accent:'#E4DCD1')+';background:'+(active?accent:'#fff')+';color:'+(active?'#fff':'#A09488')+';';
+  }
+  function dnPillStyle(active, accent){
+      return 'width:34px;height:34px;border-radius:9px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;border:1px solid '+(active?accent:'#E4DCD1')+';background:'+(active?accent:'#FAF7F2')+';color:'+(active?'#fff':'#6E645A')+';';
+  }
+  function dnPrimaryBtnStyle(active, extra){
+      return 'padding:11px 20px;border-radius:11px;border:1px solid '+(active?'#8FA97C':'#A8452C')+';background:'+(active?'#EEF3E8':'#A8452C')+';color:'+(active?'#4E6B3B':'#fff')+';font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;'+(extra||'');
+  }
+  function dnProblemFieldStyle(open){
+      return 'display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:11px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;color:#23201D;background:#FAF7F2;border:1px solid '+(open?'#A8452C':'#E4DCD1')+';';
+  }
+  function dnProblemRowStyle(sel, added){
+      return 'display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px;border:none;border-radius:9px;background:'+(sel?'#F6EFE9':'transparent')+';font-family:inherit;font-size:13.5px;font-weight:'+(sel?'700':'600')+';color:'+(added?'#A09488':'#4A423B')+';cursor:pointer;';
+  }
+  function dnProblemBoxStyle(sel){
+      return 'flex:none;width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#fff;border:1.5px solid '+(sel?'#A8452C':'#D6CBBD')+';background:'+(sel?'#A8452C':'#fff')+';';
+  }
+  function dnConfirmBtnStyle(hasPicks){
+      return 'height:38px;padding:0 16px;border-radius:10px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;border:1px solid '+(hasPicks?'#A8452C':'#E4DCD1')+';background:'+(hasPicks?'#A8452C':'#fff')+';color:'+(hasPicks?'#fff':'#C0B5A8')+';';
+  }
+  function dnLevelBtnStyle(active){
+      return 'padding:9px 14px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:800;border:1px solid '+(active?'#23201D':'#E4DCD1')+';background:'+(active?'#23201D':'#fff')+';color:'+(active?'#F7F2EB':'#6E645A')+';';
+  }
 
 function dnCache(s){
   return state.diaryCache[s.id] || (state.diaryCache[s.id] = {lessons:[]});
 }
 
 function dnBlankDraft(){
-  const today = new Date().toISOString().slice(0,10);
-  return {
-    id: null, date: today, topic: '', workLow: '', workHigh: '', goal: '',
-    structures: [], intensity: null, grade: null, cvtModes: [], anchors: [],
-    newProblem: '', hw: '', takes: [], _creating: null
-  };
+    const today = new Date().toISOString().slice(0,10);
+    return {
+          id: null, date: today, topic: '', workLow: '', workHigh: '', goal: '',
+          structures: [], intensity: null, grade: null, cvtModes: [], anchors: [],
+          newProblem: '', hw: '', takes: [], _creating: null,
+          steps: [], newTool: DN_TOOL_GROUPS[0].items[0], hard: null, tone: null,
+          probs: [], problemPicks: [], problemListOpen: false, ownProblem: '',
+          level: DN_LEVEL_DATA[0].code, hwPick: '', hwDue: '', dueWarn: false,
+          assigned: [], sent: false
+    };
 }
 function dnDraft(s){
   if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft();
@@ -1369,97 +1421,227 @@ function dnUpperLabel(text){
 }
 
 function dnFormHtml(s, draft){
-  const ctx = 'new';
-  const recKey = 'new_' + s.id;
-  return `
-  <section style="background: #fff; border: 1px solid #ECE5DB; border-radius: 18px; padding: 22px 24px;">
-    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px;">
-      <div style="font-size: 16px; font-weight: 800;">Новая запись</div>
-      <div style="font-size: 12.5px; color: #B8ADA1;">короткие поля, 30 секунд после занятия</div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px;">
-      <label style="display: block;">
-        <span style="${dnLabelStyle()}">Дата</span>
-        <input type="date" data-dn-field="date" data-dn-ctx="${ctx}" value="${draft.date||''}" style="${dnFieldInputStyle()}" />
-      </label>
-      <label style="display: block;">
-        <span style="${dnLabelStyle()}">Тема / модуль</span>
-        <input type="text" list="dn-wheel-topics" data-dn-field="topic" data-dn-ctx="${ctx}" placeholder="из Колеса баланса или своя" value="${draft.topic||''}" style="${dnFieldInputStyle()}" />
-        <datalist id="dn-wheel-topics"></datalist>
-      </label>
-      <label style="display: block;">
-        <span style="${dnLabelStyle()}">Диапазон в работе</span>
-        <div style="display: flex; align-items: center; gap: 14px; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
-          <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkLow', draft.workLow)}</div>
-          <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkHigh', draft.workHigh)}</div>
-        </div>
-      </label>
-      <label style="display: block;">
-        <span style="${dnLabelStyle()}">Цель урока</span>
-        <input type="text" data-dn-field="goal" data-dn-ctx="${ctx}" placeholder="что делаем и какую задачу закрываем" value="${draft.goal||''}" style="${dnFieldInputStyle()}" />
-      </label>
-    </div>
-
-    <div style="margin-top: 20px;">
-      ${dnUpperLabel('Фигуры и структуры, применяемые в записи')}
-      <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 5px 8px; justify-content: start; justify-items: start;">
-        ${KB_STRUCTURES.map(st=>`<button type="button" class="kb-small-btn${draft.structures.indexOf(st.key)>=0?' on':''}" data-dn-toggle-structure="${st.key}" data-dn-ctx="${ctx}">${st.label}</button>`).join('')}
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-      <div>
-        ${dnUpperLabel('Интенсивность урока (1–10)')}
-        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${draft.intensity===n?' on':''}" data-dn-set-num="intensity:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
-        </div>
-      </div>
-      <div>
-        ${dnUpperLabel('Оценка занятия (1–10)')}
-        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${draft.grade===n?' on':''}" data-dn-set-num="grade:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
-        </div>
-      </div>
-      <div>
-        ${dnUpperLabel('Моды CVT')}
-        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-          ${KB_MODE_KEYS.map(m=>`<button type="button" class="kb-small-btn${draft.cvtModes.indexOf(m)>=0?' on':''}" data-dn-toggle-mode="${m}" data-dn-ctx="${ctx}">${m}</button>`).join('')}
-        </div>
-      </div>
-      <div>
-        ${dnUpperLabel('Анкеровка')}
-        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-          ${KB_ANCHOR_KEYS.map(a=>`<button type="button" class="kb-small-btn${draft.anchors.indexOf(a)>=0?' on':''}" data-dn-toggle-anchor="${a}" data-dn-ctx="${ctx}">${a}</button>`).join('')}
-        </div>
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px;">
-      <label style="display: block;">
-        <span style="${dnLabelStyle()}">Новые проблемы</span>
-        <div style="display: flex; align-items: center; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
-          <div data-dn-ctx="${ctx}" style="flex:1;">${kbSpravochnikSingleControl('dnNewProblem', draft.newProblem)}</div>
-        </div>
-      </label>
-      <label style="display: block;">
-        <span style="${dnLabelStyle()}">Домашнее задание</span>
-        <input type="text" list="dn-hw-topics" data-dn-field="hw" data-dn-ctx="${ctx}" placeholder="впишите вручную или выберите тему из мини-приложения Telegram" value="${draft.hw||''}" style="${dnFieldInputStyle()}" />
-        <datalist id="dn-hw-topics"></datalist>
-      </label>
-    </div>
-
-    ${dnRecorderHtml(recKey, dnRec(s), draft.takes||[])}
-
-    <div style="display: flex; align-items: center; gap: 14px; margin-top: 20px; justify-content: flex-end;">
-      <span style="font-size: 13px; color: #B8ADA1;">Изменения сохраняются автоматически</span>
-      <button type="button" style="padding: 13px 26px; border: none; border-radius: 12px; background: #A8452C; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;" data-dn-save-lesson="1">Сохранить занятие</button>
-    </div>
-  </section>
-  `;
+    const ctx = 'new';
+    const recKey = 'new_' + s.id;
+    const stepsSummary = draft.steps.length + ' ' + pluralRu(draft.steps.length, ['шаг','шага','шагов']) + ' в протоколе';
+    const resOpts = [
+      { key:'ok', label:'✓', title:'получилось', accent:'#4E6B3B' },
+      { key:'part', label:'~', title:'частично', accent:'#B98A2E' },
+      { key:'no', label:'✗', title:'не пошло', accent:'#A8452C' }
+        ];
+    const level = DN_LEVEL_DATA.find(l=>l.code===draft.level) || DN_LEVEL_DATA[0];
+    const doneTotal = 5, doneNum = 3;
+    const donePercent = Math.round(doneNum/doneTotal*100);
+    const dueLatest = draft.assigned.length ? draft.assigned.map(h=>h.due).slice().sort()[0] : null;
+    return `
+      <section style="background: #fff; border: 1px solid #ECE5DB; border-radius: 18px; padding: 22px 24px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px;">
+                <div style="font-size: 16px; font-weight: 800;">Новая запись</div>
+                      <div style="font-size: 12.5px; color: #B8ADA1;">короткие поля, 30 секунд после занятия</div>
+                          </div>
+                              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                                    <label style="display: block;">
+                                            <span style="${dnLabelStyle()}">Дата</span>
+                                                    <input type="date" data-dn-field="date" data-dn-ctx="${ctx}" value="${draft.date||''}" style="${dnFieldInputStyle()}" />
+                                                          </label>
+                                                                <label style="display: block;">
+                                                                        <span style="${dnLabelStyle()}">Тема урока</span>
+                                                                                <input type="text" placeholder="что прошли" data-dn-field="topic" data-dn-ctx="${ctx}" value="${draft.topic||''}" style="${dnFieldInputStyle()}" />
+                                                                                      </label>
+                                                                                            <label style="display: block;">
+                                                                                                    <span style="${dnLabelStyle()}">Диапазон на уроке</span>
+                                                                                                            <div style="display: flex; align-items: center; gap: 6px; height: 46px; box-sizing: border-box; padding: 0 10px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+                                                                                                                      <select data-dn-field="workLow" data-dn-ctx="${ctx}" style="flex:1;min-width:0;border:none;background:none;font-family:'JetBrains Mono',monospace;font-size:14px;color:#23201D;">
+                                                                                                                                  ${DN_STEP_NOTES.map(n=>`<option value="${n}" ${draft.workLow===n?'selected':''}>${n}</option>`).join('')}
+                                                                                                                                            </select>
+                                                                                                                                                      <span style="color:#C6BAAC;">—</span>
+                                                                                                                                                                <select data-dn-field="workHigh" data-dn-ctx="${ctx}" style="flex:1;min-width:0;border:none;background:none;font-family:'JetBrains Mono',monospace;font-size:14px;color:#23201D;">
+                                                                                                                                                                            ${DN_STEP_NOTES.map(n=>`<option value="${n}" ${draft.workHigh===n?'selected':''}>${n}</option>`).join('')}
+                                                                                                                                                                                      </select>
+                                                                                                                                                                                              </div>
+                                                                                                                                                                                                    </label>
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                            <label style="display: block; margin-top: 12px;">
+                                                                                                                                                                                                                  <span style="${dnLabelStyle()}">Цель урока</span>
+                                                                                                                                                                                                                        <input type="text" placeholder="какую задачу закрываем" data-dn-field="goal" data-dn-ctx="${ctx}" value="${draft.goal||''}" style="${dnFieldInputStyle()}" />
+                                                                                                                                                                                                                            </label>
+                                                                                                                                                                                                                                <div style="margin-top: 22px; border-top: 1px solid #F0EAE1; padding-top: 18px;">
+                                                                                                                                                                                                                                      <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+                                                                                                                                                                                                                                              <div style="${dnLabelStyle()}">Задачи урока шаг за шагом</div>
+                                                                                                                                                                                                                                                      <div style="flex: 1;"></div>
+                                                                                                                                                                                                                                                              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A09488;">${stepsSummary}</div>
+                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                          <div style="display: flex; flex-direction: column; gap: 8px;">
+                                                                                                                                                                                                                                                                                  ${draft.steps.map((st,i)=>`
+                                                                                                                                                                                                                                                                                            <div style="border: 1px solid #EDE6DC; border-radius: 12px; padding: 11px 12px; background: #FDFBF8;">
+                                                                                                                                                                                                                                                                                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                                                                                                                                                                                                                                                                                                      <div style="flex: none; width: 26px; height: 26px; border-radius: 8px; background: #23201D; color: #F7F2EB; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;">${i+1}</div>
+                                                                                                                                                                                                                                                                                                                                    <div style="flex: none; display: flex; flex-direction: column; gap: 2px;">
+                                                                                                                                                                                                                                                                                                                                                    <button type="button" data-dn-step-up="${i}" title="Выше" style="${dnArrowStyle(i>0)}">▲</button>
+                                                                                                                                                                                                                                                                                                                                                                    <button type="button" data-dn-step-down="${i}" title="Ниже" style="${dnArrowStyle(i<draft.steps.length-1)}">▼</button>
+                                                                                                                                                                                                                                                                                                                                                                                  </div>
+                                                                                                                                                                                                                                                                                                                                                                                                <select data-dn-step-tool="${i}" style="flex: 1; min-width: 0; height: 38px; padding: 0 10px; border: 1px solid #E4DCD1; border-radius: 10px; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 700; color: #23201D;">
+                                                                                                                                                                                                                                                                                                                                                                                                                ${DN_TOOL_GROUPS.map(g=>`<optgroup label="${g.label}">${g.items.map(t=>`<option value="${t}" ${st.tool===t?'selected':''}>${t}</option>`).join('')}</optgroup>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                              </select>
+                                                                                                                                                                                                                                                                                                                                                                                                                                            <button type="button" data-dn-step-remove="${i}" title="Убрать шаг" style="flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #EDE6DC; background: #fff; color: #A09488; font-size: 15px; line-height: 1; cursor: pointer;">×</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <input type="text" placeholder="что делали и что получилось" data-dn-step-note="${i}" value="${(st.note||'').replace(/"/g,'&quot;')}" style="flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid #E4DCD1; border-radius: 10px; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; color: #23201D;" />
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div style="flex: none; display: flex; gap: 4px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ${resOpts.map(r=>`<button type="button" data-dn-step-result="${i}" data-res="${r.key}" title="${r.title}" style="${dnResultBtnStyle(st.res===r.key, r.accent)}">${r.label}</button>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            `).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <select data-dn-new-tool="1" style="flex: 1; min-width: 200px; height: 40px; padding: 0 10px; border: 1px solid #E4DCD1; border-radius: 10px; background: #FAF7F2; font-family: inherit; font-size: 13.5px; font-weight: 700; color: #23201D;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ${DN_TOOL_GROUPS.map(g=>`<optgroup label="${g.label}">${g.items.map(t=>`<option value="${t}" ${draft.newTool===t?'selected':''}>${t}</option>`).join('')}</optgroup>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  </select>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <button type="button" data-dn-add-step="1" style="padding: 10px 16px; border-radius: 10px; border: 1px dashed #D9CEC0; background: none; color: #6E645A; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">+ Добавить шаг</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 22px; border-top: 1px solid #F0EAE1; padding-top: 18px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <div style="${dnLabelStyle()}">Интенсивность урока</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <div style="font-size: 12px; color: #B8ADA1; margin: 2px 0 8px;">насколько было сложно — называет ученик</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" data-dn-set-num="hard:${n}" data-dn-ctx="${ctx}" style="${dnPillStyle(draft.hard===n,'#A8452C')}">${n}</button>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div style="${dnLabelStyle()}">Оценка занятия</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div style="font-size: 12px; color: #B8ADA1; margin: 2px 0 8px;">насколько ученик был в тонусе — ставлю я</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" data-dn-set-num="tone:${n}" data-dn-ctx="${ctx}" style="${dnPillStyle(draft.tone===n,'#4E6B3B')}">${n}</button>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div style="margin-top: 22px; border-top: 1px solid #F0EAE1; padding-top: 18px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <div style="${dnLabelStyle()} margin-bottom:10px;">Новые проблемы</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div style="flex: 1; min-width: 240px; position: relative;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <button type="button" data-dn-problem-toggle="1" style="${dnProblemFieldStyle(draft.problemListOpen)}">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <span style="flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${draft.problemPicks.length ? 'Отмечено: '+draft.problemPicks.length : 'Выберите проблемы из списка…'}</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <span style="flex: none; font-size: 10px; color: #A09488;">${draft.problemListOpen?'▲':'▼'}</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ${draft.problemListOpen ? `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div style="position: absolute; z-index: 40; top: 48px; left: 0; right: 0; background: #fff; border: 1px solid #E4DCD1; border-radius: 12px; box-shadow: 0 16px 34px rgba(35,32,29,0.14); overflow: hidden;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div style="max-height: 260px; overflow-y: auto; padding: 6px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ${DN_PROBLEM_GROUPS.map(g=>`
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <div style="padding: 8px 8px 2px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #B8ADA1;">${g.label}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ${g.items.map(p=>{
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              const added = draft.probs.indexOf(p)>=0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              const sel = added || draft.problemPicks.indexOf(p)>=0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              return `<button type="button" data-dn-problem-pick="${p.replace(/"/g,'&quot;')}" style="${dnProblemRowStyle(sel, added)}"><span style="${dnProblemBoxStyle(sel)}">${sel?'✓':''}</span>${p}</button>`;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          `).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      </div>
+                  <div style="border-top: 1px solid #EDE6DC; padding: 10px; display: flex; align-items: center; gap: 10px;">
+                                <button type="button" data-dn-problem-confirm="1" style="${dnConfirmBtnStyle(draft.problemPicks.length>0)}">Подтвердить выбор</button>
+                                              <div style="font-size: 12px; color: #A09488;">${draft.problemPicks.length ? 'добавится: '+draft.problemPicks.length : 'отметьте нужные пункты'}</div>
+                                                          </div>
+                                                                    </div>` : ''}
+                                                                            </div>
+                                                                                    <input type="text" placeholder="или своя формулировка" data-dn-own-problem="1" value="${(draft.ownProblem||'').replace(/"/g,'&quot;')}" style="flex: 1; min-width: 200px; height: 44px; padding: 0 12px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2; font-family: inherit; font-size: 14px; font-weight: 600; color: #23201D;" />
+                                                                                            <button type="button" data-dn-own-problem-add="1" style="height: 44px; padding: 0 16px; border-radius: 11px; border: 1px solid #E4DCD1; background: #fff; color: #6E645A; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">Добавить</button>
+                                                                                                  </div>
+                                                                                                        ${draft.probs.length ? `
+                                                                                                              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;">
+                                                                                                                      ${draft.probs.map(p=>`
+                                                                                                                                <div style="display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 13px; border-radius: 999px; background: #F6EFE9; border: 1px solid #E8D8CD; font-size: 13px; font-weight: 700; color: #23201D;">
+                                                                                                                                            ${p}
+                                                                                                                                                        <button type="button" data-dn-problem-remove="${p.replace(/"/g,'&quot;')}" title="Убрать" style="width: 20px; height: 20px; border-radius: 50%; border: none; background: #E8D8CD; color: #8A3722; font-size: 13px; line-height: 1; cursor: pointer;">×</button>
+                                                                                                                                                                  </div>
+                                                                                                                                                                          `).join('')}
+                                                                                                                                                                                </div>` : `<div style="margin-top: 10px; font-size: 12.5px; color: #C0B5A8;">Ничего не выбрано — новых проблем на уроке не было.</div>`}
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                    
+                                                                                                                                                                                        <div style="margin-top: 22px; border: 1px solid #E4DCD1; border-radius: 16px; overflow: hidden;">
+                                                                                                                                                                                              <div style="background: #FAF7F2; padding: 14px 16px; border-bottom: 1px solid #EDE6DC;">
+                                                                                                                                                                                                      <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+                                                                                                                                                                                                                <div style="${dnLabelStyle()}">Домашнее задание в мини-приложении</div>
+                                                                                                                                                                                                                          <div style="flex: 1;"></div>
+                                                                                                                                                                                                                                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6E645A;">за прошлую неделю выполнено ${doneNum} из ${doneTotal} заданий</div>
+                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                                                                                                                                                                                                                                                              <div style="flex: 1; height: 7px; border-radius: 4px; background: #EDE6DC; overflow: hidden;">
+                                                                                                                                                                                                                                                                          <div style="height: 100%; width: ${donePercent}%; background: #7C9A62;"></div>
+                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                              <div style="font-size: 12px; font-weight: 700; color: #4E6B3B;">${donePercent}%</div>
+                                                                                                                                                                                                                                                                                                      </div>
+                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                  <div style="padding: 14px 16px;">
+                                                                                                                                                                                                                                                                                                                          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                                                                                                                                                                                                                                                                                                                    ${DN_LEVEL_DATA.map(l=>`<button type="button" data-dn-level="${l.code}" style="${dnLevelBtnStyle(draft.level===l.code)}">${l.code}</button>`).join('')}
+                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                    <div style="font-size: 12px; color: #A09488; margin-top: 8px;">${level.hint} · темы совпадают с Колесом баланса и срезами</div>
+                                                                                                                                                                                                                                                                                                                                                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                                                                                                                                                                                                                                                                                                                                                      <select data-dn-hw-pick="1" style="flex: 2; min-width: 230px; height: 44px; padding: 0 12px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2; font-family: inherit; font-size: 14px; font-weight: 700; color: #23201D;">
+                                                                                                                                                                                                                                                                                                                                                                                  <option value="">Тема из уровня…</option>
+                                                                                                                                                                                                                                                                                                                                                                                              ${level.topics.map(t=>`<option value="${t}" ${draft.hwPick===t?'selected':''}>${t}</option>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                        </select>
+                                                                                                                                                                                                                                                                                                                                                                                                                  <input type="date" data-dn-hw-due="1" value="${draft.hwDue||''}" style="flex: 1; min-width: 150px; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 11px; font-family: inherit; font-size: 14px; font-weight: 600; color: #23201D; background: ${draft.dueWarn?'#FBF0EC':'#FAF7F2'}; border: 1px solid ${draft.dueWarn?'#A8452C':'#E4DCD1'};" />
+                                                                                                                                                                                                                                                                                                                                                                                                                            <button type="button" data-dn-add-hw="1" style="height: 44px; padding: 0 16px; border-radius: 11px; border: 1px solid #E4DCD1; background: #fff; color: #6E645A; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;">Добавить задание</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                            ${draft.dueWarn ? `<div style="margin-top: 8px; font-size: 12.5px; font-weight: 700; color: #A8452C;">Поставьте дедлайн — без него задание не уйдёт ученику.</div>` : ''}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                              ${draft.assigned.map((h,i)=>`
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <div style="display: flex; align-items: center; gap: 11px; border: 1px solid #EDE6DC; border-radius: 12px; padding: 11px 13px;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div style="flex: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; padding: 4px 7px; border-radius: 6px; background: #F0EAE1; color: #6E645A;">${h.level}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <div style="flex: 1; min-width: 0;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <div style="font-size: 13.5px; font-weight: 700;">${h.title}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <div style="font-size: 12px; color: #A09488; margin-top: 2px;">до ${dnFmtDate(h.due)} · ${h.status}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <button type="button" data-dn-hw-remove="${i}" title="Убрать" style="flex: none; width: 28px; height: 28px; border-radius: 8px; border: 1px solid #EDE6DC; background: #fff; color: #A09488; font-size: 15px; line-height: 1; cursor: pointer;">×</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ${!draft.assigned.length ? `<div style="margin-top: 12px; font-size: 12.5px; color: #C0B5A8;">Заданий пока нет: выберите уровень, тему и дедлайн.</div>` : ''}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div style="display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <button type="button" data-dn-send-hw="1" style="${dnPrimaryBtnStyle(draft.sent)}">${draft.sent?'Отправлено в приложение ✓':'Отправить ученику'}</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div style="font-size: 12.5px; color: #A09488;">${draft.assigned.length ? 'заданий: '+draft.assigned.length+', ближайший дедлайн '+dnFmtDate(dueLatest) : 'сначала добавьте задание'}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ${dnRecorderHtmlNew(recKey, dnRec(s), draft.takes||[])}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <button type="button" data-dn-save-lesson="1" style="${dnPrimaryBtnStyle(false)} width: 100%; margin-top: 18px;">Сохранить запись</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </section>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  `;
 }
-
-function dnRecorderHtml(recKey, rec, takes){
+  function dnRecorderHtmlNew(recKey, rec, takes){
+      const takesArr = takes || [];
+      const caption = rec.active ? 'Идёт запись голоса' : (rec.saving ? 'Сохраняю запись…' : (rec.justSaved ? 'Сохранено' : 'Запись голоса ученика'));
+      return `
+          <div style="background: #2C2724; border-radius: 14px; padding: 16px 18px; margin-top: 20px;">
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                        <button type="button" data-dn-rec-btn="${recKey}" ${rec.saving?'disabled':''} style="flex: none; padding: 11px 20px; border-radius: 11px; border: none; font-family: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; background: ${rec.active?'#E0553A':'#F7F2EB'}; color: ${rec.active?'#fff':'#23201D'};">${rec.active?'Стоп':'Записать'}</button>
+                                <div style="flex: 1; min-width: 180px;">
+                                          <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #A2968A;">${caption}</div>
+                                                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+                                                                <div data-dn-rec-timer="${recKey}" style="font-family: 'JetBrains Mono', monospace; font-size: 21px; font-weight: 500; color: #F7F2EB;">${kbPad(Math.floor(rec.seconds/60))}:${kbPad(rec.seconds%60)}</div>
+                                                                            ${rec.active ? `<div style="width: 9px; height: 9px; border-radius: 50%; background: #E0553A; animation: recpulse 1.1s infinite;"></div>` : ''}
+                                                                                      </div>
+                                                                                              </div>
+                                                                                                    </div>
+                                                                                                          ${rec.error ? `<div style="margin-top: 10px; font-size: 12.5px; color: #E3A99A;">${rec.error}</div>` : ''}
+                                                                                                                ${takesArr.length ? `
+                                                                                                                      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #423A34; display: flex; flex-direction: column; gap: 10px;">
+                                                                                                                              ${takesArr.map(t=>`
+                                                                                                                                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                                                                                                                                    <div style="min-width: 130px;">
+                                                                                                                                                                  <div style="font-size: 13px; font-weight: 700; color: #F7F2EB;">${t.name}</div>
+                                                                                                                                                                                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #A2968A;">${t.meta}</div>
+              </div>
+                          ${t.dataUrl ? `<audio controls src="${t.dataUrl}" style="flex: 1; min-width: 200px; height: 34px;"></audio>` : ''}
+                                      <button type="button" data-dn-take-del="${recKey}" data-take-id="${t.id}" style="border: none; background: none; color: #8A7E74; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;">Удалить</button>
+                                                </div>
+                                                        `).join('')}
+                                                              </div>` : ''}
+                                                                  </div>
+                                                                    `;
+  }
+  function dnRecorderHtml(recKey, rec, takes){
   const takesArr = takes || [];
   return `
     <div style="background: #2C2724; border-radius: 14px; padding: 16px 18px; margin-top: 20px;">
@@ -1714,22 +1896,21 @@ function dnFlush(lessonId, onResult){
 }
 
 function dnDraftToPayload(s, draft){
-  return {
-    studentId: s.id,
-    lessonDate: draft.date,
-    topic: draft.topic || null,
-    workLow: draft.workLow || null,
-    workHigh: draft.workHigh || null,
-    goal: draft.goal || null,
-    structures: draft.structures || [],
-    intensity: draft.intensity,
-    grade: draft.grade,
-    cvtModes: draft.cvtModes || [],
-    anchors: draft.anchors || [],
-    newProblem: draft.newProblem || null,
-    hw: draft.hw || null,
-    takes: draft.takes || []
-  };
+    return {
+          studentId: s.id,
+          lessonDate: draft.date,
+          topic: draft.topic || null,
+          workLow: draft.workLow || null,
+          workHigh: draft.workHigh || null,
+          goal: draft.goal || null,
+          intensity: draft.hard,
+          grade: draft.tone,
+          lessonSteps: draft.steps || [],
+          newProblems: draft.probs || [],
+          hwItems: draft.assigned || [],
+          hwSent: !!draft.sent,
+          takes: draft.takes || []
+    };
 }
 function dnEnsureDraftRow(s){
   const draft = dnDraft(s);
@@ -2061,7 +2242,191 @@ function wireDiaryHandlers(s){
     };
   });
 
-  // рекордер новой записи
+  // Шаги урока (новая форма «Новая запись»)
+    c.querySelectorAll('[data-dn-step-tool]').forEach(el=>{
+          el.onchange = ()=>{
+                  const i = Number(el.dataset.dnStepTool);
+                  const draft = dnDraft(s);
+                  const steps = draft.steps.map((x,j)=> j===i ? Object.assign({}, x, {tool: el.value}) : x);
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-step-note]').forEach(el=>{
+          el.onchange = ()=>{
+                  const i = Number(el.dataset.dnStepNote);
+                  const draft = dnDraft(s);
+                  const steps = draft.steps.map((x,j)=> j===i ? Object.assign({}, x, {note: el.value}) : x);
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-step-up]').forEach(el=>{
+          el.onclick = ()=>{
+                  const i = Number(el.dataset.dnStepUp);
+                  if(i<=0) return;
+                  const draft = dnDraft(s);
+                  const steps = draft.steps.slice();
+                  const tmp = steps[i]; steps[i] = steps[i-1]; steps[i-1] = tmp;
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-step-down]').forEach(el=>{
+          el.onclick = ()=>{
+                  const i = Number(el.dataset.dnStepDown);
+                  const draft = dnDraft(s);
+                  if(i>=draft.steps.length-1) return;
+                  const steps = draft.steps.slice();
+                  const tmp = steps[i]; steps[i] = steps[i+1]; steps[i+1] = tmp;
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-step-remove]').forEach(el=>{
+          el.onclick = ()=>{
+                  const i = Number(el.dataset.dnStepRemove);
+                  const draft = dnDraft(s);
+                  const steps = draft.steps.filter((x,j)=> j!==i);
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-step-result]').forEach(el=>{
+          el.onclick = ()=>{
+                  const i = Number(el.dataset.dnStepResult);
+                  const res = el.dataset.res;
+                  const draft = dnDraft(s);
+                  const steps = draft.steps.map((x,j)=> j===i ? Object.assign({}, x, {res: x.res===res?null:res}) : x);
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-add-step]').forEach(el=>{
+          el.onclick = ()=>{
+                  const draft = dnDraft(s);
+                  const toolSel = c.querySelector('[data-dn-new-tool]');
+                  const tool = (toolSel && toolSel.value) || draft.newTool;
+                  const steps = draft.steps.concat([{tool: tool, note: '', res: null}]);
+                  dnAutosave(s, {steps: steps, lessonSteps: steps});
+                  paintDiary(s);
+          };
+    });
+  
+    // Новые проблемы: попап с многократным выбором и подтверждением
+    c.querySelectorAll('[data-dn-problem-toggle]').forEach(el=>{
+          el.onclick = ()=>{
+                  const draft = dnDraft(s);
+                  const wasOpen = draft.problemListOpen;
+                  draft.problemListOpen = !wasOpen;
+                  draft.problemPicks = wasOpen ? [] : draft.problemPicks;
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-problem-pick]').forEach(el=>{
+          el.onclick = ()=>{
+                  const p = el.dataset.dnProblemPick;
+                  const draft = dnDraft(s);
+                  if(draft.probs.indexOf(p)>=0) return;
+                  const idx = draft.problemPicks.indexOf(p);
+                  draft.problemPicks = idx>=0 ? draft.problemPicks.filter(x=>x!==p) : draft.problemPicks.concat([p]);
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-problem-confirm]').forEach(el=>{
+          el.onclick = ()=>{
+                  const draft = dnDraft(s);
+                  if(!draft.problemPicks.length) return;
+                  const probs = draft.probs.concat(draft.problemPicks.filter(p=>draft.probs.indexOf(p)<0));
+                  draft.problemPicks = [];
+                  draft.problemListOpen = false;
+                  dnAutosave(s, {probs: probs, newProblems: probs});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-problem-remove]').forEach(el=>{
+      el.onclick = ()=>{
+              const p = el.dataset.dnProblemRemove;
+              const draft = dnDraft(s);
+              const probs = draft.probs.filter(x=>x!==p);
+              dnAutosave(s, {probs: probs, newProblems: probs});
+              paintDiary(s);
+      };
+    });
+    const ownProblemEl = c.querySelector('[data-dn-own-problem]');
+    if(ownProblemEl){
+          ownProblemEl.oninput = ()=>{ dnDraft(s).ownProblem = ownProblemEl.value; };
+          const commitOwnProblem = ()=>{
+                  const draft = dnDraft(s);
+                  const raw = (draft.ownProblem||'').trim();
+                  draft.ownProblem = '';
+                  if(!raw) { paintDiary(s); return; }
+                  if(draft.probs.indexOf(raw)>=0){ paintDiary(s); return; }
+                  const probs = draft.probs.concat([raw]);
+                  dnAutosave(s, {probs: probs, newProblems: probs});
+                  paintDiary(s);
+          };
+          ownProblemEl.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); commitOwnProblem(); } };
+          const ownProblemAddBtn = c.querySelector('[data-dn-own-problem-add]');
+          if(ownProblemAddBtn) ownProblemAddBtn.onclick = commitOwnProblem;
+    }
+  
+    // Домашнее задание в мини-приложении
+    c.querySelectorAll('[data-dn-level]').forEach(el=>{
+          el.onclick = ()=>{
+                  const draft = dnDraft(s);
+                  draft.level = el.dataset.dnLevel;
+                  draft.hwPick = '';
+                  paintDiary(s);
+          };
+    });
+    const hwPickEl = c.querySelector('[data-dn-hw-pick]');
+    if(hwPickEl) hwPickEl.onchange = ()=>{
+          const draft = dnDraft(s);
+          draft.hwPick = hwPickEl.value;
+          draft.dueWarn = false;
+          paintDiary(s);
+    };
+    const hwDueEl = c.querySelector('[data-dn-hw-due]');
+    if(hwDueEl) hwDueEl.onchange = ()=>{
+          const draft = dnDraft(s);
+          draft.hwDue = hwDueEl.value;
+          draft.dueWarn = false;
+          paintDiary(s);
+    };
+    c.querySelectorAll('[data-dn-add-hw]').forEach(el=>{
+          el.onclick = ()=>{
+                  const draft = dnDraft(s);
+                  if(!draft.hwPick) return;
+                  if(!draft.hwDue){ draft.dueWarn = true; paintDiary(s); return; }
+                  const assigned = draft.assigned.concat([{ level: draft.level, title: draft.hwPick, due: draft.hwDue, status: 'в приложении: не начато' }]);
+                  draft.hwPick = '';
+                  draft.dueWarn = false;
+                  draft.sent = false;
+                  dnAutosave(s, {assigned: assigned, hwItems: assigned, sent: false, hwSent: false});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-hw-remove]').forEach(el=>{
+          el.onclick = ()=>{
+                  const i = Number(el.dataset.dnHwRemove);
+                  const draft = dnDraft(s);
+                  const assigned = draft.assigned.filter((x,j)=>j!==i);
+                  draft.sent = false;
+                  dnAutosave(s, {assigned: assigned, hwItems: assigned, sent: false, hwSent: false});
+                  paintDiary(s);
+          };
+    });
+    c.querySelectorAll('[data-dn-send-hw]').forEach(el=>{
+          el.onclick = ()=>{
+                  const draft = dnDraft(s);
+                  if(!draft.assigned.length) return;
+                  dnAutosave(s, {sent: true, hwSent: true});
+                  paintDiary(s);
+          };
+    });
+  
+    // рекордер новой записи
   const draft = dnDraft(s);
   dnRecorderWire(s, 'new_'+s.id, dnRec(s), 'new',
     ()=> dnDraft(s).takes,
