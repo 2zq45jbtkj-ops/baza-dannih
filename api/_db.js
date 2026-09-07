@@ -151,6 +151,16 @@ async function ensureSchema(p) {
   await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();`);
 
   ensured = true;
+
+    // Дневник занятий — редизайн формы «Новая запись» (структурированные шаги,
+    // список новых проблем, структурированные домашние задания). Старые
+    // колонки structures/cvt_modes/anchors/new_problem/homework не трогаются —
+    // ими продолжает пользоваться инлайн-редактирование старых записей в
+    // «Записи занятий» (не входит в этот редизайн).
+    await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS lesson_steps JSONB DEFAULT '[]';`);
+    await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS new_problems TEXT[] DEFAULT '{}';`);
+    await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS hw_items JSONB DEFAULT '[]';`);
+    await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS hw_sent BOOLEAN DEFAULT false;`);
 }
 
 async function query(sql, params) {
