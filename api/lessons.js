@@ -1,4 +1,8 @@
 const { query } = require('./_db');
+    lessonSteps: row.lesson_steps || [],
+          newProblems: row.new_problems || [],
+          hwItems: row.hw_items || [],
+          hwSent: row.hw_sent || false,
 
 function rowToJson(row) {
   return {
@@ -62,8 +66,8 @@ module.exports = async (req, res) => {
         `INSERT INTO lesson_log (
            student_id, lesson_date, topic, work_low, work_high, goal,
            structures, intensity, grade, cvt_modes, anchors, new_problem,
-           homework, takes
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+           homework, takes, lesson_steps, new_problems, hw_items, hw_sent
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          RETURNING *`,
         [
           b.studentId,
@@ -79,7 +83,11 @@ module.exports = async (req, res) => {
           Array.isArray(b.anchors) ? b.anchors : [],
           b.newProblem || null,
           b.hw || null,
-          JSON.stringify(Array.isArray(b.takes) ? b.takes : [])
+          JSON.stringify(Array.isArray(b.takes) ? b.takes : []),
+                    JSON.stringify(Array.isArray(b.lessonSteps) ? b.lessonSteps : []),
+                    Array.isArray(b.newProblems) ? b.newProblems : [],
+                    JSON.stringify(Array.isArray(b.hwItems) ? b.hwItems : []),
+                    !!b.hwSent
         ]
       );
       res.status(200).json({ lesson: rowToJson(r.rows[0]) });
@@ -112,6 +120,10 @@ module.exports = async (req, res) => {
       if (Object.prototype.hasOwnProperty.call(b, 'newProblem')) { cols.push(`new_problem = $${i++}`); vals.push(b.newProblem || null); }
       if (Object.prototype.hasOwnProperty.call(b, 'hw')) { cols.push(`homework = $${i++}`); vals.push(b.hw || null); }
       if (Object.prototype.hasOwnProperty.call(b, 'takes')) { cols.push(`takes = $${i++}`); vals.push(JSON.stringify(Array.isArray(b.takes) ? b.takes : [])); }
+            if (Object.prototype.hasOwnProperty.call(b, 'lessonSteps')) { cols.push(`lesson_steps = $${i++}`); vals.push(JSON.stringify(Array.isArray(b.lessonSteps) ? b.lessonSteps : [])); }
+            if (Object.prototype.hasOwnProperty.call(b, 'newProblems')) { cols.push(`new_problems = $${i++}`); vals.push(Array.isArray(b.newProblems) ? b.newProblems : []); }
+            if (Object.prototype.hasOwnProperty.call(b, 'hwItems')) { cols.push(`hw_items = $${i++}`); vals.push(JSON.stringify(Array.isArray(b.hwItems) ? b.hwItems : [])); }
+            if (Object.prototype.hasOwnProperty.call(b, 'hwSent')) { cols.push(`hw_sent = $${i++}`); vals.push(!!b.hwSent); }
 
       if (!cols.length) {
         const cur = await query('SELECT * FROM lesson_log WHERE id = $1', [id]);
