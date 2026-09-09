@@ -1,9 +1,4 @@
 const { query } = require('./_db');
-    lessonSteps: row.lesson_steps || [],
-          newProblems: row.new_problems || [],
-          hwItems: row.hw_items || [],
-          hwSent: row.hw_sent || false,
-
 function rowToJson(row) {
   return {
     id: row.id,
@@ -23,6 +18,10 @@ function rowToJson(row) {
     newProblem: row.new_problem,
     hw: row.homework,
     takes: row.takes || [],
+          lessonSteps: row.lesson_steps || [],
+          newProblems: row.new_problems || [],
+          hwItems: row.hw_items || [],
+          hwSent: row.hw_sent || false,
     // Legacy fields from the old (unused, improvised) Дневник занятий UI —
     // kept for backward compatibility, not written to by the current form.
     effortLevel: row.effort_level,
