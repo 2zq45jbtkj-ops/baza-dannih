@@ -314,7 +314,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-select{border:1px solid #423A34;background:#231F1B;color:#D8CFC5;border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:inherit;cursor:pointer;}
 .vr-check-label{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#B8ADA1;cursor:pointer;user-select:none;}
 .vr-bars{display:flex;gap:2px;align-items:center;height:44px;flex:1;min-width:120px;overflow:hidden;}
-.vr-bar{width:3px;border-radius:2px;background:#C97B62;flex-shrink:0;transition:height .06s linear;}
+.vr-bar{flex:1 1 0%;border-radius:2px;background:#C97B62;transition:height .06s linear;}
 .vr-ctl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;}
 .vr-ctl-btn{padding:7px 13px;border-radius:9px;border:1px solid #423A34;background:none;color:#B8ADA1;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
 .vr-ctl-btn:hover{background:#332C26;}
@@ -343,7 +343,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-take-wave{position:relative;display:flex;gap:1px;align-items:center;height:30px;margin-top:8px;cursor:pointer;}
 .vr-take-bar{flex:1 1 0%;border-radius:2px;background:#5E544B;}
 .vr-take-bar.played{background:#A8452C;}
-.vr-take-pin{position:absolute;top:0;bottom:0;width:1px;background:#7C9A62;pointer-events:none;}
+.vr-take-pin{position:absolute;top:0;bottom:0;width:2px;background:#7C9A62;pointer-events:none;}
 .vr-take-transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .vr-tr-btn{height:30px;padding:0 10px;border-radius:8px;border:1px solid #3A342E;background:transparent;color:#B5A8A1;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;text-decoration:none;}
 .vr-tr-btn:hover{background:#2C2723;}
@@ -2012,6 +2012,16 @@ document.addEventListener('keydown', function(e){
   if(!targetKey) return;
   const btn = document.querySelector('[data-vr-marker-add="'+targetKey+'"]');
   if(btn) btn.click();
+});
+
+document.addEventListener('keydown', function(e){
+  if(e.code!=='Space' && e.key!==' ') return;
+  const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  const audio = document.querySelector('[data-vr-audio]');
+  if(!audio) return;
+  e.preventDefault();
+  if(audio.paused) audio.play(); else audio.pause();
 });
 
 function vrTakeMetaLine(t){
