@@ -299,6 +299,36 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .kb-rec-error{margin-top:14px;font-size:13px;color:#E3A99A;line-height:1.45;}
 .kb-upload-label{padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;}
 .kb-upload-label:hover{background:var(--bg);}
+.vr-box{background:#2A2622;border-radius:16px;padding:18px 20px;font-family:inherit;}
+.vr-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.vr-btn{flex:none;padding:11px 22px;border-radius:12px;border:none;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;background:#F7F3EC;color:#23201D;transition:background .15s,color .15s;}
+.vr-btn.active{background:#A8452C;color:#fff;}
+.vr-btn:disabled{opacity:.5;cursor:default;}
+.vr-caption{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8D8378;margin-bottom:5px;}
+.vr-caption.saved{color:#8FBF8A;}
+.vr-timer{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:#8D8378;letter-spacing:.02em;}
+.vr-timer.live{color:#F7F3EC;}
+.vr-timer.warn{color:#E0553A;}
+.vr-dot{width:9px;height:9px;border-radius:50%;background:#A8452C;animation:vrpulse 1.2s ease-in-out infinite;flex-shrink:0;}
+@keyframes vrpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
+.vr-select{border:1px solid #423A34;background:#231F1B;color:#D8CFC5;border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:inherit;cursor:pointer;}
+.vr-check-label{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#B8ADA1;cursor:pointer;user-select:none;}
+.vr-bars{display:flex;gap:2px;align-items:center;height:44px;flex:1;min-width:120px;overflow:hidden;}
+.vr-bar{width:3px;border-radius:2px;background:#C97B62;flex-shrink:0;transition:height .06s linear;}
+.vr-ctl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.vr-ctl-btn{padding:7px 13px;border-radius:9px;border:1px solid #423A34;background:none;color:#B8ADA1;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.vr-ctl-btn:hover{background:#332C26;}
+.vr-ctl-btn.danger:hover{color:#E0A899;border-color:#5A3A30;}
+.vr-marker-count{font-size:11px;opacity:.75;margin-left:3px;}
+.vr-marker-chip{padding:4px 9px;border-radius:7px;background:#332C26;color:#C9BCAE;font-size:11.5px;font-family:'JetBrains Mono',monospace;}
+.vr-error{margin-top:12px;font-size:12.5px;color:#E3A99A;line-height:1.45;}
+.vr-save-row{display:flex;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap;}
+.vr-save-btn{flex:none;padding:12px 20px;border-radius:11px;border:none;background:#A8452C;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;}
+.vr-save-btn:hover{background:#8E3721;}
+.vr-save-btn:disabled{opacity:.55;cursor:default;}
+.vr-discard-link{background:none;border:none;color:#8A7E74;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.vr-upload-label{padding:7px 13px;border-radius:9px;border:1px solid #423A34;background:none;color:#B8ADA1;font-size:12.5px;font-weight:700;cursor:pointer;}
+
 .kb-files-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 10px;display:flex;flex-direction:column;}
 .kb-files-empty{padding:14px 10px;font-size:13px;color:var(--muted);}
 .kb-file-row{display:flex;align-items:center;gap:14px;padding:11px 10px;flex-wrap:wrap;}
@@ -465,7 +495,7 @@ const state = {
   kabinetCompareOpen: false,
   kabinetSaveSeq: {},
   kabinetSaveChain: {},
-  kabinetRec: { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null },
+  kabinetRec: vrBlankRec(),
   diaryCache: {},
   diaryDrafts: {},
   diaryRec: {},
@@ -1352,9 +1382,7 @@ function dnDraft(s){
   if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft();
   return state.diaryDrafts[s.id];
 }
-function dnBlankRec(){
-  return { active:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null };
-}
+function dnBlankRec(){ return vrBlankRec(); }
 function dnRec(s){
   if(!state.diaryRec[s.id]) state.diaryRec[s.id] = dnBlankRec();
   return state.diaryRec[s.id];
@@ -1599,72 +1627,8 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 </section>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   `;
 }
-  function dnRecorderHtmlNew(recKey, rec, takes){
-      const takesArr = takes || [];
-      const caption = rec.active ? 'Идёт запись голоса' : (rec.saving ? 'Сохраняю запись…' : (rec.justSaved ? 'Сохранено' : 'Запись голоса ученика'));
-      return `
-          <div style="background: #2C2724; border-radius: 14px; padding: 16px 18px; margin-top: 20px;">
-                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-                        <button type="button" data-dn-rec-btn="${recKey}" ${rec.saving?'disabled':''} style="flex: none; padding: 11px 20px; border-radius: 11px; border: none; font-family: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; background: ${rec.active?'#E0553A':'#F7F2EB'}; color: ${rec.active?'#fff':'#23201D'};">${rec.active?'Стоп':'Записать'}</button>
-                                <div style="flex: 1; min-width: 180px;">
-                                          <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #A2968A;">${caption}</div>
-                                                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
-                                                                <div data-dn-rec-timer="${recKey}" style="font-family: 'JetBrains Mono', monospace; font-size: 21px; font-weight: 500; color: #F7F2EB;">${kbPad(Math.floor(rec.seconds/60))}:${kbPad(rec.seconds%60)}</div>
-                                                                            ${rec.active ? `<div style="width: 9px; height: 9px; border-radius: 50%; background: #E0553A; animation: recpulse 1.1s infinite;"></div>` : ''}
-                                                                                      </div>
-                                                                                              </div>
-                                                                                                    </div>
-                                                                                                          ${rec.error ? `<div style="margin-top: 10px; font-size: 12.5px; color: #E3A99A;">${rec.error}</div>` : ''}
-                                                                                                                ${takesArr.length ? `
-                                                                                                                      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #423A34; display: flex; flex-direction: column; gap: 10px;">
-                                                                                                                              ${takesArr.map(t=>`
-                                                                                                                                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                                                                                                                                                    <div style="min-width: 130px;">
-                                                                                                                                                                  <div style="font-size: 13px; font-weight: 700; color: #F7F2EB;">${t.name}</div>
-                                                                                                                                                                                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #A2968A;">${t.meta}</div>
-              </div>
-                          ${t.dataUrl ? `<audio controls src="${t.dataUrl}" style="flex: 1; min-width: 200px; height: 34px;"></audio>` : ''}
-                                      <button type="button" data-dn-take-del="${recKey}" data-take-id="${t.id}" style="border: none; background: none; color: #8A7E74; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;">Удалить</button>
-                                                </div>
-                                                        `).join('')}
-                                                              </div>` : ''}
-                                                                  </div>
-                                                                    `;
-  }
-  function dnRecorderHtml(recKey, rec, takes){
-  const takesArr = takes || [];
-  return `
-    <div style="background: #2C2724; border-radius: 14px; padding: 16px 18px; margin-top: 20px;">
-      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-        <button type="button" class="kb-rec-btn${rec.active?' active':''}" data-dn-rec-btn="${recKey}" ${rec.saving?'disabled':''}>${rec.active?'Стоп':'Запись'}</button>
-        <div style="flex: 1; min-width: 200px;">
-          <div class="kb-rec-caption${rec.saving?' saving':''}${rec.justSaved?' saved':''}">${rec.active?'Идёт запись':(rec.saving?'Сохраняю запись…':(rec.justSaved?'Сохранено':(takesArr.length?'Записано '+takesArr.length:'Нажмите, чтобы записать голос')))}</div>
-          <div style="display: flex; align-items: center; gap: 12px; margin-top: 5px;">
-            <div class="kb-rec-timer" data-dn-rec-timer="${recKey}">${kbPad(Math.floor(rec.seconds/60))}:${kbPad(rec.seconds%60)}</div>
-            ${rec.active? `<div class="kb-rec-dot"></div>` : ''}
-          </div>
-        </div>
-        <div class="kb-rec-bars" data-dn-rec-bars="${recKey}">${Array.from({length:28}).map((_,i)=>`<div class="kb-rec-bar" style="height:${[6,12,9,15,7,11,8,14,6,10,13,8,11,7,12,9,15,6,10,8,13,7,11,9,6,12,8,10][i%28]}px;"></div>`).join('')}</div>
-      </div>
-      ${rec.error? `<div class="kb-rec-error">${rec.error}</div>` : ''}
-      ${takesArr.length? `
-      <div class="kb-rec-takes">
-        ${takesArr.map(t=>`
-          <div class="kb-rec-take-row">
-            <div>
-              <div class="kb-rec-take-name">${t.name}</div>
-              <div class="kb-rec-take-meta">${t.meta}</div>
-            </div>
-            <audio controls src="${t.dataUrl}" style="flex:1;min-width:260px;height:38px;"></audio>
-            <a class="kb-rec-take-dl" href="${t.dataUrl}" download="${t.name}">Скачать</a>
-            <button type="button" class="kb-rec-take-del" data-dn-take-del="${recKey}" data-take-id="${t.id}">Удалить</button>
-          </div>
-        `).join('')}
-      </div>` : ''}
-    </div>
-  `;
-}
-
+  function dnRecorderHtmlNew(recKey, rec, takes){ return vrRecorderHtml(recKey, rec, takes, {}); }
+function dnRecorderHtml(recKey, rec, takes){ return vrRecorderHtml(recKey, rec, takes, {}); }
 function dnGradeColor(g){
   if(g>=7) return '#4E7047';
   if(g>=4) return '#8B8177';
@@ -1764,7 +1728,7 @@ function dnHistoryCardHtml(l){
 }
 
 function dnEditCardHtml(l){
-  const ed = dnEditDraft(l.id);
+  const ed = dnEditDraft(l.id);Voice recorder step 1: unified idle/recording UI, real 60-bar waveform, pause, markers, 15-min limit, explicit save button
   const ctx = 'edit:' + l.id;
   const recKey = 'edit_' + l.id;
   const rec = dnEditRec(l.id);
@@ -1949,34 +1913,48 @@ function dnFinalizeSave(s){
 /* ---- recorder: same MediaRecorder setup/limits/filename pattern as
    kbStartRecording/kbStopRecording/kbTeardownRecorder/kbUpdateRecDom,
    generalized to run as an independent instance per recKey ---- */
-function dnUpdateRecDom(recKey, rec){
-  const timerEl = document.querySelector(`[data-dn-rec-timer="${recKey}"]`);
-  if(timerEl) timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60);
-  const barsWrap = document.querySelector(`[data-dn-rec-bars="${recKey}"]`);
-  if(barsWrap){
-    const bars = barsWrap.children;
-    const levels = rec.levels;
-    for(let i=0;i<bars.length;i++){
-      const v = levels[levels.length - bars.length + i] || 0;
-      const h = Math.max(3, Math.round(v*38));
-      bars[i].style.height = h + 'px';
-      bars[i].style.background = '#E0553A';
-    }
+function vrBlankRec(){ return { active:false, paused:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], peaks:[], markers:[], pendingTake:null, visibleToStudent:true, mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }; }
+function vrDeviceId(){ try{ return localStorage.getItem('vrInputDeviceId')||''; }catch(e){ return ''; } }
+function vrSetDeviceId(id){ try{ localStorage.setItem('vrInputDeviceId', id||''); }catch(e){} }
+function vrListInputDevices(selectEl){ if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return; navigator.mediaDevices.enumerateDevices().then(list=>{ const mics = list.filter(d=>d.kind==='audioinput'); const cur = vrDeviceId(); selectEl.innerHTML = mics.length ? mics.map((d,i)=>`<option value="${d.deviceId}" ${d.deviceId===cur?'selected':''}>${d.label || ('ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ '+(i+1))}</option>`).join('') : `<option value="">ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ</option>`; }).catch(()=>{}); }
+function vrRecorderHtml(recKey, rec, takes, opts){
+  opts = opts || {};
+  const takesArr = takes || [];
+  const mm = kbPad(Math.floor(rec.seconds/60)), ss = kbPad(rec.seconds%60);
+  const warn = rec.seconds >= 870;
+  let body = '';
+  if(rec.pendingTake){
+    const pt = rec.pendingTake;
+    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">ÐÐ°Ð¿Ð¸ÑÑ Ð¾ÑÑÐ°Ð½Ð¾Ð²Ð»ÐµÐ½Ð° â ${pt.meta}</div></div></div>${rec.markers && rec.markers.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${rec.markers.map(m=>`<span class="vr-marker-chip">${kbPad(Math.floor(m.sec/60))}:${kbPad(m.sec%60)}</span>`).join('')}</div>` : ''}<div class="vr-save-row"><button type="button" class="vr-save-btn" data-vr-save="${recKey}" ${rec.saving?'disabled':''}>${rec.saving?'Ð¡Ð¾ÑÑÐ°Ð½ÑÑâ¦':'Ð¡Ð¾ÑÑÐ°Ð½Ð¸ÑÑ Ð·Ð°Ð¿Ð¸ÑÑ'}</button><button type="button" class="vr-discard-link" data-vr-discard-pending="${recKey}">Ð¡ÑÐµÑÐµÑÑ, Ð½Ðµ ÑÐ¾ÑÑÐ°Ð½ÑÑÑ</button></div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+  } else if(rec.active){
+    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Ð¡ÑÐ¾Ð¿</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'ÐÑÐ¾Ð´Ð¾Ð»Ð¶Ð¸ÑÑ':'ÐÐ°ÑÐ·Ð°'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">ÐÐµÑÐºÐ°${rec.markers && rec.markers.length?`<span class="vr-marker-count">${rec.markers.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Ð¡ÑÐµÑÐµÑÑ</button></div>${rec.markers && rec.markers.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${rec.markers.map(m=>`<span class="vr-marker-chip">${kbPad(Math.floor(m.sec/60))}:${kbPad(m.sec%60)}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+  } else {
+    body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>ÐÐ°Ð¿Ð¸ÑÐ°ÑÑ</button><div style="flex:1;min-width:140px;"><div class="vr-caption">ÐÐ°Ð¿Ð¸ÑÑ Ð³Ð¾Ð»Ð¾ÑÐ° ÑÑÐµÐ½Ð¸ÐºÐ°</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Ð¡ÑÐ°Ð·Ñ ÑÑÐµÐ½Ð¸ÐºÑ</label>${opts.showUpload ? `<label class="vr-upload-label">ÐÐ°Ð³ÑÑÐ·Ð¸ÑÑ ÑÐ°Ð¹Ð»<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
+  const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;">${takesArr.map(t=>`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="min-width:130px;"><div style="font-size:13px;font-weight:700;color:#F7F3EC;">${t.name}</div><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A2968A;">${t.meta}</div></div>${t.dataUrl ? `<audio controls src="${t.dataUrl}" style="flex:1;min-width:200px;height:34px;"></audio>` : ''}<button type="button" data-vr-take-del="${recKey}" data-take-id="${t.id}" style="border:none;background:none;color:#8A7E74;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Ð£Ð´Ð°Ð»Ð¸ÑÑ</button></div>`).join('')}</div>` : '';
+  return `<div class="vr-box">${body}${takesHtml}</div>`;
+}
+function dnUpdateRecDom(recKey, rec){
+  const timerEl = document.querySelector(`[data-vr-timer="${recKey}"]`);
+  if(timerEl){ timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60); timerEl.classList.toggle('warn', rec.seconds>=870); }
+  const barsWrap = document.querySelector(`[data-vr-bars="${recKey}"]`);
+  if(barsWrap){ const bars = barsWrap.children; const levels = rec.levels; for(let i=0;i<bars.length;i++){ const v = levels[levels.length - bars.length + i] || 0; bars[i].style.height = Math.max(3, Math.round(v*44)) + 'px'; } }
+  const markerCountEl = document.querySelector(`[data-vr-marker="${recKey}"] .vr-marker-count`);
+  if(markerCountEl) markerCountEl.textContent = rec.markers.length;
 }
 function dnStartRecording(recKey, rec, opts){
   if(rec.active || rec.saving) return;
-  if(!navigator.mediaDevices || !window.MediaRecorder){
-    rec.error = 'Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.';
-    opts.onRepaint();
-    return;
-  }
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+  if(!navigator.mediaDevices || !window.MediaRecorder){ rec.error = 'ÐÑÐ°ÑÐ·ÐµÑ Ð½Ðµ Ð¿Ð¾Ð´Ð´ÐµÑÐ¶Ð¸Ð²Ð°ÐµÑ Ð·Ð°Ð¿Ð¸ÑÑ Ð·Ð²ÑÐºÐ°. ÐÑÐºÑÐ¾Ð¹ÑÐµ ÑÑÑÐ°Ð½Ð¸ÑÑ Ð² Chrome Ð¸Ð»Ð¸ Safari.'; opts.onRepaint(); return; }
+  const devSel = document.querySelector(`[data-vr-device="${recKey}"]`);
+  const deviceId = (devSel && devSel.value) || vrDeviceId();
+  const constraints = deviceId ? {audio:{deviceId:{exact:deviceId}}} : {audio:true};
+  navigator.mediaDevices.getUserMedia(constraints).then(stream=>{
     rec.stream = stream;
     const mr = new MediaRecorder(stream);
     rec.chunks = [];
     mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
     mr.onstop = ()=>{
+      if(rec._discard){ rec._discard = false; dnTeardownRecorder(rec); opts.onRepaint(); return; }
       const blob = new Blob(rec.chunks, {type: mr.mimeType || 'audio/webm'});
       const secs = rec.seconds;
       const d = new Date();
@@ -1984,55 +1962,55 @@ function dnStartRecording(recKey, rec, opts){
       const reader = new FileReader();
       reader.onload = ()=>{
         const dataUrl = reader.result;
+        const wasLimitStop = !!rec._limitStop; rec._limitStop = false;
+        const markers = (rec.markers||[]).slice();
+        const visibleToStudent = rec.visibleToStudent !== false;
         dnTeardownRecorder(rec);
-        if(dataUrl.length > 5800000){
-          rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.';
-          opts.onRepaint();
-          return;
-        }
-        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString() };
-        opts.onSaveTake(take);
+        if(dataUrl.length > 5800000){ rec.error = 'ÐÐ°Ð¿Ð¸ÑÑ ÑÐ»Ð¸ÑÐºÐ¾Ð¼ Ð±Ð¾Ð»ÑÑÐ°Ñ Ð´Ð»Ñ ÑÐ¾ÑÑÐ°Ð½ÐµÐ½Ð¸Ñ Ð² Ð±Ð°Ð·Ðµ (Ð»Ð¸Ð¼Ð¸Ñ ~4 ÐÐ). Ð¡Ð¾ÐºÑÐ°ÑÐ¸ÑÐµ Ð´Ð»Ð¸ÑÐµÐ»ÑÐ½Ð¾ÑÑÑ Ð¸ Ð·Ð°Ð¿Ð¸ÑÐ¸ÑÐµ Ð·Ð°Ð½Ð¾Ð²Ð¾.'; opts.onRepaint(); return; }
+        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' Â· '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString(), markers, visibleToStudent };
+        if(wasLimitStop){ opts.onSaveTake(take); } else { rec.pendingTake = take; opts.onRepaint(); }
       };
       reader.readAsDataURL(blob);
     };
     rec.mediaRecorder = mr;
     mr.start();
-    rec.active = true; rec.seconds = 0; rec.error = ''; rec.levels = [];
+    rec.active = true; rec.paused = false; rec.seconds = 0; rec.error = ''; rec.levels = []; rec.peaks = []; rec.markers = []; rec.pendingTake = null;
     opts.onRepaint();
-    rec.timer = setInterval(()=>{ rec.seconds++; dnUpdateRecDom(recKey, rec); }, 1000);
+    rec.timer = setInterval(()=>{
+      if(rec.paused) return;
+      rec.seconds++;
+      if(rec.seconds >= 900){ rec._limitStop = true; dnUpdateRecDom(recKey, rec); dnStopRecording(rec); return; }
+      dnUpdateRecDom(recKey, rec);
+    }, 1000);
     try{
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.65;
       ctx.createMediaStreamSource(stream).connect(analyser);
       rec.ctx = ctx;
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      const data = new Uint8Array(analyser.fftSize);
       rec.levelTimer = setInterval(()=>{
+        if(rec.paused) return;
         analyser.getByteTimeDomainData(data);
-        let peak = 0;
-        for(let i=0;i<data.length;i++) peak = Math.max(peak, Math.abs(data[i]-128)/128);
-        rec.levels = rec.levels.concat([peak]).slice(-28);
+        let sumSq = 0;
+        for(let i=0;i<data.length;i++){ const v = (data[i]-128)/128; sumSq += v*v; }
+        const rms = Math.sqrt(sumSq/data.length);
+        const amplitude = Math.min(1, rms*3.4);
+        rec.levels = rec.levels.concat([amplitude]).slice(-60);
+        rec.peaks.push(amplitude);
         dnUpdateRecDom(recKey, rec);
-      }, 90);
-    }catch(e){ /* визуализация не критична для работы записи */ }
-  }).catch(()=>{
-    rec.error = 'Нет доступа к микрофону. Разрешите запись в настройках браузера и попробуйте снова.';
-    opts.onRepaint();
-  });
+      }, 50);
+    }catch(e){ /* Ð²Ð¸Ð·ÑÐ°Ð»Ð¸Ð·Ð°ÑÐ¸Ñ Ð½Ðµ ÐºÑÐ¸ÑÐ¸ÑÐ½Ð° Ð´Ð»Ñ ÑÐ°Ð±Ð¾ÑÑ Ð·Ð°Ð¿Ð¸ÑÐ¸ */ }
+  }).catch(()=>{ rec.error = 'ÐÐµÑ Ð´Ð¾ÑÑÑÐ¿Ð° Ðº Ð¼Ð¸ÐºÑÐ¾ÑÐ¾Ð½Ñ. Ð Ð°Ð·ÑÐµÑÐ¸ÑÐµ Ð·Ð°Ð¿Ð¸ÑÑ Ð² Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ°Ñ Ð±ÑÐ°ÑÐ·ÐµÑÐ° Ð¸ Ð¿Ð¾Ð¿ÑÐ¾Ð±ÑÐ¹ÑÐµ ÑÐ½Ð¾Ð²Ð°.'; opts.onRepaint(); });
 }
-function dnStopRecording(rec){
-  if(rec.timer) clearInterval(rec.timer);
-  if(rec.levelTimer) clearInterval(rec.levelTimer);
-  if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop();
-  else dnTeardownRecorder(rec);
-}
-function dnTeardownRecorder(rec){
-  if(rec.timer) clearInterval(rec.timer);
-  if(rec.levelTimer) clearInterval(rec.levelTimer);
-  if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; }
-  if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; }
-  rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
-}
+function dnStopRecording(rec){ if(rec.timer) clearInterval(rec.timer); if(rec.levelTimer) clearInterval(rec.levelTimer); if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop(); else dnTeardownRecorder(rec); }
+function dnTeardownRecorder(rec){ if(rec.timer) clearInterval(rec.timer); if(rec.levelTimer) clearInterval(rec.levelTimer); if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; } if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; } rec.active = false; rec.paused = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null; }
+function dnPauseToggle(rec, recKey, opts){ if(!rec.active) return; if(!rec.paused){ if(rec.mediaRecorder && rec.mediaRecorder.state==='recording' && rec.mediaRecorder.pause) rec.mediaRecorder.pause(); rec.paused = true; } else { if(rec.mediaRecorder && rec.mediaRecorder.state==='paused' && rec.mediaRecorder.resume) rec.mediaRecorder.resume(); rec.paused = false; } opts.onRepaint(); }
+function dnAddMarker(rec, recKey, opts){ if(!rec.active || rec.paused) return; rec.markers = rec.markers || []; rec.markers.push({sec: rec.seconds}); dnUpdateRecDom(recKey, rec); }
+function dnDiscardRecording(rec, opts){ if(!rec.active) return; if(rec.seconds > 10 && !confirm('Ð£Ð´Ð°Ð»Ð¸ÑÑ ÑÐµÐºÑÑÑÑ Ð·Ð°Ð¿Ð¸ÑÑ? ÐÑÐ¼ÐµÐ½Ð¸ÑÑ Ð±ÑÐ´ÐµÑ Ð½ÐµÐ»ÑÐ·Ñ.')) return; rec._discard = true; if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop(); else dnTeardownRecorder(rec); opts.onRepaint(); }
+function dnConfirmSaveTake(rec, opts){ if(!rec.pendingTake || rec.saving) return; const take = rec.pendingTake; rec.pendingTake = null; opts.onSaveTake(take); }
+function dnDiscardPendingTake(rec, opts){ rec.pendingTake = null; rec.markers = []; opts.onRepaint(); }
 function dnSaveTakes(rec, ensureRowFn, getTakes, applyTakes, repaint){
   rec.saving = true; rec.justSaved = false; repaint();
   ensureRowFn().then(lessonId=>{
@@ -2108,41 +2086,52 @@ function dnCommitDictAdd(fieldKey, s){
   dnApplyDictValue(s, ctx, fieldKey, raw);
 }
 
-function dnRecorderWire(s, recKey, rec, ctx, getTakesArr, setTakesArr, syncAfterSave){
-  const btn = document.querySelector(`[data-dn-rec-btn="${recKey}"]`);
-  if(btn){
-    btn.onclick = ()=>{
-      if(rec.active){ dnStopRecording(rec); return; }
-      dnStartRecording(recKey, rec, {
-        fileTag: (s.name||'student').replace(/\s+/g,'_') + '_zanyatie',
-        onRepaint: ()=> paintDiary(s),
-        onSaveTake: (take)=>{
-          const ensureFn = ctx==='new' ? (()=>dnEnsureDraftRow(s)) : (()=>Promise.resolve(ctx.slice(5)));
-          dnSaveTakes(rec, ensureFn,
-            ()=>{ const next = [take].concat(getTakesArr()||[]); setTakesArr(next); return next; },
-            (lesson)=>{ if(lesson) syncAfterSave(lesson); },
-            ()=> paintDiary(s)
-          );
-        }
-      });
-    };
-  }
-  document.querySelectorAll(`[data-dn-take-del="${recKey}"]`).forEach(el=>{
+function dnRecorderWire(s, recKey, rec, ctx, getTakesArr, setTakesArr, syncAfterSave, opts){
+  opts = opts || {};
+  const root = document.getElementById('tabContent');
+  if(!root) return;
+  const fileTag = (s.name||'student').replace(/\s+/g,'_') + (opts.fileTagSuffix || '_zanyatie');
+  const repaint = ()=> (opts.repaint ? opts.repaint() : paintDiary(s));
+  const doSaveTake = (take)=>{
+    if(ctx==='kabinet'){ const next = [take].concat(getTakesArr()||[]); setTakesArr(next); opts.onKabinetSave(next); return; }
+    const ensureFn = ctx==='new' ? (()=>dnEnsureDraftRow(s)) : (()=>Promise.resolve(ctx.slice(5)));
+    dnSaveTakes(rec, ensureFn,
+      ()=>{ const next=[take].concat(getTakesArr()||[]); setTakesArr(next); return next; },
+      (lesson)=>{ if(lesson) syncAfterSave(lesson); },
+      repaint
+    );
+  };
+  const engOpts = { fileTag, onRepaint: repaint, onSaveTake: doSaveTake };
+  const btn = root.querySelector(`[data-vr-rec-btn="${recKey}"]`);
+  if(btn) btn.onclick = ()=>{ if(rec.active){ dnStopRecording(rec); } else { dnStartRecording(recKey, rec, engOpts); } };
+  const pauseBtn = root.querySelector(`[data-vr-pause="${recKey}"]`);
+  if(pauseBtn) pauseBtn.onclick = ()=> dnPauseToggle(rec, recKey, engOpts);
+  const markerBtn = root.querySelector(`[data-vr-marker="${recKey}"]`);
+  if(markerBtn) markerBtn.onclick = ()=> dnAddMarker(rec, recKey, engOpts);
+  const discardBtn = root.querySelector(`[data-vr-discard="${recKey}"]`);
+  if(discardBtn) discardBtn.onclick = ()=> dnDiscardRecording(rec, engOpts);
+  const saveBtn = root.querySelector(`[data-vr-save="${recKey}"]`);
+  if(saveBtn) saveBtn.onclick = ()=> dnConfirmSaveTake(rec, engOpts);
+  const discardPendingBtn = root.querySelector(`[data-vr-discard-pending="${recKey}"]`);
+  if(discardPendingBtn) discardPendingBtn.onclick = ()=> dnDiscardPendingTake(rec, engOpts);
+  const deviceSel = root.querySelector(`[data-vr-device="${recKey}"]`);
+  if(deviceSel){ vrListInputDevices(deviceSel); deviceSel.onchange = ()=> vrSetDeviceId(deviceSel.value); }
+  const visibleChk = root.querySelector(`[data-vr-visible="${recKey}"]`);
+  if(visibleChk) visibleChk.onchange = ()=>{ rec.visibleToStudent = visibleChk.checked; };
+  const uploadInput = root.querySelector(`[data-vr-upload="${recKey}"]`);
+  if(uploadInput) uploadInput.onchange = (e)=>{ const file = e.target.files && e.target.files[0]; if(file && opts.onUpload) opts.onUpload(file); e.target.value = ''; };
+  root.querySelectorAll(`[data-vr-take-del="${recKey}"]`).forEach(el=>{
     el.onclick = ()=>{
       const takeId = Number(el.dataset.takeId);
       const next = (getTakesArr()||[]).filter(t=>t.id!==takeId);
       setTakesArr(next);
-      if(ctx==='new'){
-        const draft = dnDraft(s);
-        if(draft.id) dnQueueSave(draft.id, {takes: next}, ()=>{});
-      } else if(ctx && ctx.indexOf('edit:')===0){
-        dnQueueSave(ctx.slice(5), {takes: next}, (lesson)=> syncAfterSave(lesson));
-      }
-      paintDiary(s);
+      if(ctx==='kabinet'){ opts.onKabinetSave(next); return; }
+      if(ctx==='new'){ const draft = dnDraft(s); if(draft.id) dnQueueSave(draft.id, {takes: next}, ()=>{}); }
+      else if(ctx && ctx.indexOf('edit:')===0){ dnQueueSave(ctx.slice(5), {takes: next}, (lesson)=> syncAfterSave(lesson)); }
+      repaint();
     };
   });
 }
-
 function wireDiaryHandlers(s){
   const c = document.getElementById('tabContent');
 
@@ -3172,44 +3161,8 @@ function paintKabinet(s){
     </div>` : ''}
   `;
 
-  const rec = state.kabinetRec;
-  const takes = intake.referenceTakes || [];
-  const recordHtml = `
-    ${kbSection('record','РЕФЕРЕНС-ЗАПИСЬ НА ВХОДЕ','записывается здесь, в браузере', `
-      <label class="kb-upload-label">Загрузить файл<input type="file" accept="audio/*" id="kbUploadInput" style="display:none;"></label>
-    `)}
-    ${open.record ? `
-    <div class="kb-rec-box">
-      <div class="kb-rec-top">
-        <button type="button" class="kb-rec-btn${rec.active?' active':''}" id="kbRecBtn" ${rec.saving?'disabled':''}>${rec.active?'Стоп':'Запись'}</button>
-        <div style="flex:1;min-width:220px;">
-          <div class="kb-rec-caption${rec.saving?' saving':''}${rec.justSaved?' saved':''}">${rec.active?'Идёт запись':(rec.saving?'Сохраняю запись…':(rec.justSaved?'Сохранено':(takes.length?'Записано '+takes.length:'Нажмите, чтобы записать голос')))}</div>
-          <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
-            <div class="kb-rec-timer" id="kbRecTimer">00:00</div>
-            ${rec.active? `<div class="kb-rec-dot"></div>` : ''}
-          </div>
-        </div>
-        <div class="kb-rec-bars" id="kbRecBars">${Array.from({length:28}).map((_,i)=>`<div class="kb-rec-bar" style="height:${[6,12,9,15,7,11,8,14,6,10,13,8,11,7,12,9,15,6,10,8,13,7,11,9,6,12,8,10][i%28]}px;"></div>`).join('')}</div>
-      </div>
-      ${rec.error? `<div class="kb-rec-error">${rec.error}</div>` : ''}
-      ${takes.length? `
-      <div class="kb-rec-takes">
-        ${takes.map(t=>`
-          <div class="kb-rec-take-row">
-            <div>
-              <div class="kb-rec-take-name">${t.name}</div>
-              <div class="kb-rec-take-meta">${t.meta}</div>
-            </div>
-            <audio controls src="${t.dataUrl}" style="flex:1;min-width:260px;height:38px;"></audio>
-            <a class="kb-rec-take-dl" href="${t.dataUrl}" download="${t.name}">Скачать</a>
-            <button type="button" class="kb-rec-take-del" data-kb-take-del="${t.id}">Удалить</button>
-          </div>
-        `).join('')}
-      </div>` : ''}
-    </div>` : ''}
-  `;
-
-  // Каждое занятие теперь может содержать несколько записей («takes» из
+  const rec = state.kabinetRec; const takes = intake.referenceTakes || []; const recordHtml = ` ${kbSection('record','Ð ÐÐ¤ÐÐ ÐÐÐ¡-ÐÐÐÐÐ¡Ð¬ ÐÐ ÐÐ¥ÐÐÐ','Ð·Ð°Ð¿Ð¸ÑÑÐ²Ð°ÐµÑÑÑ Ð·Ð´ÐµÑÑ, Ð² Ð±ÑÐ°ÑÐ·ÐµÑÐµ', '')} ${open.record ? vrRecorderHtml('kabinet_'+s.id, rec, takes, {showUpload:true}) : ''} `;
+// Каждое занятие теперь может содержать несколько записей («takes» из
   // рекордера в Дневнике занятий) — разворачиваем их в отдельные строки.
   // Старые занятия (сделанные ещё прежней версией вкладки) хранят одну
   // ссылку в mediaUrl — показываем и её тоже, для обратной совместимости.
@@ -3446,29 +3399,8 @@ function wireKabinetHandlers(s){
     slider.onchange = ()=> saveKabinet(s, {metallicPercent: Number(slider.value)});
   }
 
-  const uploadInput = document.getElementById('kbUploadInput');
-  if(uploadInput) uploadInput.onchange = (e)=>{
-    const file = e.target.files && e.target.files[0];
-    if(file) kbUploadFile(s, file);
-    e.target.value = '';
-  };
-
-  c.querySelectorAll('[data-kb-take-del]').forEach(el=>{
-    el.onclick = ()=>{
-      const id = Number(el.dataset.kbTakeDel);
-      const cache = kbCache(s);
-      const takes = (cache.intake.referenceTakes||[]).filter(t=>t.id!==id);
-      kbSaveTakes(s, takes);
-    };
-  });
-
-  const recBtn = document.getElementById('kbRecBtn');
-  if(recBtn) recBtn.onclick = ()=>{
-    if(state.kabinetRec.active) kbStopRecording(s);
-    else kbStartRecording(s);
-  };
-
-  const pdfBtn = document.getElementById('kbExportPdfBtn');
+  dnRecorderWire(s, 'kabinet_'+s.id, state.kabinetRec, 'kabinet', ()=> (kbCache(s).intake.referenceTakes||[]), (next)=>{ kbCache(s).intake.referenceTakes = next; }, null, { repaint:()=>paintKabinet(s), fileTagSuffix:'_reference', onUpload:(file)=>kbUploadFile(s, file), onKabinetSave:(next)=>kbSaveTakes(s, next) });
+const pdfBtn = document.getElementById('kbExportPdfBtn');
   if(pdfBtn) pdfBtn.onclick = ()=> alert('Отправка PDF ученику — в разработке. Нужно решить отдельно: email, ссылка на скачивание или Telegram. Как определимся — подключим.');
 }
 
@@ -3508,100 +3440,6 @@ function kbSaveTakes(s, takes){
 
 function kbPad(n){ return n<10 ? '0'+n : String(n); }
 
-function kbUpdateRecDom(){
-  const rec = state.kabinetRec;
-  const timerEl = document.getElementById('kbRecTimer');
-  if(timerEl) timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60);
-  const barsWrap = document.getElementById('kbRecBars');
-  if(barsWrap){
-    const bars = barsWrap.children;
-    const levels = rec.levels;
-    for(let i=0;i<bars.length;i++){
-      const v = levels[levels.length - bars.length + i] || 0;
-      const h = Math.max(3, Math.round(v*38));
-      bars[i].style.height = h + 'px';
-      bars[i].style.background = '#E0553A';
-    }
-  }
-}
-
-function kbStartRecording(s){
-  const rec = state.kabinetRec;
-  if(rec.active || rec.saving) return;
-  if(!navigator.mediaDevices || !window.MediaRecorder){
-    rec.error = 'Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.';
-    paintKabinet(s);
-    return;
-  }
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
-    rec.stream = stream;
-    const mr = new MediaRecorder(stream);
-    rec.chunks = [];
-    mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
-    mr.onstop = ()=>{
-      const blob = new Blob(rec.chunks, {type: mr.mimeType || 'audio/webm'});
-      const secs = rec.seconds;
-      const d = new Date();
-      const fileName = kbPad(d.getDate())+'.'+kbPad(d.getMonth()+1)+'.'+d.getFullYear()+'_'+(s.name||'student').replace(/\s+/g,'_')+'_reference.webm';
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        const dataUrl = reader.result;
-        kbTeardownRecorder();
-        if(dataUrl.length > 5800000){
-          rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.';
-          paintKabinet(s);
-          return;
-        }
-        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString() };
-        const cache = kbCache(s);
-        const takes = [take].concat(cache.intake.referenceTakes || []);
-        kbSaveTakes(s, takes);
-      };
-      reader.readAsDataURL(blob);
-    };
-    rec.mediaRecorder = mr;
-    mr.start();
-    rec.active = true; rec.seconds = 0; rec.error = ''; rec.levels = [];
-    paintKabinet(s);
-    rec.timer = setInterval(()=>{ rec.seconds++; kbUpdateRecDom(); }, 1000);
-    try{
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      ctx.createMediaStreamSource(stream).connect(analyser);
-      rec.ctx = ctx;
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      rec.levelTimer = setInterval(()=>{
-        analyser.getByteTimeDomainData(data);
-        let peak = 0;
-        for(let i=0;i<data.length;i++) peak = Math.max(peak, Math.abs(data[i]-128)/128);
-        rec.levels = rec.levels.concat([peak]).slice(-28);
-        kbUpdateRecDom();
-      }, 90);
-    }catch(e){ /* визуализация не критична для работы записи */ }
-  }).catch(()=>{
-    rec.error = 'Нет доступа к микрофону. Разрешите запись в настройках браузера и попробуйте снова.';
-    paintKabinet(s);
-  });
-}
-
-function kbStopRecording(s){
-  const rec = state.kabinetRec;
-  if(rec.timer) clearInterval(rec.timer);
-  if(rec.levelTimer) clearInterval(rec.levelTimer);
-  if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop();
-  else kbTeardownRecorder();
-}
-
-function kbTeardownRecorder(){
-  const rec = state.kabinetRec;
-  if(rec.timer) clearInterval(rec.timer);
-  if(rec.levelTimer) clearInterval(rec.levelTimer);
-  if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; }
-  if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; }
-  rec.active = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null;
-}
-
 // Close an open Справочник dropdown (Цель обучения / Жанр / Возраст /
 // Тип голоса на слух / Жалобы / any future field using this component)
 // on any click outside it.
@@ -3619,3 +3457,4 @@ syncStudentsFromServer();
 </script>
 </body>
 </html>
+
