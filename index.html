@@ -4084,10 +4084,10 @@ function kbUploadFile(s, file){
 // server call resolved and gave no signal that the save had actually landed).
 function kbSaveTakes(s, takes){
   const rec = state.kabinetRec;
-  rec.saving = true;
-  rec.justSaved = false;
-  paintKabinet(s);
+  const wasSaving = rec.saving;
+  if(wasSaving) paintKabinet(s);
   saveKabinet(s, {referenceTakes: takes}).then(ok=>{
+    if(!wasSaving) return;
     rec.saving = false;
     rec.justSaved = ok;
     paintKabinet(s);
