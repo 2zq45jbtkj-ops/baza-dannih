@@ -361,7 +361,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-light-mid{flex:1;min-width:0;}
 .vr-light-title{font-size:13px;font-weight:700;color:#23201D;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .vr-light-wave{display:flex;gap:1px;align-items:center;height:26px;cursor:pointer;}
-.vr-light-bar{width:2px;border-radius:1px;background:#E4DCD1;flex-shrink:0;}
+.vr-light-bar{flex:1 1 0%;border-radius:1px;background:#E4DCD1;}
 .vr-light-bar.played{background:#A8452C;}
 .vr-light-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8078;flex-shrink:0;}
 .vr-light-rate{height:26px;padding:0 8px;border-radius:7px;border:1px solid #E4DCD1;background:#fff;color:#6E645A;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
@@ -2121,6 +2121,7 @@ function vrTakeRowLight(ownerKey, t){
     </div>
     <span class="vr-take-time vr-light-time" data-vr-time="${rk}">0:00 / ${vrFmtTime(dur)}</span>
     <button type="button" class="vr-light-rate" data-vr-rate="${rk}" data-rate="1">1×</button>
+    <button type="button" class="vr-light-rate" data-vr-visibility="${rk}">${t.visibleToStudent!==false?'Виден ученику':'Скрыт'}</button>
     <div class="vr-light-menu-wrap">
       <button type="button" class="vr-light-menu-btn" data-vr-menu-toggle="${rk}">⋯</button>
       <div class="vr-light-menu" data-vr-menu="${rk}" style="display:none;">
