@@ -343,7 +343,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-take-wave{position:relative;display:flex;gap:1px;align-items:center;height:30px;margin-top:8px;cursor:pointer;}
 .vr-take-bar{flex:1 1 0%;border-radius:2px;background:#5E544B;}
 .vr-take-bar.played{background:#A8452C;}
-.vr-take-pin{position:absolute;top:0;bottom:0;width:2px;background:#7C9A62;pointer-events:none;}
+.vr-take-pin{position:absolute;top:0;bottom:0;width:6px;background:#7C9A62;pointer-events:none;}
 .vr-take-transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .vr-tr-btn{height:30px;padding:0 10px;border-radius:8px;border:1px solid #3A342E;background:transparent;color:#B5A8A1;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;text-decoration:none;}
 .vr-tr-btn:hover{background:#2C2723;}
@@ -2083,7 +2083,7 @@ function vrTakeRowDark(recKey, t){
   const markers = vrSortedMarkers(t.markers);
   const pins = dur ? markers.map(m=>`<div class="vr-take-pin" style="left:${Math.min(100,Math.max(0,vrMarkerTime(m)/dur*100))}%;"></div>`).join('') : '';
   const chips = markers.map(m=>`<span class="vr-mk-chip" data-vr-marker-chip="${rk}" data-marker-id="${m.id}">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}<span class="vr-mk-del" data-vr-marker-del="${rk}" data-marker-id="${m.id}">✕</span></span>`).join('');
-  const rateVals = [0.5,0.75,1,1.25];
+  const rateVals = [0.5,0.75,1,1.25,1.5,1.75,2];
   const rateBtns = rateVals.map(v=>`<button type="button" class="vr-tr-btn vr-rate-btn${v===1?' on':''}" data-vr-rate-btn="${rk}" data-rate="${v}">${v}×</button>`).join('');
   return `<div class="vr-take${t._fresh?' fresh':''}" data-vr-row="${rk}">
     <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
@@ -2417,7 +2417,7 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
     };
     const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
     if(rateBtn){
-      const cycle = [1,1.25,0.75,0.5];
+      const cycle = [0.5,0.75,1,1.25,1.5,1.75,2];
       rateBtn.onclick = function(){
         const cur = parseFloat(rateBtn.getAttribute('data-rate'))||1;
         const idx = cycle.indexOf(cur);
@@ -2623,7 +2623,7 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
     };
     const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
     if(rateBtn){
-      const cycle = [1,1.25,0.75,0.5];
+      const cycle = [0.5,0.75,1,1.25,1.5,1.75,2];
       rateBtn.onclick = function(){
         const cur = parseFloat(rateBtn.getAttribute('data-rate'))||1;
         const idx = cycle.indexOf(cur);
