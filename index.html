@@ -328,6 +328,41 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-save-btn:disabled{opacity:.55;cursor:default;}
 .vr-discard-link{background:none;border:none;color:#8A7E74;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
 .vr-upload-label{padding:7px 13px;border-radius:9px;border:1px solid #423A34;background:none;color:#B8ADA1;font-size:12.5px;font-weight:700;cursor:pointer;}
+.vr-take{background:#23201D;border:1px solid #3A342E;border-radius:13px;padding:12px 14px;}
+.vr-take.fresh{border-color:#4E7047;}
+.vr-take-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.vr-take-title{font-size:13.5px;font-weight:700;color:#F7F3EC;cursor:text;}
+.vr-take-title-input{font-size:13.5px;font-weight:700;background:#332C26;color:#F7F3EC;border:1px solid #4A4038;border-radius:6px;padding:2px 6px;font-family:inherit;}
+.vr-take-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:#A2968A;}
+.vr-take-wave{position:relative;display:flex;gap:1px;align-items:center;height:30px;margin-top:8px;cursor:pointer;}
+.vr-take-bar{width:2px;border-radius:1px;background:#5E544B;flex-shrink:0;}
+.vr-take-bar.played{background:#A8452C;}
+.vr-take-pin{position:absolute;top:0;bottom:0;width:1px;background:#C97B62;pointer-events:none;}
+.vr-take-transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.vr-tr-btn{height:30px;padding:0 10px;border-radius:8px;border:1px solid #3A342E;background:transparent;color:#B5A8A1;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;text-decoration:none;}
+.vr-tr-btn:hover{background:#2C2723;}
+.vr-tr-btn.on{color:#C97B62;border-color:#5A3A30;}
+.vr-take-time{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A2968A;}
+.vr-take-markers{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.vr-mk-chip{position:relative;padding:4px 8px;border-radius:7px;background:#332C26;color:#C9BCAE;font-size:11.5px;font-family:'JetBrains Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+.vr-mk-chip:hover .vr-mk-del{display:inline;}
+.vr-mk-del{display:none;color:#E0A899;font-weight:700;}
+.vr-mk-input{font-size:11.5px;font-family:inherit;background:#231F1B;color:#F7F3EC;border:1px solid #5A3A30;border-radius:6px;padding:2px 6px;width:110px;}
+.vr-light-row{display:flex;align-items:center;gap:12px;background:#FAF7F2;border:1px solid #F0EAE1;border-radius:14px;padding:9px 14px;min-height:56px;box-sizing:border-box;}
+.vr-light-play{width:38px;height:38px;border-radius:50%;border:none;background:#23201D;color:#F7F3EC;font-size:13px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.vr-light-mid{flex:1;min-width:0;}
+.vr-light-title{font-size:13px;font-weight:700;color:#23201D;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vr-light-wave{display:flex;gap:1px;align-items:center;height:26px;cursor:pointer;}
+.vr-light-bar{width:2px;border-radius:1px;background:#E4DCD1;flex-shrink:0;}
+.vr-light-bar.played{background:#A8452C;}
+.vr-light-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8078;flex-shrink:0;}
+.vr-light-rate{height:26px;padding:0 8px;border-radius:7px;border:1px solid #E4DCD1;background:#fff;color:#6E645A;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.vr-light-menu-btn{width:26px;height:26px;border-radius:7px;border:1px solid #E4DCD1;background:#fff;color:#8A8078;cursor:pointer;flex-shrink:0;}
+.vr-light-menu{position:absolute;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #E4DCD1;border-radius:10px;box-shadow:0 8px 20px rgba(35,32,29,.12);padding:6px;z-index:20;flex-direction:column;min-width:150px;}
+.vr-light-menu button, .vr-light-menu a{padding:8px 10px;border:none;background:none;text-align:left;font-size:12.5px;color:#23201D;cursor:pointer;border-radius:6px;text-decoration:none;font-family:inherit;display:block;width:100%;box-sizing:border-box;}
+.vr-light-menu button:hover, .vr-light-menu a:hover{background:#F4EEE6;}
+.vr-light-menu-wrap{position:relative;}
+
 
 .kb-files-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 10px;display:flex;flex-direction:column;}
 .kb-files-empty{padding:14px 10px;font-size:13px;color:var(--muted);}
@@ -1435,7 +1470,7 @@ function paintDiary(s){
       ${dnHistorySectionHtml(s, lessons, editingId)}
     </div>
   `;
-  wireDiaryHandlers(s);
+  wireDiaryHandlers(s); vrWireLightRows(s);
 }
 
 function dnFieldInputStyle(){
@@ -1723,7 +1758,7 @@ function dnHistoryCardHtml(l){
       ${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div>
     </div>
-    ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=>`<audio controls src="${t.dataUrl}" style="width:100%;height:34px;"></audio>`).join('')}</div>` : ''}
+    ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=> vrTakeRowLight('light_'+l.id, t)).join('')}</div>` : ''}
   </div>`;
 }
 
@@ -1917,6 +1952,122 @@ function vrBlankRec(){ return { active:false, paused:false, saving:false, justSa
 function vrDeviceId(){ try{ return localStorage.getItem('vrInputDeviceId')||''; }catch(e){ return ''; } }
 function vrSetDeviceId(id){ try{ localStorage.setItem('vrInputDeviceId', id||''); }catch(e){} }
 function vrListInputDevices(selectEl){ if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return; navigator.mediaDevices.enumerateDevices().then(list=>{ const mics = list.filter(d=>d.kind==='audioinput'); const cur = vrDeviceId(); selectEl.innerHTML = mics.length ? mics.map((d,i)=>`<option value="${d.deviceId}" ${d.deviceId===cur?'selected':''}>${d.label || ('ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ '+(i+1))}</option>`).join('') : `<option value="">ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ</option>`; }).catch(()=>{}); }
+function vrUid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function vrNewMarker(t){ return { id: vrUid(), t: Math.round(t*10)/10, label: '', createdAt: new Date().toISOString() }; }
+function vrMarkerTime(m){ return m.t!=null ? m.t : (m.sec||0); }
+function vrSortedMarkers(markers){ return (markers||[]).slice().sort((a,b)=> vrMarkerTime(a)-vrMarkerTime(b)); }
+function vrFindNearMarker(markers, t, thresh){ thresh = thresh||0.3; let best=-1, bestD=Infinity; (markers||[]).forEach((m,i)=>{ const d=Math.abs(vrMarkerTime(m)-t); if(d<thresh && d<bestD){ bestD=d; best=i; } }); return best; }
+function vrDownsample(peaks, n){
+  peaks = peaks||[];
+  if(!peaks.length) return Array.from({length:n}).map(()=>0);
+  const out = [];
+  const bucket = peaks.length/n;
+  for(let i=0;i<n;i++){
+    const start = Math.floor(i*bucket), end = Math.max(start+1, Math.floor((i+1)*bucket));
+    let m = 0;
+    for(let j=start;j<end && j<peaks.length;j++){ m = Math.max(m, peaks[j]); }
+    out.push(m);
+  }
+  const max = Math.max(0.0001, Math.max.apply(null, out));
+  return out.map(v=>v/max);
+}
+function vrFmtTime(sec){ sec = Math.max(0, Math.floor(sec||0)); return kbPad(Math.floor(sec/60))+':'+kbPad(sec%60); }
+window.__vrAudios = window.__vrAudios || {};
+function vrStopOtherAudio(exceptKey){ Object.keys(window.__vrAudios).forEach(k=>{ if(k!==exceptKey){ const a = window.__vrAudios[k]; if(a && !a.paused) a.pause(); } }); }
+function vrShowUndoToast(message, onUndo, onFinal){
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#23201D;color:#F7F3EC;padding:12px 18px;border-radius:10px;font-size:13px;display:flex;gap:14px;align-items:center;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.3);font-family:inherit;';
+  el.innerHTML = '<span>'+message+'</span><button type="button" style="background:none;border:none;color:#C97B62;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit;">Отменить</button>';
+  document.body.appendChild(el);
+  let done = false;
+  const finish = (undo)=>{ if(done) return; done = true; el.remove(); if(undo){ onUndo(); } else { onFinal(); } };
+  el.querySelector('button').onclick = ()=> finish(true);
+  const timer = setTimeout(()=> finish(false), 10000);
+  return { cancel: ()=>{ clearTimeout(timer); finish(true); } };
+}
+window.__vrActiveRecs = window.__vrActiveRecs || [];
+function vrRegisterRec(rec){ if(window.__vrActiveRecs.indexOf(rec)<0) window.__vrActiveRecs.push(rec); }
+function vrUnregisterRec(rec){ const i = window.__vrActiveRecs.indexOf(rec); if(i>=0) window.__vrActiveRecs.splice(i,1); }
+window.addEventListener('beforeunload', function(e){
+  const busy = window.__vrActiveRecs.some(function(r){ return r.active || r.saving; });
+  if(busy){ e.preventDefault(); e.returnValue = ''; return ''; }
+});
+document.addEventListener('keydown', function(e){
+  if(e.key!=='m' && e.key!=='M') return;
+  const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  let targetKey = null;
+  for(const k in window.__vrAudios){ const a = window.__vrAudios[k]; if(a && !a.paused){ targetKey = k; break; } }
+  if(!targetKey) return;
+  const btn = document.querySelector('[data-vr-marker-add="'+targetKey+'"]');
+  if(btn) btn.click();
+});
+
+function vrTakeMetaLine(t){
+  const d = t.createdAt ? new Date(t.createdAt) : null;
+  const dateStr = d ? (kbPad(d.getDate())+'.'+kbPad(d.getMonth()+1)+'.'+String(d.getFullYear()).slice(2)+' '+kbPad(d.getHours())+':'+kbPad(d.getMinutes())) : '';
+  const sizeMatch = (t.meta||'').match(/([\d.,]+ ?(KB|MB))/i);
+  const sizeStr = sizeMatch ? sizeMatch[1] : '';
+  const dur = t.durationSec!=null ? vrFmtTime(t.durationSec) : '';
+  const vis = t.visibleToStudent!==false ? 'виден ученику' : 'только педагог';
+  return [dateStr, dur, sizeStr, vis].filter(Boolean).join(' · ');
+}
+function vrTakeRowDark(recKey, t){
+  const rk = recKey + '_' + t.id;
+  const bars = vrDownsample(t.peaks, 90);
+  const dur = t.durationSec || 0;
+  const markers = vrSortedMarkers(t.markers);
+  const pins = dur ? markers.map(m=>`<div class="vr-take-pin" style="left:${Math.min(100,Math.max(0,vrMarkerTime(m)/dur*100))}%;"></div>`).join('') : '';
+  const chips = markers.map(m=>`<span class="vr-mk-chip" data-vr-marker-chip="${rk}" data-marker-id="${m.id}">${vrFmtTime(vrMarkerTime(m))}${m.label?(' · '+m.label):''}<span class="vr-mk-del" data-vr-marker-del="${rk}" data-marker-id="${m.id}">✕</span></span>`).join('');
+  return `<div class="vr-take${t._fresh?' fresh':''}" data-vr-row="${rk}">
+    <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
+    <div class="vr-take-top">
+      <div class="vr-take-title" data-vr-title="${rk}" title="Нажмите, чтобы переименовать">${t.name}${t._fresh?' <span style="color:#8FBF8A;font-weight:700;">· Сохранено</span>':''}</div>
+      <div class="vr-take-meta">${vrTakeMetaLine(t)}</div>
+    </div>
+    <div class="vr-take-wave" data-vr-waveform="${rk}" data-duration="${dur}">
+      ${bars.map(v=>`<div class="vr-take-bar" style="height:${Math.max(2,Math.round(v*28))}px;"></div>`).join('')}
+      ${pins}
+    </div>
+    <div class="vr-take-transport">
+      <button type="button" class="vr-tr-btn" data-vr-play="${rk}">▶ Слушать</button>
+      <button type="button" class="vr-tr-btn" data-vr-back5="${rk}">-5с</button>
+      <button type="button" class="vr-tr-btn" data-vr-fwd5="${rk}">+5с</button>
+      <span class="vr-take-time" data-vr-time="${rk}">0:00 / ${vrFmtTime(dur)}</span>
+      <button type="button" class="vr-tr-btn" data-vr-marker-add="${rk}">Метка</button>
+      <button type="button" class="vr-tr-btn" data-vr-rate="${rk}" data-rate="1">1×</button>
+      <button type="button" class="vr-tr-btn${t.visibleToStudent!==false?' on':''}" data-vr-visibility="${rk}">${t.visibleToStudent!==false?'Виден ученику':'Скрыт'}</button>
+      <a class="vr-tr-btn" data-vr-download="${rk}" href="${t.dataUrl||''}" download="${t.name}">Скачать</a>
+      <button type="button" class="vr-tr-btn" data-vr-delete="${rk}">Удалить</button>
+    </div>
+    <div class="vr-take-markers" data-vr-marker-list="${rk}">${chips}</div>
+  </div>`;
+}
+function vrTakeRowLight(ownerKey, t){
+  const rk = ownerKey + '_' + t.id;
+  const bars = vrDownsample(t.peaks, 60);
+  const dur = t.durationSec || 0;
+  return `<div class="vr-light-row" data-vr-row="${rk}">
+    <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
+    <button type="button" class="vr-light-play" data-vr-play="${rk}">▶</button>
+    <div class="vr-light-mid">
+      <div class="vr-light-title">${t.name}</div>
+      <div class="vr-light-wave" data-vr-waveform="${rk}" data-duration="${dur}">${bars.map(v=>`<div class="vr-light-bar" style="height:${Math.max(2,Math.round(v*22))}px;"></div>`).join('')}</div>
+    </div>
+    <span class="vr-take-time vr-light-time" data-vr-time="${rk}">0:00 / ${vrFmtTime(dur)}</span>
+    <button type="button" class="vr-light-rate" data-vr-rate="${rk}" data-rate="1">1×</button>
+    <div class="vr-light-menu-wrap">
+      <button type="button" class="vr-light-menu-btn" data-vr-menu-toggle="${rk}">⋯</button>
+      <div class="vr-light-menu" data-vr-menu="${rk}" style="display:none;">
+        <a href="${t.dataUrl||''}" download="${t.name}">Скачать</a>
+        <button type="button" data-vr-menu-rename="${rk}">Переименовать</button>
+        <button type="button" data-vr-menu-visibility="${rk}">${t.visibleToStudent!==false?'Скрыть от ученика':'Показать ученику'}</button>
+        <button type="button" data-vr-menu-delete="${rk}">Удалить</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function vrRecorderHtml(recKey, rec, takes, opts){
   opts = opts || {};
   const takesArr = takes || [];
@@ -1925,13 +2076,15 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   let body = '';
   if(rec.pendingTake){
     const pt = rec.pendingTake;
-    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">ÐÐ°Ð¿Ð¸ÑÑ Ð¾ÑÑÐ°Ð½Ð¾Ð²Ð»ÐµÐ½Ð° â ${pt.meta}</div></div></div>${rec.markers && rec.markers.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${rec.markers.map(m=>`<span class="vr-marker-chip">${kbPad(Math.floor(m.sec/60))}:${kbPad(m.sec%60)}</span>`).join('')}</div>` : ''}<div class="vr-save-row"><button type="button" class="vr-save-btn" data-vr-save="${recKey}" ${rec.saving?'disabled':''}>${rec.saving?'Ð¡Ð¾ÑÑÐ°Ð½ÑÑâ¦':'Ð¡Ð¾ÑÑÐ°Ð½Ð¸ÑÑ Ð·Ð°Ð¿Ð¸ÑÑ'}</button><button type="button" class="vr-discard-link" data-vr-discard-pending="${recKey}">Ð¡ÑÐµÑÐµÑÑ, Ð½Ðµ ÑÐ¾ÑÑÐ°Ð½ÑÑÑ</button></div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    const mk = vrSortedMarkers(pt.markers);
+    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">Запись остановлена — ${pt.meta}</div></div></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' · '+m.label):''}</span>`).join('')}</div>` : ''}<div class="vr-save-row"><button type="button" class="vr-save-btn" data-vr-save="${recKey}" ${rec.saving?'disabled':''}>${rec.saving?'Сохраняю…':'Сохранить запись'}</button><button type="button" class="vr-discard-link" data-vr-discard-pending="${recKey}">Стереть, не сохранять</button></div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   } else if(rec.active){
-    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Ð¡ÑÐ¾Ð¿</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'ÐÑÐ¾Ð´Ð¾Ð»Ð¶Ð¸ÑÑ':'ÐÐ°ÑÐ·Ð°'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">ÐÐµÑÐºÐ°${rec.markers && rec.markers.length?`<span class="vr-marker-count">${rec.markers.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Ð¡ÑÐµÑÐµÑÑ</button></div>${rec.markers && rec.markers.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${rec.markers.map(m=>`<span class="vr-marker-chip">${kbPad(Math.floor(m.sec/60))}:${kbPad(m.sec%60)}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    const mk = vrSortedMarkers(rec.markers);
+    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">Метка${mk.length?`<span class="vr-marker-count">${mk.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
   } else {
-    body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>ÐÐ°Ð¿Ð¸ÑÐ°ÑÑ</button><div style="flex:1;min-width:140px;"><div class="vr-caption">ÐÐ°Ð¿Ð¸ÑÑ Ð³Ð¾Ð»Ð¾ÑÐ° ÑÑÐµÐ½Ð¸ÐºÐ°</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Ð¡ÑÐ°Ð·Ñ ÑÑÐµÐ½Ð¸ÐºÑ</label>${opts.showUpload ? `<label class="vr-upload-label">ÐÐ°Ð³ÑÑÐ·Ð¸ÑÑ ÑÐ°Ð¹Ð»<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Сразу ученику</label>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
-  const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;">${takesArr.map(t=>`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="min-width:130px;"><div style="font-size:13px;font-weight:700;color:#F7F3EC;">${t.name}</div><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A2968A;">${t.meta}</div></div>${t.dataUrl ? `<audio controls src="${t.dataUrl}" style="flex:1;min-width:200px;height:34px;"></audio>` : ''}<button type="button" data-vr-take-del="${recKey}" data-take-id="${t.id}" style="border:none;background:none;color:#8A7E74;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Ð£Ð´Ð°Ð»Ð¸ÑÑ</button></div>`).join('')}</div>` : '';
+  const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
   return `<div class="vr-box">${body}${takesHtml}</div>`;
 }
 function dnUpdateRecDom(recKey, rec){
@@ -1940,20 +2093,34 @@ function dnUpdateRecDom(recKey, rec){
   const barsWrap = document.querySelector(`[data-vr-bars="${recKey}"]`);
   if(barsWrap){ const bars = barsWrap.children; const levels = rec.levels; for(let i=0;i<bars.length;i++){ const v = levels[levels.length - bars.length + i] || 0; bars[i].style.height = Math.max(3, Math.round(v*44)) + 'px'; } }
   const markerCountEl = document.querySelector(`[data-vr-marker="${recKey}"] .vr-marker-count`);
-  if(markerCountEl) markerCountEl.textContent = rec.markers.length;
+  if(markerCountEl) markerCountEl.textContent = (rec.markers||[]).length;
 }
 function dnStartRecording(recKey, rec, opts){
   if(rec.active || rec.saving) return;
-  if(!navigator.mediaDevices || !window.MediaRecorder){ rec.error = 'ÐÑÐ°ÑÐ·ÐµÑ Ð½Ðµ Ð¿Ð¾Ð´Ð´ÐµÑÐ¶Ð¸Ð²Ð°ÐµÑ Ð·Ð°Ð¿Ð¸ÑÑ Ð·Ð²ÑÐºÐ°. ÐÑÐºÑÐ¾Ð¹ÑÐµ ÑÑÑÐ°Ð½Ð¸ÑÑ Ð² Chrome Ð¸Ð»Ð¸ Safari.'; opts.onRepaint(); return; }
+  if(!navigator.mediaDevices || !window.MediaRecorder){ rec.error = 'Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.'; opts.onRepaint(); return; }
   const devSel = document.querySelector(`[data-vr-device="${recKey}"]`);
   const deviceId = (devSel && devSel.value) || vrDeviceId();
   const constraints = deviceId ? {audio:{deviceId:{exact:deviceId}}} : {audio:true};
   navigator.mediaDevices.getUserMedia(constraints).then(stream=>{
     rec.stream = stream;
+    rec.hint = '';
+    rec.silenceStreak = 0;
+    vrRegisterRec(rec);
+    const track = stream.getAudioTracks()[0];
+    if(track){
+      track.onended = ()=>{
+        if(!rec.active) return;
+        rec.paused = true;
+        if(rec.mediaRecorder && rec.mediaRecorder.state==='recording' && rec.mediaRecorder.pause) rec.mediaRecorder.pause();
+        rec.error = 'Микрофон отключён — выберите другой источник и продолжите.';
+        opts.onRepaint();
+      };
+    }
     const mr = new MediaRecorder(stream);
     rec.chunks = [];
     mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
     mr.onstop = ()=>{
+      vrUnregisterRec(rec);
       if(rec._discard){ rec._discard = false; dnTeardownRecorder(rec); opts.onRepaint(); return; }
       const blob = new Blob(rec.chunks, {type: mr.mimeType || 'audio/webm'});
       const secs = rec.seconds;
@@ -1963,11 +2130,12 @@ function dnStartRecording(recKey, rec, opts){
       reader.onload = ()=>{
         const dataUrl = reader.result;
         const wasLimitStop = !!rec._limitStop; rec._limitStop = false;
-        const markers = (rec.markers||[]).slice();
+        const markers = vrSortedMarkers(rec.markers);
+        const peaks = vrDownsample(rec.peaks, 200);
         const visibleToStudent = rec.visibleToStudent !== false;
         dnTeardownRecorder(rec);
-        if(dataUrl.length > 5800000){ rec.error = 'ÐÐ°Ð¿Ð¸ÑÑ ÑÐ»Ð¸ÑÐºÐ¾Ð¼ Ð±Ð¾Ð»ÑÑÐ°Ñ Ð´Ð»Ñ ÑÐ¾ÑÑÐ°Ð½ÐµÐ½Ð¸Ñ Ð² Ð±Ð°Ð·Ðµ (Ð»Ð¸Ð¼Ð¸Ñ ~4 ÐÐ). Ð¡Ð¾ÐºÑÐ°ÑÐ¸ÑÐµ Ð´Ð»Ð¸ÑÐµÐ»ÑÐ½Ð¾ÑÑÑ Ð¸ Ð·Ð°Ð¿Ð¸ÑÐ¸ÑÐµ Ð·Ð°Ð½Ð¾Ð²Ð¾.'; opts.onRepaint(); return; }
-        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' Â· '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString(), markers, visibleToStudent };
+        if(dataUrl.length > 5800000){ rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.'; opts.onRepaint(); return; }
+        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString(), durationSec: secs, markers, peaks, visibleToStudent };
         if(wasLimitStop){ opts.onSaveTake(take); } else { rec.pendingTake = take; opts.onRepaint(); }
       };
       reader.readAsDataURL(blob);
@@ -1999,16 +2167,18 @@ function dnStartRecording(recKey, rec, opts){
         const amplitude = Math.min(1, rms*3.4);
         rec.levels = rec.levels.concat([amplitude]).slice(-60);
         rec.peaks.push(amplitude);
+        if(amplitude < 0.02){ rec.silenceStreak = (rec.silenceStreak||0) + 1; } else { rec.silenceStreak = 0; if(rec.hint){ rec.hint=''; opts.onRepaint(); } }
+        if(rec.silenceStreak === 200){ rec.hint = 'Похоже, микрофон не ловит звук.'; opts.onRepaint(); }
         dnUpdateRecDom(recKey, rec);
       }, 50);
-    }catch(e){ /* Ð²Ð¸Ð·ÑÐ°Ð»Ð¸Ð·Ð°ÑÐ¸Ñ Ð½Ðµ ÐºÑÐ¸ÑÐ¸ÑÐ½Ð° Ð´Ð»Ñ ÑÐ°Ð±Ð¾ÑÑ Ð·Ð°Ð¿Ð¸ÑÐ¸ */ }
-  }).catch(()=>{ rec.error = 'ÐÐµÑ Ð´Ð¾ÑÑÑÐ¿Ð° Ðº Ð¼Ð¸ÐºÑÐ¾ÑÐ¾Ð½Ñ. Ð Ð°Ð·ÑÐµÑÐ¸ÑÐµ Ð·Ð°Ð¿Ð¸ÑÑ Ð² Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ°Ñ Ð±ÑÐ°ÑÐ·ÐµÑÐ° Ð¸ Ð¿Ð¾Ð¿ÑÐ¾Ð±ÑÐ¹ÑÐµ ÑÐ½Ð¾Ð²Ð°.'; opts.onRepaint(); });
+    }catch(e){ /* визуализация не критична для работы записи */ }
+  }).catch(()=>{ rec.error = 'Микрофон недоступен: разрешите доступ в браузере и попробуйте снова.'; opts.onRepaint(); });
 }
 function dnStopRecording(rec){ if(rec.timer) clearInterval(rec.timer); if(rec.levelTimer) clearInterval(rec.levelTimer); if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop(); else dnTeardownRecorder(rec); }
-function dnTeardownRecorder(rec){ if(rec.timer) clearInterval(rec.timer); if(rec.levelTimer) clearInterval(rec.levelTimer); if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; } if(rec.stream){ rec.stream.getTracks().forEach(t=>t.stop()); rec.stream = null; } rec.active = false; rec.paused = false; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null; }
-function dnPauseToggle(rec, recKey, opts){ if(!rec.active) return; if(!rec.paused){ if(rec.mediaRecorder && rec.mediaRecorder.state==='recording' && rec.mediaRecorder.pause) rec.mediaRecorder.pause(); rec.paused = true; } else { if(rec.mediaRecorder && rec.mediaRecorder.state==='paused' && rec.mediaRecorder.resume) rec.mediaRecorder.resume(); rec.paused = false; } opts.onRepaint(); }
-function dnAddMarker(rec, recKey, opts){ if(!rec.active || rec.paused) return; rec.markers = rec.markers || []; rec.markers.push({sec: rec.seconds}); opts.onRepaint(); }
-function dnDiscardRecording(rec, opts){ if(!rec.active) return; if(rec.seconds > 10 && !confirm('Ð£Ð´Ð°Ð»Ð¸ÑÑ ÑÐµÐºÑÑÑÑ Ð·Ð°Ð¿Ð¸ÑÑ? ÐÑÐ¼ÐµÐ½Ð¸ÑÑ Ð±ÑÐ´ÐµÑ Ð½ÐµÐ»ÑÐ·Ñ.')) return; rec._discard = true; if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop(); else dnTeardownRecorder(rec); opts.onRepaint(); }
+function dnTeardownRecorder(rec){ vrUnregisterRec(rec); if(rec.timer) clearInterval(rec.timer); if(rec.levelTimer) clearInterval(rec.levelTimer); if(rec.ctx){ try{ rec.ctx.close(); }catch(e){} rec.ctx = null; } if(rec.stream){ rec.stream.getTracks().forEach(t=>{ t.onended=null; t.stop(); }); rec.stream = null; } rec.active = false; rec.paused = false; rec.hint=''; rec.mediaRecorder = null; rec.timer = null; rec.levelTimer = null; }
+function dnPauseToggle(rec, recKey, opts){ if(!rec.active) return; if(!rec.paused){ if(rec.mediaRecorder && rec.mediaRecorder.state==='recording' && rec.mediaRecorder.pause) rec.mediaRecorder.pause(); rec.paused = true; } else { if(rec.mediaRecorder && rec.mediaRecorder.state==='paused' && rec.mediaRecorder.resume) rec.mediaRecorder.resume(); rec.paused = false; rec.error=''; } opts.onRepaint(); }
+function dnAddMarker(rec, recKey, opts){ if(!rec.active || rec.paused) return; rec.markers = rec.markers || []; rec.markers.push(vrNewMarker(rec.seconds)); opts.onRepaint(); }
+function dnDiscardRecording(rec, opts){ if(!rec.active) return; if(rec.seconds > 10 && !confirm('Удалить текущую запись? Отменить будет нельзя.')) return; rec._discard = true; if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop(); else dnTeardownRecorder(rec); opts.onRepaint(); }
 function dnConfirmSaveTake(rec, opts){ if(!rec.pendingTake || rec.saving) return; const take = rec.pendingTake; rec.pendingTake = null; opts.onSaveTake(take); }
 function dnDiscardPendingTake(rec, opts){ rec.pendingTake = null; rec.markers = []; opts.onRepaint(); }
 function dnSaveTakes(rec, ensureRowFn, getTakes, applyTakes, repaint){
@@ -2086,50 +2256,258 @@ function dnCommitDictAdd(fieldKey, s){
   dnApplyDictValue(s, ctx, fieldKey, raw);
 }
 
+function vrOpenMarkerEditor(rk, markerId, take, persistFn, repaintFn){
+  const chip = document.querySelector('[data-vr-marker-chip="'+rk+'"][data-marker-id="'+markerId+'"]');
+  if(!chip) return;
+  const marker = (take.markers||[]).find(function(m){ return m.id===markerId; });
+  if(!marker) return;
+  const input = document.createElement('input');
+  input.className = 'vr-mk-input';
+  input.value = marker.label || '';
+  input.placeholder = 'Что здесь?';
+  input.maxLength = 40;
+  chip.replaceWith(input);
+  input.focus(); input.select();
+  let done = false;
+  const finish = function(){
+    if(done) return; done = true;
+    const idx = vrSortedMarkers(take.markers).findIndex(function(m){ return m.id===markerId; });
+    const v = input.value.trim().slice(0,40);
+    marker.label = v || ('Метка ' + (idx+1));
+    persistFn();
+    repaintFn();
+  };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); finish(); }
+    else if(e.key==='Escape'){ e.preventDefault(); input.value=''; finish(); }
+  });
+}
+function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn, isLight){
+  const audio = root.querySelector('[data-vr-audio="'+rk+'"]');
+  const dur = take.durationSec || 0;
+  if(audio){
+    window.__vrAudios[rk] = audio;
+    const timeEl = root.querySelector('[data-vr-time="'+rk+'"]');
+    const waveEl = root.querySelector('[data-vr-waveform="'+rk+'"]');
+    const playBtn = root.querySelector('[data-vr-play="'+rk+'"]');
+    const updateWave = function(){
+      if(!waveEl) return;
+      const d = dur || audio.duration || 0;
+      if(!d) return;
+      const pct = Math.min(1, audio.currentTime/d);
+      const bars = waveEl.querySelectorAll(isLight?'.vr-light-bar':'.vr-take-bar');
+      const cut = Math.floor(pct*bars.length);
+      bars.forEach(function(b,i){ b.classList.toggle('played', i<cut); });
+    };
+    audio.addEventListener('timeupdate', function(){
+      if(timeEl) timeEl.textContent = vrFmtTime(audio.currentTime) + ' / ' + vrFmtTime(dur||audio.duration||0);
+      updateWave();
+    });
+    audio.addEventListener('play', function(){ vrStopOtherAudio(rk); if(playBtn) playBtn.textContent = isLight? '❚❚' : '❚❚ Пауза'; });
+    audio.addEventListener('pause', function(){ if(playBtn) playBtn.textContent = isLight? '▶' : '▶ Слушать'; });
+    audio.addEventListener('ended', function(){ if(playBtn) playBtn.textContent = isLight? '▶' : '▶ Слушать'; });
+    if(playBtn) playBtn.onclick = function(){ if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); } };
+    const back5 = root.querySelector('[data-vr-back5="'+rk+'"]');
+    if(back5) back5.onclick = function(){ audio.currentTime = Math.max(0, audio.currentTime-5); };
+    const fwd5 = root.querySelector('[data-vr-fwd5="'+rk+'"]');
+    if(fwd5) fwd5.onclick = function(){ audio.currentTime = Math.min((dur||audio.duration||1e9), audio.currentTime+5); };
+    if(waveEl) waveEl.onclick = function(e){
+      const rect = waveEl.getBoundingClientRect();
+      const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+      const d = dur || audio.duration || 0;
+      audio.currentTime = pct*d;
+    };
+    const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
+    if(rateBtn){
+      const cycle = [1,1.25,0.75,0.5];
+      rateBtn.onclick = function(){
+        const cur = parseFloat(rateBtn.getAttribute('data-rate'))||1;
+        const idx = cycle.indexOf(cur);
+        const next = cycle[(idx+1)%cycle.length];
+        rateBtn.setAttribute('data-rate', String(next));
+        rateBtn.textContent = next+'×';
+        audio.playbackRate = next;
+      };
+    }
+  }
+  const markerAddBtn = root.querySelector('[data-vr-marker-add="'+rk+'"]');
+  if(markerAddBtn){
+    markerAddBtn.onclick = function(){
+      const a = window.__vrAudios[rk];
+      const t = a ? a.currentTime : 0;
+      const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
+      if(nearIdx>=0){
+        window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
+        repaintFn();
+        return;
+      }
+      const m = vrNewMarker(t);
+      take.markers = (take.markers||[]).concat([m]);
+      persistFn();
+      window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
+      repaintFn();
+    };
+  }
+  root.querySelectorAll('[data-vr-marker-chip="'+rk+'"]').forEach(function(chip){
+    const markerId = chip.getAttribute('data-marker-id');
+    chip.onclick = function(e){
+      if(e.target.closest('[data-vr-marker-del]')) return;
+      const a = window.__vrAudios[rk];
+      const m = (take.markers||[]).find(function(x){ return x.id===markerId; });
+      if(a && m) a.currentTime = vrMarkerTime(m);
+    };
+    chip.ondblclick = function(){ vrOpenMarkerEditor(rk, markerId, take, persistFn, repaintFn); };
+  });
+  root.querySelectorAll('[data-vr-marker-del="'+rk+'"]').forEach(function(delBtn){
+    delBtn.onclick = function(e){
+      e.stopPropagation();
+      const markerId = delBtn.getAttribute('data-marker-id');
+      const prevMarkers = (take.markers||[]).slice();
+      take.markers = (take.markers||[]).filter(function(m){ return m.id!==markerId; });
+      persistFn();
+      repaintFn();
+      vrShowUndoToast('Метка удалена', function(){ take.markers = prevMarkers; persistFn(); repaintFn(); }, function(){});
+    };
+  });
+  if(window.__vrPendingEditMarker && window.__vrPendingEditMarker.rk===rk){
+    const pend = window.__vrPendingEditMarker;
+    window.__vrPendingEditMarker = null;
+    setTimeout(function(){ vrOpenMarkerEditor(rk, pend.markerId, take, persistFn, repaintFn); }, 0);
+  }
+  const titleEl = root.querySelector('[data-vr-title="'+rk+'"]');
+  if(titleEl){
+    titleEl.onclick = function(){
+      const input = document.createElement('input');
+      input.className = 'vr-take-title-input';
+      input.value = take.name;
+      titleEl.replaceWith(input);
+      input.focus(); input.select();
+      const fin = function(){ take.name = input.value.trim() || take.name; persistFn(); repaintFn(); };
+      input.addEventListener('blur', fin);
+      input.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); fin(); } if(e.key==='Escape'){ e.preventDefault(); repaintFn(); } });
+    };
+  }
+  const visBtn = root.querySelector('[data-vr-visibility="'+rk+'"]');
+  if(visBtn){
+    visBtn.onclick = function(){ take.visibleToStudent = take.visibleToStudent===false; persistFn(); repaintFn(); };
+  }
+  const delBtn = root.querySelector('[data-vr-delete="'+rk+'"]');
+  if(delBtn){
+    delBtn.onclick = function(){
+      const all = getTakes();
+      const idx = all.findIndex(function(x){ return x.id===take.id; });
+      if(idx<0) return;
+      const removed = all[idx];
+      const next = all.slice(0,idx).concat(all.slice(idx+1));
+      setTakes(next);
+      repaintFn();
+      vrShowUndoToast('Запись удалена', function(){ const cur=getTakes(); setTakes(cur.slice(0,idx).concat([removed]).concat(cur.slice(idx))); persistFn(); repaintFn(); }, function(){ persistFn(); });
+    };
+  }
+  if(isLight){
+    const menuBtn = root.querySelector('[data-vr-menu-toggle="'+rk+'"]');
+    const menu = root.querySelector('[data-vr-menu="'+rk+'"]');
+    if(menuBtn && menu){
+      menuBtn.onclick = function(e){
+        e.stopPropagation();
+        const open = menu.style.display!=='none' && menu.style.display!=='';
+        document.querySelectorAll('.vr-light-menu').forEach(function(m){ m.style.display='none'; });
+        menu.style.display = open?'none':'flex';
+      };
+    }
+    const renameBtn = root.querySelector('[data-vr-menu-rename="'+rk+'"]');
+    if(renameBtn) renameBtn.onclick = function(){ const val = prompt('Новое название записи', take.name); if(val && val.trim()){ take.name = val.trim(); persistFn(); repaintFn(); } };
+    const visMenuBtn = root.querySelector('[data-vr-menu-visibility="'+rk+'"]');
+    if(visMenuBtn) visMenuBtn.onclick = function(){ take.visibleToStudent = take.visibleToStudent===false; persistFn(); repaintFn(); };
+    const delMenuBtn = root.querySelector('[data-vr-menu-delete="'+rk+'"]');
+    if(delMenuBtn) delMenuBtn.onclick = function(){
+      const all = getTakes();
+      const idx = all.findIndex(function(x){ return x.id===take.id; });
+      if(idx<0) return;
+      const removed = all[idx];
+      const next = all.slice(0,idx).concat(all.slice(idx+1));
+      setTakes(next);
+      repaintFn();
+      vrShowUndoToast('Запись удалена', function(){ const cur=getTakes(); setTakes(cur.slice(0,idx).concat([removed]).concat(cur.slice(idx))); persistFn(); repaintFn(); }, function(){ persistFn(); });
+    };
+  }
+}
+document.addEventListener('click', function(){ document.querySelectorAll('.vr-light-menu').forEach(function(m){ m.style.display='none'; }); });
+function vrWireLightRows(s){
+  const root = document.getElementById('tabContent');
+  if(!root) return;
+  const cache = dnCache(s);
+  const lessons = cache.lessons || [];
+  lessons.forEach(function(l){
+    if(String(state.diaryEditing[s.id])===String(l.id)) return;
+    (l.takes||[]).forEach(function(t){
+      const rk = 'light_' + l.id + '_' + t.id;
+      const getTakes = function(){ return l.takes || []; };
+      const setTakes = function(next){ l.takes = next; };
+      const persist = function(){
+        dnQueueSave(l.id, {takes: l.takes}, function(lesson){
+          if(lesson){ const idx = lessons.findIndex(function(x){ return String(x.id)===String(lesson.id); }); if(idx>=0) lessons[idx] = lesson; }
+        });
+      };
+      vrWireTakeRow(root, rk, t, getTakes, setTakes, persist, function(){ paintDiary(s); }, true);
+    });
+  });
+}
 function dnRecorderWire(s, recKey, rec, ctx, getTakesArr, setTakesArr, syncAfterSave, opts){
   opts = opts || {};
   const root = document.getElementById('tabContent');
   if(!root) return;
   const fileTag = (s.name||'student').replace(/\s+/g,'_') + (opts.fileTagSuffix || '_zanyatie');
-  const repaint = ()=> (opts.repaint ? opts.repaint() : paintDiary(s));
-  const doSaveTake = (take)=>{
-    if(ctx==='kabinet'){ const next = [take].concat(getTakesArr()||[]); setTakesArr(next); opts.onKabinetSave(next); return; }
-    const ensureFn = ctx==='new' ? (()=>dnEnsureDraftRow(s)) : (()=>Promise.resolve(ctx.slice(5)));
+  const repaint = function(){ return opts.repaint ? opts.repaint() : paintDiary(s); };
+  const persistTakes = function(){
+    if(ctx==='kabinet'){ opts.onKabinetSave(getTakesArr()); return; }
+    if(ctx==='new'){ const draft = dnDraft(s); if(draft.id) dnQueueSave(draft.id, {takes: getTakesArr()}, function(){}); return; }
+    if(ctx && ctx.indexOf('edit:')===0){ dnQueueSave(ctx.slice(5), {takes: getTakesArr()}, function(lesson){ if(lesson) syncAfterSave(lesson); }); return; }
+  };
+  const doSaveTake = function(take){
+    if(ctx==='kabinet'){
+      take._fresh = true;
+      setTimeout(function(){ take._fresh=false; repaint(); }, 6000);
+      const next = [take].concat(getTakesArr()||[]);
+      setTakesArr(next);
+      opts.onKabinetSave(next);
+      return;
+    }
+    const ensureFn = ctx==='new' ? (function(){ return dnEnsureDraftRow(s); }) : (function(){ return Promise.resolve(ctx.slice(5)); });
     dnSaveTakes(rec, ensureFn,
-      ()=>{ const next=[take].concat(getTakesArr()||[]); setTakesArr(next); return next; },
-      (lesson)=>{ if(lesson) syncAfterSave(lesson); },
+      function(){
+        take._fresh = true;
+        setTimeout(function(){ take._fresh=false; repaint(); }, 6000);
+        const next = [take].concat(getTakesArr()||[]);
+        setTakesArr(next);
+        return next;
+      },
+      function(lesson){ if(lesson) syncAfterSave(lesson); },
       repaint
     );
   };
-  const engOpts = { fileTag, onRepaint: repaint, onSaveTake: doSaveTake };
-  const btn = root.querySelector(`[data-vr-rec-btn="${recKey}"]`);
-  if(btn) btn.onclick = ()=>{ if(rec.active){ dnStopRecording(rec); } else { dnStartRecording(recKey, rec, engOpts); } };
-  const pauseBtn = root.querySelector(`[data-vr-pause="${recKey}"]`);
-  if(pauseBtn) pauseBtn.onclick = ()=> dnPauseToggle(rec, recKey, engOpts);
-  const markerBtn = root.querySelector(`[data-vr-marker="${recKey}"]`);
-  if(markerBtn) markerBtn.onclick = ()=> dnAddMarker(rec, recKey, engOpts);
-  const discardBtn = root.querySelector(`[data-vr-discard="${recKey}"]`);
-  if(discardBtn) discardBtn.onclick = ()=> dnDiscardRecording(rec, engOpts);
-  const saveBtn = root.querySelector(`[data-vr-save="${recKey}"]`);
-  if(saveBtn) saveBtn.onclick = ()=> dnConfirmSaveTake(rec, engOpts);
-  const discardPendingBtn = root.querySelector(`[data-vr-discard-pending="${recKey}"]`);
-  if(discardPendingBtn) discardPendingBtn.onclick = ()=> dnDiscardPendingTake(rec, engOpts);
-  const deviceSel = root.querySelector(`[data-vr-device="${recKey}"]`);
-  if(deviceSel){ vrListInputDevices(deviceSel); deviceSel.onchange = ()=> vrSetDeviceId(deviceSel.value); }
-  const visibleChk = root.querySelector(`[data-vr-visible="${recKey}"]`);
-  if(visibleChk) visibleChk.onchange = ()=>{ rec.visibleToStudent = visibleChk.checked; };
-  const uploadInput = root.querySelector(`[data-vr-upload="${recKey}"]`);
-  if(uploadInput) uploadInput.onchange = (e)=>{ const file = e.target.files && e.target.files[0]; if(file && opts.onUpload) opts.onUpload(file); e.target.value = ''; };
-  root.querySelectorAll(`[data-vr-take-del="${recKey}"]`).forEach(el=>{
-    el.onclick = ()=>{
-      const takeId = Number(el.dataset.takeId);
-      const next = (getTakesArr()||[]).filter(t=>t.id!==takeId);
-      setTakesArr(next);
-      if(ctx==='kabinet'){ opts.onKabinetSave(next); return; }
-      if(ctx==='new'){ const draft = dnDraft(s); if(draft.id) dnQueueSave(draft.id, {takes: next}, ()=>{}); }
-      else if(ctx && ctx.indexOf('edit:')===0){ dnQueueSave(ctx.slice(5), {takes: next}, (lesson)=> syncAfterSave(lesson)); }
-      repaint();
-    };
+  const engOpts = { fileTag: fileTag, onRepaint: repaint, onSaveTake: doSaveTake };
+  const btn = root.querySelector('[data-vr-rec-btn="'+recKey+'"]');
+  if(btn) btn.onclick = function(){ if(rec.active){ dnStopRecording(rec); } else { dnStartRecording(recKey, rec, engOpts); } };
+  const pauseBtn = root.querySelector('[data-vr-pause="'+recKey+'"]');
+  if(pauseBtn) pauseBtn.onclick = function(){ dnPauseToggle(rec, recKey, engOpts); };
+  const markerBtn = root.querySelector('[data-vr-marker="'+recKey+'"]');
+  if(markerBtn) markerBtn.onclick = function(){ dnAddMarker(rec, recKey, engOpts); };
+  const discardBtn = root.querySelector('[data-vr-discard="'+recKey+'"]');
+  if(discardBtn) discardBtn.onclick = function(){ dnDiscardRecording(rec, engOpts); };
+  const saveBtn = root.querySelector('[data-vr-save="'+recKey+'"]');
+  if(saveBtn) saveBtn.onclick = function(){ dnConfirmSaveTake(rec, engOpts); };
+  const discardPendingBtn = root.querySelector('[data-vr-discard-pending="'+recKey+'"]');
+  if(discardPendingBtn) discardPendingBtn.onclick = function(){ dnDiscardPendingTake(rec, engOpts); };
+  const deviceSel = root.querySelector('[data-vr-device="'+recKey+'"]');
+  if(deviceSel){ vrListInputDevices(deviceSel); deviceSel.onchange = function(){ vrSetDeviceId(deviceSel.value); }; }
+  const visibleChk = root.querySelector('[data-vr-visible="'+recKey+'"]');
+  if(visibleChk) visibleChk.onchange = function(){ rec.visibleToStudent = visibleChk.checked; };
+  const uploadInput = root.querySelector('[data-vr-upload="'+recKey+'"]');
+  if(uploadInput) uploadInput.onchange = function(e){ const file = e.target.files && e.target.files[0]; if(file && opts.onUpload) opts.onUpload(file); e.target.value = ''; };
+  (getTakesArr()||[]).forEach(function(t){
+    vrWireTakeRow(root, recKey+'_'+t.id, t, getTakesArr, setTakesArr, persistTakes, repaint, false);
   });
 }
 function wireDiaryHandlers(s){
