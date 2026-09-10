@@ -2051,7 +2051,7 @@ function vrTakeRowDark(recKey, t){
 }
 function vrTakeRowLight(ownerKey, t){
   const rk = ownerKey + '_' + t.id;
-  const bars = vrDownsample(t.peaks, 60);
+  const bars = vrDownsample(t.peaks, 80);
   const dur = t.durationSec || 0;
   const dlName = t.fileName || t.name;
   return `<div class="vr-light-row" data-vr-row="${rk}">
