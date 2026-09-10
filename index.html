@@ -1968,6 +1968,22 @@ function vrNewMarker(t){ return { id: vrUid(), t: Math.round(t*10)/10, label: ''
 function vrMarkerTime(m){ return m.t!=null ? m.t : (m.sec||0); }
 function vrSortedMarkers(markers){ return (markers||[]).slice().sort((a,b)=> vrMarkerTime(a)-vrMarkerTime(b)); }
 function vrFindNearMarker(markers, t, thresh){ thresh = thresh||0.3; let best=-1, bestD=Infinity; (markers||[]).forEach((m,i)=>{ const d=Math.abs(vrMarkerTime(m)-t); if(d<thresh && d<bestD){ bestD=d; best=i; } }); return best; }
+function vrCreateOrEditMarker(rk, take, t, persistFn, repaintFn){
+  const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
+  if(nearIdx>=0){
+    window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
+    repaintFn();
+    return;
+  }
+  const m = vrNewMarker(t);
+  take.markers = (take.markers||[]).concat([m]);
+  const sorted = vrSortedMarkers(take.markers);
+  const idx = sorted.findIndex(function(x){ return x.id===m.id; });
+  m.label = 'Метка ' + (idx+1);
+  persistFn();
+  window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
+  repaintFn();
+}
 function vrDownsample(peaks, n){
   peaks = peaks||[];
   if(!peaks.length) return Array.from({length:n}).map(()=>0);
@@ -2007,11 +2023,23 @@ document.addEventListener('keydown', function(e){
   if(e.key!=='m' && e.key!=='M') return;
   const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || (document.activeElement && document.activeElement.isContentEditable)) return;
-  let targetKey = null;
-  for(const k in window.__vrAudios){ const a = window.__vrAudios[k]; if(a && !a.paused){ targetKey = k; break; } }
+  let targetKey = null, targetAudio = null;
+  for(const k in window.__vrAudios){ const a = window.__vrAudios[k]; if(a && !a.paused){ targetKey = k; targetAudio = a; break; } }
   if(!targetKey) return;
-  const btn = document.querySelector('[data-vr-marker-add="'+targetKey+'"]');
-  if(btn) btn.click();
+  const ctx = window.__vrTakeCtx && window.__vrTakeCtx[targetKey];
+  if(!ctx) return;
+  vrCreateOrEditMarker(targetKey, ctx.take, targetAudio.currentTime, ctx.persistFn, ctx.repaintFn);
+});
+document.addEventListener('keydown', function(e){
+  if(e.key!=='ArrowLeft' && e.key!=='ArrowRight') return;
+  const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  const audio = document.querySelector('[data-vr-audio]');
+  if(!audio) return;
+  e.preventDefault();
+  const d = audio.duration || 0;
+  if(e.key==='ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime-5);
+  else audio.currentTime = Math.min((d||1e9), audio.currentTime+5);
 });
 
 document.addEventListener('keydown', function(e){
@@ -2056,9 +2084,6 @@ function vrTakeRowDark(recKey, t){
     </div>
     <div class="vr-take-transport">
       <span class="vr-take-time" data-vr-time="${rk}">0:00 / ${vrFmtTime(dur)}</span>
-      <button type="button" class="vr-tr-btn" data-vr-back5="${rk}">-5</button>
-      <button type="button" class="vr-tr-btn" data-vr-fwd5="${rk}">+5</button>
-      <button type="button" class="vr-tr-btn" data-vr-marker-add="${rk}">Метка</button>
       ${rateBtns}
       <button type="button" class="vr-tr-btn${t.visibleToStudent!==false?' on':''}" data-vr-visibility="${rk}" style="margin-left:auto;">${t.visibleToStudent!==false?'Виден ученику':'Скрыт'}</button>
       <button type="button" class="vr-tr-btn" data-vr-delete="${rk}">Удалить</button>
@@ -2337,6 +2362,8 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
   const dur = take.durationSec || 0;
   if(audio){
     window.__vrAudios[rk] = audio;
+    window.__vrTakeCtx = window.__vrTakeCtx || {};
+    window.__vrTakeCtx[rk] = { take: take, persistFn: persistFn, repaintFn: repaintFn };
     const timeEl = root.querySelector('[data-vr-time="'+rk+'"]');
     const waveEl = root.querySelector('[data-vr-waveform="'+rk+'"]');
     const playBtn = root.querySelector('[data-vr-play="'+rk+'"]');
@@ -2371,18 +2398,7 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
       const rect = waveEl.getBoundingClientRect();
       const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
       const d = dur || audio.duration || 0;
-      const t = pct*d;
-      const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
-      if(nearIdx>=0){
-        window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
-        repaintFn();
-        return;
-      }
-      const m = vrNewMarker(t);
-      take.markers = (take.markers||[]).concat([m]);
-      persistFn();
-      window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
-      repaintFn();
+      vrCreateOrEditMarker(rk, take, pct*d, persistFn, repaintFn);
     };
     const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
     if(rateBtn){
@@ -2552,6 +2568,8 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
   const dur = take.durationSec || 0;
   if(audio){
     window.__vrAudios[rk] = audio;
+    window.__vrTakeCtx = window.__vrTakeCtx || {};
+    window.__vrTakeCtx[rk] = { take: take, persistFn: persistFn, repaintFn: repaintFn };
     const timeEl = root.querySelector('[data-vr-time="'+rk+'"]');
     const waveEl = root.querySelector('[data-vr-waveform="'+rk+'"]');
     const playBtn = root.querySelector('[data-vr-play="'+rk+'"]');
@@ -2586,18 +2604,7 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
       const rect = waveEl.getBoundingClientRect();
       const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
       const d = dur || audio.duration || 0;
-      const t = pct*d;
-      const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
-      if(nearIdx>=0){
-        window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
-        repaintFn();
-        return;
-      }
-      const m = vrNewMarker(t);
-      take.markers = (take.markers||[]).concat([m]);
-      persistFn();
-      window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
-      repaintFn();
+      vrCreateOrEditMarker(rk, take, pct*d, persistFn, repaintFn);
     };
     const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
     if(rateBtn){
