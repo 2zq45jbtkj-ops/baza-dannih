@@ -2021,6 +2021,7 @@ window.addEventListener('beforeunload', function(e){
 });
 document.addEventListener('keydown', function(e){
   if(e.key!=='m' && e.key!=='M') return;
+  if(e.repeat) return;
   const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || (document.activeElement && document.activeElement.isContentEditable)) return;
   let targetKey = null, targetAudio = null;
@@ -2032,6 +2033,7 @@ document.addEventListener('keydown', function(e){
 });
 document.addEventListener('keydown', function(e){
   if(e.key!=='ArrowLeft' && e.key!=='ArrowRight') return;
+  if(e.repeat) return;
   const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
   const audio = document.querySelector('[data-vr-audio]');
@@ -2043,6 +2045,7 @@ document.addEventListener('keydown', function(e){
 });
 document.addEventListener('keydown', function(e){
   if(e.key!=='Enter') return;
+  if(e.repeat) return;
   const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
   const btn = document.querySelector('[data-vr-save]');
@@ -2053,6 +2056,7 @@ document.addEventListener('keydown', function(e){
 
 document.addEventListener('keydown', function(e){
   if(e.code!=='Space' && e.key!==' ') return;
+  if(e.repeat) return;
   const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
   const audio = document.querySelector('[data-vr-audio]');
@@ -2143,7 +2147,7 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   } else if(rec.active){
     body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
   } else {
-    body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select><button type="button" class="vr-tr-btn${rec.visibleToStudent!==false?' on':''}" data-vr-visible="${recKey}">${rec.visibleToStudent!==false?'Виден ученику':'Скрыт'}</button>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
   const takesHtml = takesArr.length ? `<div style="margin:14px -20px -18px -20px;padding:14px 20px 18px 20px;background:#231F1B;border-radius:0 0 16px 16px;display:flex;flex-direction:column;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
   return `<div class="vr-box">${body}${takesHtml}</div>`;
@@ -2195,7 +2199,7 @@ function dnStartRecording(recKey, rec, opts){
         const wasLimitStop = !!rec._limitStop; rec._limitStop = false;
         const markers = vrSortedMarkers(rec.markers);
         const peaks = vrDownsample(rec.peaks, 200);
-        const visibleToStudent = rec.visibleToStudent !== false;
+        const visibleToStudent = false;
         dnTeardownRecorder(rec);
         if(dataUrl.length > 5800000){ rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.'; opts.onRepaint(); return; }
         const take = { id: Date.now(), name: displayName, fileName: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString(), durationSec: secs, markers, peaks, visibleToStudent };
@@ -2809,8 +2813,6 @@ function dnRecorderWire(s, recKey, rec, ctx, getTakesArr, setTakesArr, syncAfter
   if(discardPendingBtn) discardPendingBtn.onclick = function(){ dnDiscardPendingTake(rec, engOpts); };
   const deviceSel = root.querySelector('[data-vr-device="'+recKey+'"]');
   if(deviceSel){ vrListInputDevices(deviceSel); deviceSel.onchange = function(){ vrSetDeviceId(deviceSel.value); }; }
-  const visibleChk = root.querySelector('[data-vr-visible="'+recKey+'"]');
-  if(visibleChk) visibleChk.onclick = function(){ rec.visibleToStudent = rec.visibleToStudent===false ? true : false; repaint(); };
   const uploadInput = root.querySelector('[data-vr-upload="'+recKey+'"]');
   if(uploadInput) uploadInput.onchange = function(e){ const file = e.target.files && e.target.files[0]; if(file && opts.onUpload) opts.onUpload(file); e.target.value = ''; };
   (getTakesArr()||[]).forEach(function(t){
