@@ -362,6 +362,11 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-light-menu button, .vr-light-menu a{padding:8px 10px;border:none;background:none;text-align:left;font-size:12.5px;color:#23201D;cursor:pointer;border-radius:6px;text-decoration:none;font-family:inherit;display:block;width:100%;box-sizing:border-box;}
 .vr-light-menu button:hover, .vr-light-menu a:hover{background:#F4EEE6;}
 .vr-light-menu-wrap{position:relative;}
+.vr-save-row-outer{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.vr-save-btn-outer{width:100%;padding:14px;border-radius:12px;border:none;background:#A8452C;color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
+.vr-save-btn-outer:hover{background:#8E3721;}
+.vr-save-btn-outer:disabled{opacity:.55;cursor:default;}
+
 
 
 .kb-files-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 10px;display:flex;flex-direction:column;}
@@ -2018,7 +2023,9 @@ function vrTakeRowDark(recKey, t){
   const dur = t.durationSec || 0;
   const markers = vrSortedMarkers(t.markers);
   const pins = dur ? markers.map(m=>`<div class="vr-take-pin" style="left:${Math.min(100,Math.max(0,vrMarkerTime(m)/dur*100))}%;"></div>`).join('') : '';
-  const chips = markers.map(m=>`<span class="vr-mk-chip" data-vr-marker-chip="${rk}" data-marker-id="${m.id}">${vrFmtTime(vrMarkerTime(m))}${m.label?(' · '+m.label):''}<span class="vr-mk-del" data-vr-marker-del="${rk}" data-marker-id="${m.id}">✕</span></span>`).join('');
+  const chips = markers.map(m=>`<span class="vr-mk-chip" data-vr-marker-chip="${rk}" data-marker-id="${m.id}">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}<span class="vr-mk-del" data-vr-marker-del="${rk}" data-marker-id="${m.id}">✕</span></span>`).join('');
+  const rateVals = [0.5,0.75,1,1.25];
+  const rateBtns = rateVals.map(v=>`<button type="button" class="vr-tr-btn vr-rate-btn${v===1?' on':''}" data-vr-rate-btn="${rk}" data-rate="${v}">${v}×</button>`).join('');
   return `<div class="vr-take${t._fresh?' fresh':''}" data-vr-row="${rk}">
     <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
     <div class="vr-take-top">
@@ -2030,14 +2037,13 @@ function vrTakeRowDark(recKey, t){
       ${pins}
     </div>
     <div class="vr-take-transport">
-      <button type="button" class="vr-tr-btn" data-vr-play="${rk}">▶ Слушать</button>
+      <button type="button" class="vr-tr-btn vr-tr-play" data-vr-play="${rk}">▶</button>
+      <span class="vr-take-time" data-vr-time="${rk}">0:00 / ${vrFmtTime(dur)}</span>
       <button type="button" class="vr-tr-btn" data-vr-back5="${rk}">-5с</button>
       <button type="button" class="vr-tr-btn" data-vr-fwd5="${rk}">+5с</button>
-      <span class="vr-take-time" data-vr-time="${rk}">0:00 / ${vrFmtTime(dur)}</span>
       <button type="button" class="vr-tr-btn" data-vr-marker-add="${rk}">Метка</button>
-      <button type="button" class="vr-tr-btn" data-vr-rate="${rk}" data-rate="1">1×</button>
+      ${rateBtns}
       <button type="button" class="vr-tr-btn${t.visibleToStudent!==false?' on':''}" data-vr-visibility="${rk}">${t.visibleToStudent!==false?'Виден ученику':'Скрыт'}</button>
-      <a class="vr-tr-btn" data-vr-download="${rk}" href="${t.dataUrl||''}" download="${t.name}">Скачать</a>
       <button type="button" class="vr-tr-btn" data-vr-delete="${rk}">Удалить</button>
     </div>
     <div class="vr-take-markers" data-vr-marker-list="${rk}">${chips}</div>
@@ -2047,6 +2053,7 @@ function vrTakeRowLight(ownerKey, t){
   const rk = ownerKey + '_' + t.id;
   const bars = vrDownsample(t.peaks, 60);
   const dur = t.durationSec || 0;
+  const dlName = t.fileName || t.name;
   return `<div class="vr-light-row" data-vr-row="${rk}">
     <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
     <button type="button" class="vr-light-play" data-vr-play="${rk}">▶</button>
@@ -2059,7 +2066,7 @@ function vrTakeRowLight(ownerKey, t){
     <div class="vr-light-menu-wrap">
       <button type="button" class="vr-light-menu-btn" data-vr-menu-toggle="${rk}">⋯</button>
       <div class="vr-light-menu" data-vr-menu="${rk}" style="display:none;">
-        <a href="${t.dataUrl||''}" download="${t.name}">Скачать</a>
+        <a href="${t.dataUrl||''}" download="${dlName}">Скачать</a>
         <button type="button" data-vr-menu-rename="${rk}">Переименовать</button>
         <button type="button" data-vr-menu-visibility="${rk}">${t.visibleToStudent!==false?'Скрыть от ученика':'Показать ученику'}</button>
         <button type="button" data-vr-menu-delete="${rk}">Удалить</button>
@@ -2067,25 +2074,26 @@ function vrTakeRowLight(ownerKey, t){
     </div>
   </div>`;
 }
-
 function vrRecorderHtml(recKey, rec, takes, opts){
   opts = opts || {};
   const takesArr = takes || [];
   const mm = kbPad(Math.floor(rec.seconds/60)), ss = kbPad(rec.seconds%60);
   const warn = rec.seconds >= 870;
   let body = '';
+  let outerExtra = '';
   if(rec.pendingTake){
     const pt = rec.pendingTake;
     const mk = vrSortedMarkers(pt.markers);
-    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">Запись остановлена — ${pt.meta}</div></div></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' · '+m.label):''}</span>`).join('')}</div>` : ''}<div class="vr-save-row"><button type="button" class="vr-save-btn" data-vr-save="${recKey}" ${rec.saving?'disabled':''}>${rec.saving?'Сохраняю…':'Сохранить запись'}</button><button type="button" class="vr-discard-link" data-vr-discard-pending="${recKey}">Стереть, не сохранять</button></div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">Запись остановлена — ${pt.meta}</div></div></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    outerExtra = `<div class="vr-save-row-outer"><button type="button" class="vr-save-btn-outer" data-vr-save="${recKey}" ${rec.saving?'disabled':''}>${rec.saving?'Сохраняю…':'Сохранить запись'}</button><button type="button" class="vr-discard-link" data-vr-discard-pending="${recKey}">Стереть, не сохранять</button></div>`;
   } else if(rec.active){
     const mk = vrSortedMarkers(rec.markers);
-    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">Метка${mk.length?`<span class="vr-marker-count">${mk.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
+    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">Метка${mk.length?`<span class="vr-marker-count">${mk.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
   } else {
     body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Сразу ученику</label>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
   const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
-  return `<div class="vr-box">${body}${takesHtml}</div>`;
+  return `<div class="vr-box">${body}${takesHtml}</div>${outerExtra}`;
 }
 function dnUpdateRecDom(recKey, rec){
   const timerEl = document.querySelector(`[data-vr-timer="${recKey}"]`);
@@ -2125,7 +2133,9 @@ function dnStartRecording(recKey, rec, opts){
       const blob = new Blob(rec.chunks, {type: mr.mimeType || 'audio/webm'});
       const secs = rec.seconds;
       const d = new Date();
-      const fileName = kbPad(d.getDate())+'.'+kbPad(d.getMonth()+1)+'.'+d.getFullYear()+'_'+opts.fileTag+'.webm';
+      const dateLabel = kbPad(d.getDate())+'.'+kbPad(d.getMonth()+1)+'.'+d.getFullYear();
+      const fileName = dateLabel+'_'+opts.fileTag+'.webm';
+      const displayName = 'Голос ученика · '+dateLabel;
       const reader = new FileReader();
       reader.onload = ()=>{
         const dataUrl = reader.result;
@@ -2135,7 +2145,7 @@ function dnStartRecording(recKey, rec, opts){
         const visibleToStudent = rec.visibleToStudent !== false;
         dnTeardownRecorder(rec);
         if(dataUrl.length > 5800000){ rec.error = 'Запись слишком большая для сохранения в базе (лимит ~4 МБ). Сократите длительность и запишите заново.'; opts.onRepaint(); return; }
-        const take = { id: Date.now(), name: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString(), durationSec: secs, markers, peaks, visibleToStudent };
+        const take = { id: Date.now(), name: displayName, fileName: fileName, meta: kbPad(Math.floor(secs/60))+':'+kbPad(secs%60)+' · '+Math.round(blob.size/1024)+' KB', dataUrl, createdAt: new Date().toISOString(), durationSec: secs, markers, peaks, visibleToStudent };
         if(wasLimitStop){ opts.onSaveTake(take); } else { rec.pendingTake = take; opts.onRepaint(); }
       };
       reader.readAsDataURL(blob);
@@ -2329,6 +2339,214 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
         rateBtn.textContent = next+'×';
         audio.playbackRate = next;
       };
+    }
+  }
+  const markerAddBtn = root.querySelector('[data-vr-marker-add="'+rk+'"]');
+  if(markerAddBtn){
+    markerAddBtn.onclick = function(){
+      const a = window.__vrAudios[rk];
+      const t = a ? a.currentTime : 0;
+      const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
+      if(nearIdx>=0){
+        window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
+        repaintFn();
+        return;
+      }
+      const m = vrNewMarker(t);
+      take.markers = (take.markers||[]).concat([m]);
+      persistFn();
+      window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
+      repaintFn();
+    };
+  }
+  root.querySelectorAll('[data-vr-marker-chip="'+rk+'"]').forEach(function(chip){
+    const markerId = chip.getAttribute('data-marker-id');
+    chip.onclick = function(e){
+      if(e.target.closest('[data-vr-marker-del]')) return;
+      const a = window.__vrAudios[rk];
+      const m = (take.markers||[]).find(function(x){ return x.id===markerId; });
+      if(a && m) a.currentTime = vrMarkerTime(m);
+    };
+    chip.ondblclick = function(){ vrOpenMarkerEditor(rk, markerId, take, persistFn, repaintFn); };
+  });
+  root.querySelectorAll('[data-vr-marker-del="'+rk+'"]').forEach(function(delBtn){
+    delBtn.onclick = function(e){
+      e.stopPropagation();
+      const markerId = delBtn.getAttribute('data-marker-id');
+      const prevMarkers = (take.markers||[]).slice();
+      take.markers = (take.markers||[]).filter(function(m){ return m.id!==markerId; });
+      persistFn();
+      repaintFn();
+      vrShowUndoToast('Метка удалена', function(){ take.markers = prevMarkers; persistFn(); repaintFn(); }, function(){});
+    };
+  });
+  if(window.__vrPendingEditMarker && window.__vrPendingEditMarker.rk===rk){
+    const pend = window.__vrPendingEditMarker;
+    window.__vrPendingEditMarker = null;
+    setTimeout(function(){ vrOpenMarkerEditor(rk, pend.markerId, take, persistFn, repaintFn); }, 0);
+  }
+  const titleEl = root.querySelector('[data-vr-title="'+rk+'"]');
+  if(titleEl){
+    titleEl.onclick = function(){
+      const input = document.createElement('input');
+      input.className = 'vr-take-title-input';
+      input.value = take.name;
+      titleEl.replaceWith(input);
+      input.focus(); input.select();
+      const fin = function(){ take.name = input.value.trim() || take.name; persistFn(); repaintFn(); };
+      input.addEventListener('blur', fin);
+      input.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); fin(); } if(e.key==='Escape'){ e.preventDefault(); repaintFn(); } });
+    };
+  }
+  const visBtn = root.querySelector('[data-vr-visibility="'+rk+'"]');
+  if(visBtn){
+    visBtn.onclick = function(){ take.visibleToStudent = take.visibleToStudent===false; persistFn(); repaintFn(); };
+  }
+  const delBtn = root.querySelector('[data-vr-delete="'+rk+'"]');
+  if(delBtn){
+    delBtn.onclick = function(){
+      const all = getTakes();
+      const idx = all.findIndex(function(x){ return x.id===take.id; });
+      if(idx<0) return;
+      const removed = all[idx];
+      const next = all.slice(0,idx).concat(all.slice(idx+1));
+      setTakes(next);
+      repaintFn();
+      vrShowUndoToast('Запись удалена', function(){ const cur=getTakes(); setTakes(cur.slice(0,idx).concat([removed]).concat(cur.slice(idx))); persistFn(); repaintFn(); }, function(){ persistFn(); });
+    };
+  }
+  if(isLight){
+    const menuBtn = root.querySelector('[data-vr-menu-toggle="'+rk+'"]');
+    const menu = root.querySelector('[data-vr-menu="'+rk+'"]');
+    if(menuBtn && menu){
+      menuBtn.onclick = function(e){
+        e.stopPropagation();
+        const open = menu.style.display!=='none' && menu.style.display!=='';
+        document.querySelectorAll('.vr-light-menu').forEach(function(m){ m.style.display='none'; });
+        menu.style.display = open?'none':'flex';
+      };
+    }
+    const renameBtn = root.querySelector('[data-vr-menu-rename="'+rk+'"]');
+    if(renameBtn) renameBtn.onclick = function(){ const val = prompt('Новое название записи', take.name); if(val && val.trim()){ take.name = val.trim(); persistFn(); repaintFn(); } };
+    const visMenuBtn = root.querySelector('[data-vr-menu-visibility="'+rk+'"]');
+    if(visMenuBtn) visMenuBtn.onclick = function(){ take.visibleToStudent = take.visibleToStudent===false; persistFn(); repaintFn(); };
+    const delMenuBtn = root.querySelector('[data-vr-menu-delete="'+rk+'"]');
+    if(delMenuBtn) delMenuBtn.onclick = function(){
+      const all = getTakes();
+      const idx = all.findIndex(function(x){ return x.id===take.id; });
+      if(idx<0) return;
+      const removed = all[idx];
+      const next = all.slice(0,idx).concat(all.slice(idx+1));
+      setTakes(next);
+      repaintFn();
+      vrShowUndoToast('Запись удалена', function(){ const cur=getTakes(); setTakes(cur.slice(0,idx).concat([removed]).concat(cur.slice(idx))); persistFn(); repaintFn(); }, function(){ persistFn(); });
+    };
+  }
+}
+document.addEventListener('click', function(){ document.querySelectorAll('.vr-light-menu').forEach(function(m){ m.style.display='none'; }); });
+function vrWireLightRows(s){
+  const root = document.getElementById('tabContent');
+  if(!root) return;
+  const cache = dnCache(s);
+  const lessons = cache.lessons || [];
+  lessons.forEach(function(l){
+    if(String(state.diaryEditing[s.id])===String(l.id)) return;
+    (l.takes||[]).forEach(function(t){
+      const rk = 'light_' + l.id + '_' + t.id;
+      const getTakes = function(){ return l.takes || []; };
+      const setTakes = function(next){ l.takes = next; };
+      const persist = function(){
+        dnQueueSave(l.id, {takes: l.takes}, function(lesson){
+          if(lesson){ const idx = lessons.findIndex(function(x){ return String(x.id)===String(lesson.id); }); if(idx>=0) lessons[idx] = lesson; }
+        });
+      };
+      vrWireTakeRow(root, rk, t, getTakes, setTakes, persist, function(){ paintDiary(s); }, true);
+    });
+  });
+}
+function vrOpenMarkerEditor(rk, markerId, take, persistFn, repaintFn){
+  const chip = document.querySelector('[data-vr-marker-chip="'+rk+'"][data-marker-id="'+markerId+'"]');
+  if(!chip) return;
+  const marker = (take.markers||[]).find(function(m){ return m.id===markerId; });
+  if(!marker) return;
+  const input = document.createElement('input');
+  input.className = 'vr-mk-input';
+  input.value = marker.label || '';
+  input.placeholder = 'Что здесь?';
+  input.maxLength = 40;
+  chip.replaceWith(input);
+  input.focus(); input.select();
+  let done = false;
+  const finish = function(){
+    if(done) return; done = true;
+    const idx = vrSortedMarkers(take.markers).findIndex(function(m){ return m.id===markerId; });
+    const v = input.value.trim().slice(0,40);
+    marker.label = v || ('Метка ' + (idx+1));
+    persistFn();
+    repaintFn();
+  };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); finish(); }
+    else if(e.key==='Escape'){ e.preventDefault(); input.value=''; finish(); }
+  });
+}
+function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn, isLight){
+  const audio = root.querySelector('[data-vr-audio="'+rk+'"]');
+  const dur = take.durationSec || 0;
+  if(audio){
+    window.__vrAudios[rk] = audio;
+    const timeEl = root.querySelector('[data-vr-time="'+rk+'"]');
+    const waveEl = root.querySelector('[data-vr-waveform="'+rk+'"]');
+    const playBtn = root.querySelector('[data-vr-play="'+rk+'"]');
+    const updateWave = function(){
+      if(!waveEl) return;
+      const d = dur || audio.duration || 0;
+      if(!d) return;
+      const pct = Math.min(1, audio.currentTime/d);
+      const bars = waveEl.querySelectorAll(isLight?'.vr-light-bar':'.vr-take-bar');
+      const cut = Math.floor(pct*bars.length);
+      bars.forEach(function(b,i){ b.classList.toggle('played', i<cut); });
+    };
+    audio.addEventListener('timeupdate', function(){
+      if(timeEl) timeEl.textContent = vrFmtTime(audio.currentTime) + ' / ' + vrFmtTime(dur||audio.duration||0);
+      updateWave();
+    });
+    audio.addEventListener('play', function(){ vrStopOtherAudio(rk); if(playBtn) playBtn.textContent = '❚❚'; });
+    audio.addEventListener('pause', function(){ if(playBtn) playBtn.textContent = '▶'; });
+    audio.addEventListener('ended', function(){ if(playBtn) playBtn.textContent = '▶'; });
+    if(playBtn) playBtn.onclick = function(){ if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); } };
+    const back5 = root.querySelector('[data-vr-back5="'+rk+'"]');
+    if(back5) back5.onclick = function(){ audio.currentTime = Math.max(0, audio.currentTime-5); };
+    const fwd5 = root.querySelector('[data-vr-fwd5="'+rk+'"]');
+    if(fwd5) fwd5.onclick = function(){ audio.currentTime = Math.min((dur||audio.duration||1e9), audio.currentTime+5); };
+    if(waveEl) waveEl.onclick = function(e){
+      const rect = waveEl.getBoundingClientRect();
+      const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+      const d = dur || audio.duration || 0;
+      audio.currentTime = pct*d;
+    };
+    const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
+    if(rateBtn){
+      const cycle = [1,1.25,0.75,0.5];
+      rateBtn.onclick = function(){
+        const cur = parseFloat(rateBtn.getAttribute('data-rate'))||1;
+        const idx = cycle.indexOf(cur);
+        const next = cycle[(idx+1)%cycle.length];
+        rateBtn.setAttribute('data-rate', String(next));
+        rateBtn.textContent = next+'×';
+        audio.playbackRate = next;
+      };
+    }
+    const rateBtns = root.querySelectorAll('[data-vr-rate-btn="'+rk+'"]');
+    if(rateBtns.length){
+      rateBtns.forEach(function(b){
+        b.onclick = function(){
+          const v = parseFloat(b.getAttribute('data-rate'))||1;
+          audio.playbackRate = v;
+          rateBtns.forEach(function(x){ x.classList.toggle('on', x===b); });
+        };
+      });
     }
   }
   const markerAddBtn = root.querySelector('[data-vr-marker-add="'+rk+'"]');
