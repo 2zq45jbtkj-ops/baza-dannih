@@ -327,9 +327,15 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-save-btn:hover{background:#8E3721;}
 .vr-save-btn:disabled{opacity:.55;cursor:default;}
 .vr-discard-link{background:none;border:none;color:#8A7E74;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
-.vr-upload-label{padding:7px 13px;border-radius:9px;border:1px solid #423A34;background:none;color:#B8ADA1;font-size:12.5px;font-weight:700;cursor:pointer;}
-.vr-take{background:#23201D;border:1px solid #3A342E;border-radius:13px;padding:12px 14px;}
-.vr-take.fresh{border-color:#4E7047;}
+.vr-upload-label{padding:0;border:none;background:none;color:#8A7E74;font-size:11.5px;font-weight:600;text-decoration:underline;cursor:pointer;}
+.vr-take{background:transparent;border:none;border-radius:0;padding:0;}
+.vr-take + .vr-take{border-top:1px solid #3A342E;margin-top:12px;padding-top:12px;}
+.vr-saving-phase{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#B8ADA1;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.vr-spinner{width:12px;height:12px;border-radius:50%;border:2px solid #423A34;border-top-color:#C97B62;animation:vrspin .8s linear infinite;flex-shrink:0;}
+@keyframes vrspin{to{transform:rotate(360deg);}}
+.vr-saving-pct{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8D8378;flex-shrink:0;}
+.vr-progress-track{height:6px;border-radius:3px;background:#332C26;margin-top:6px;overflow:hidden;}
+.vr-progress-fill{height:100%;background:#A8452C;transition:width .06s linear;}
 .vr-take-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .vr-take-title{font-size:13.5px;font-weight:700;color:#F7F3EC;cursor:text;}
 .vr-take-title-input{font-size:13.5px;font-weight:700;background:#332C26;color:#F7F3EC;border:1px solid #4A4038;border-radius:6px;padding:2px 6px;font-family:inherit;}
@@ -2080,20 +2086,23 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   const mm = kbPad(Math.floor(rec.seconds/60)), ss = kbPad(rec.seconds%60);
   const warn = rec.seconds >= 870;
   let body = '';
-  let outerExtra = '';
   if(rec.pendingTake){
     const pt = rec.pendingTake;
     const mk = vrSortedMarkers(pt.markers);
     body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">Запись остановлена — ${pt.meta}</div></div></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
-    outerExtra = `<div class="vr-save-row-outer"><button type="button" class="vr-save-btn-outer" data-vr-save="${recKey}" ${rec.saving?'disabled':''}>${rec.saving?'Сохраняю…':'Сохранить запись'}</button><button type="button" class="vr-discard-link" data-vr-discard-pending="${recKey}">Стереть, не сохранять</button></div>`;
+  } else if(rec.saving){
+    const phases = ['Сжимаем аудио','Загружаем в облако','Открываем ученику'];
+    const phase = phases[Math.max(0,Math.min(2, rec.savingPhase||0))];
+    const pct = Math.max(0, Math.min(100, rec.savingPct||0));
+    body = `<div class="vr-row"><button type="button" class="vr-btn" disabled>■ Сохраняем</button><div class="vr-timer">00:00</div><div style="flex:1;min-width:180px;"><div class="vr-saving-phase"><span class="vr-spinner"></span>${phase}</div><div class="vr-progress-track"><div class="vr-progress-fill" style="width:${pct}%;"></div></div></div><div class="vr-saving-pct">${pct}%</div></div>`;
   } else if(rec.active){
     const mk = vrSortedMarkers(rec.markers);
     body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">Метка${mk.length?`<span class="vr-marker-count">${mk.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
   } else {
     body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Сразу ученику</label>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
-  const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;gap:10px;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
-  return `<div class="vr-box">${body}${takesHtml}</div>${outerExtra}`;
+  const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
+  return `<div class="vr-box">${body}${takesHtml}</div>`;
 }
 function dnUpdateRecDom(recKey, rec){
   const timerEl = document.querySelector(`[data-vr-timer="${recKey}"]`);
@@ -2189,7 +2198,28 @@ function dnTeardownRecorder(rec){ vrUnregisterRec(rec); if(rec.timer) clearInter
 function dnPauseToggle(rec, recKey, opts){ if(!rec.active) return; if(!rec.paused){ if(rec.mediaRecorder && rec.mediaRecorder.state==='recording' && rec.mediaRecorder.pause) rec.mediaRecorder.pause(); rec.paused = true; } else { if(rec.mediaRecorder && rec.mediaRecorder.state==='paused' && rec.mediaRecorder.resume) rec.mediaRecorder.resume(); rec.paused = false; rec.error=''; } opts.onRepaint(); }
 function dnAddMarker(rec, recKey, opts){ if(!rec.active || rec.paused) return; rec.markers = rec.markers || []; rec.markers.push(vrNewMarker(rec.seconds)); opts.onRepaint(); }
 function dnDiscardRecording(rec, opts){ if(!rec.active) return; if(rec.seconds > 10 && !confirm('Удалить текущую запись? Отменить будет нельзя.')) return; rec._discard = true; if(rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') rec.mediaRecorder.stop(); else dnTeardownRecorder(rec); opts.onRepaint(); }
-function dnConfirmSaveTake(rec, opts){ if(!rec.pendingTake || rec.saving) return; const take = rec.pendingTake; rec.pendingTake = null; opts.onSaveTake(take); }
+function dnConfirmSaveTake(rec, opts){
+  if(!rec.pendingTake || rec.saving) return;
+  const take = rec.pendingTake;
+  rec.pendingTake = null;
+  rec.saving = true;
+  rec.savingPhase = 0;
+  rec.savingPct = 0;
+  opts.onRepaint();
+  const stepMs = 60;
+  const steps = 22;
+  let i = 0;
+  const timer = setInterval(function(){
+    i++;
+    rec.savingPct = Math.min(100, Math.round(i/steps*100));
+    rec.savingPhase = rec.savingPct >= 67 ? 2 : (rec.savingPct >= 34 ? 1 : 0);
+    opts.onRepaint();
+    if(i>=steps){
+      clearInterval(timer);
+      opts.onSaveTake(take);
+    }
+  }, stepMs);
+}
 function dnDiscardPendingTake(rec, opts){ rec.pendingTake = null; rec.markers = []; opts.onRepaint(); }
 function dnSaveTakes(rec, ensureRowFn, getTakes, applyTakes, repaint){
   rec.saving = true; rec.justSaved = false; repaint();
