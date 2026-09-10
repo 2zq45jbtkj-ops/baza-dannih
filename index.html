@@ -2086,7 +2086,6 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   opts = opts || {};
   const takesArr = takes || [];
   const mm = kbPad(Math.floor(rec.seconds/60)), ss = kbPad(rec.seconds%60);
-  const warn = rec.seconds >= 870;
   let body = '';
   if(rec.pendingTake){
     const pt = rec.pendingTake;
@@ -2098,8 +2097,7 @@ function vrRecorderHtml(recKey, rec, takes, opts){
     const pct = Math.max(0, Math.min(100, rec.savingPct||0));
     body = `<div class="vr-row"><button type="button" class="vr-btn" disabled>■ Сохраняем</button><div class="vr-timer">00:00</div><div style="flex:1;min-width:180px;"><div class="vr-saving-phase"><span class="vr-spinner"></span>${phase}</div><div class="vr-progress-track"><div class="vr-progress-fill" style="width:${pct}%;"></div></div></div><div class="vr-saving-pct">${pct}%</div></div>`;
   } else if(rec.active){
-    const mk = vrSortedMarkers(rec.markers);
-    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live${warn?' warn':''}" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn" data-vr-marker="${recKey}">Метка${mk.length?`<span class="vr-marker-count">${mk.length}</span>`:''}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
+    body = `<div class="vr-row"><button type="button" class="vr-btn active" data-vr-rec-btn="${recKey}">Стоп</button><div class="vr-dot"></div><div class="vr-timer live" data-vr-timer="${recKey}">${mm}:${ss}</div><div class="vr-bars" data-vr-bars="${recKey}">${Array.from({length:60}).map(()=>`<div class="vr-bar" style="height:3px;"></div>`).join('')}</div></div><div class="vr-ctl-row"><button type="button" class="vr-ctl-btn" data-vr-pause="${recKey}">${rec.paused?'Продолжить':'Пауза'}</button><button type="button" class="vr-ctl-btn danger" data-vr-discard="${recKey}">Стереть</button></div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}${rec.hint ? `<div class="vr-hint">${rec.hint}</div>` : ''}`;
   } else {
     body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Сразу ученику</label>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
@@ -2108,7 +2106,7 @@ function vrRecorderHtml(recKey, rec, takes, opts){
 }
 function dnUpdateRecDom(recKey, rec){
   const timerEl = document.querySelector(`[data-vr-timer="${recKey}"]`);
-  if(timerEl){ timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60); timerEl.classList.toggle('warn', rec.seconds>=870); }
+  if(timerEl){ timerEl.textContent = kbPad(Math.floor(rec.seconds/60)) + ':' + kbPad(rec.seconds%60); }
   const barsWrap = document.querySelector(`[data-vr-bars="${recKey}"]`);
   if(barsWrap){ const bars = barsWrap.children; const levels = rec.levels; for(let i=0;i<bars.length;i++){ const v = levels[levels.length - bars.length + i] || 0; bars[i].style.height = Math.max(3, Math.round(v*44)) + 'px'; } }
   const markerCountEl = document.querySelector(`[data-vr-marker="${recKey}"] .vr-marker-count`);
@@ -2168,7 +2166,6 @@ function dnStartRecording(recKey, rec, opts){
     rec.timer = setInterval(()=>{
       if(rec.paused) return;
       rec.seconds++;
-      if(rec.seconds >= 900){ rec._limitStop = true; dnUpdateRecDom(recKey, rec); dnStopRecording(rec); return; }
       dnUpdateRecDom(recKey, rec);
     }, 1000);
     try{
