@@ -2091,7 +2091,7 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   if(rec.pendingTake){
     const pt = rec.pendingTake;
     const mk = vrSortedMarkers(pt.markers);
-    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">Запись остановлена — ${pt.meta}</div></div></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
+    body = `<div class="vr-row"><div style="flex:1;min-width:200px;"><div class="vr-caption saved">Запись остановлена — ${pt.meta}</div></div><button type="button" class="vr-btn" data-vr-save="${recKey}">Сохранить</button><button type="button" class="vr-tr-btn" data-vr-discard-pending="${recKey}">Стереть</button></div>${mk.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${mk.map(m=>`<span class="vr-marker-chip">${vrFmtTime(vrMarkerTime(m))}${m.label?(' '+m.label):''}</span>`).join('')}</div>` : ''}${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   } else if(rec.saving){
     const phases = ['Сжимаем аудио','Загружаем в облако','Открываем ученику'];
     const phase = phases[Math.max(0,Math.min(2, rec.savingPhase||0))];
