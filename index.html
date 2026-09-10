@@ -343,14 +343,14 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-take-wave{position:relative;display:flex;gap:1px;align-items:center;height:30px;margin-top:8px;cursor:pointer;}
 .vr-take-bar{width:2px;border-radius:1px;background:#5E544B;flex-shrink:0;}
 .vr-take-bar.played{background:#A8452C;}
-.vr-take-pin{position:absolute;top:0;bottom:0;width:1px;background:#C97B62;pointer-events:none;}
+.vr-take-pin{position:absolute;top:0;bottom:0;width:1px;background:#7C9A62;pointer-events:none;}
 .vr-take-transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .vr-tr-btn{height:30px;padding:0 10px;border-radius:8px;border:1px solid #3A342E;background:transparent;color:#B5A8A1;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;text-decoration:none;}
 .vr-tr-btn:hover{background:#2C2723;}
 .vr-tr-btn.on{color:#C97B62;border-color:#5A3A30;}
 .vr-take-time{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A2968A;}
 .vr-take-markers{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-.vr-mk-chip{position:relative;padding:4px 8px;border-radius:7px;background:#332C26;color:#C9BCAE;font-size:11.5px;font-family:'JetBrains Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+.vr-mk-chip{position:relative;padding:4px 8px;border-radius:7px;background:#332C26;color:#7C9A62;font-size:11.5px;font-family:'JetBrains Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
 .vr-mk-chip:hover .vr-mk-del{display:inline;}
 .vr-mk-del{display:none;color:#E0A899;font-weight:700;}
 .vr-mk-input{font-size:11.5px;font-family:inherit;background:#231F1B;color:#F7F3EC;border:1px solid #5A3A30;border-radius:6px;padding:2px 6px;width:110px;}
@@ -2307,14 +2307,14 @@ function vrOpenMarkerEditor(rk, markerId, take, persistFn, repaintFn){
   input.className = 'vr-mk-input';
   input.value = marker.label || '';
   input.placeholder = 'Что здесь?';
-  input.maxLength = 40;
+  input.maxLength = 200;
   chip.replaceWith(input);
   input.focus(); input.select();
   let done = false;
   const finish = function(){
     if(done) return; done = true;
     const idx = vrSortedMarkers(take.markers).findIndex(function(m){ return m.id===markerId; });
-    const v = input.value.trim().slice(0,40);
+    const v = input.value.trim().slice(0,200);
     marker.label = v || ('Метка ' + (idx+1));
     persistFn();
     repaintFn();
@@ -2359,6 +2359,23 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
       const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
       const d = dur || audio.duration || 0;
       audio.currentTime = pct*d;
+    };
+    waveEl.ondblclick = function(e){
+      const rect = waveEl.getBoundingClientRect();
+      const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+      const d = dur || audio.duration || 0;
+      const t = pct*d;
+      const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
+      if(nearIdx>=0){
+        window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
+        repaintFn();
+        return;
+      }
+      const m = vrNewMarker(t);
+      take.markers = (take.markers||[]).concat([m]);
+      persistFn();
+      window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
+      repaintFn();
     };
     const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
     if(rateBtn){
@@ -2505,14 +2522,14 @@ function vrOpenMarkerEditor(rk, markerId, take, persistFn, repaintFn){
   input.className = 'vr-mk-input';
   input.value = marker.label || '';
   input.placeholder = 'Что здесь?';
-  input.maxLength = 40;
+  input.maxLength = 200;
   chip.replaceWith(input);
   input.focus(); input.select();
   let done = false;
   const finish = function(){
     if(done) return; done = true;
     const idx = vrSortedMarkers(take.markers).findIndex(function(m){ return m.id===markerId; });
-    const v = input.value.trim().slice(0,40);
+    const v = input.value.trim().slice(0,200);
     marker.label = v || ('Метка ' + (idx+1));
     persistFn();
     repaintFn();
@@ -2557,6 +2574,23 @@ function vrWireTakeRow(root, rk, take, getTakes, setTakes, persistFn, repaintFn,
       const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
       const d = dur || audio.duration || 0;
       audio.currentTime = pct*d;
+    };
+    waveEl.ondblclick = function(e){
+      const rect = waveEl.getBoundingClientRect();
+      const pct = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+      const d = dur || audio.duration || 0;
+      const t = pct*d;
+      const nearIdx = vrFindNearMarker(take.markers, t, 0.3);
+      if(nearIdx>=0){
+        window.__vrPendingEditMarker = { rk: rk, markerId: (take.markers||[])[nearIdx].id };
+        repaintFn();
+        return;
+      }
+      const m = vrNewMarker(t);
+      take.markers = (take.markers||[]).concat([m]);
+      persistFn();
+      window.__vrPendingEditMarker = { rk: rk, markerId: m.id };
+      repaintFn();
     };
     const rateBtn = root.querySelector('[data-vr-rate="'+rk+'"]');
     if(rateBtn){
