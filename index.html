@@ -1956,7 +1956,7 @@ function dnFinalizeSave(s){
 function vrBlankRec(){ return { active:false, paused:false, saving:false, justSaved:false, seconds:0, error:'', levels:[], peaks:[], markers:[], pendingTake:null, visibleToStudent:true, mediaRecorder:null, stream:null, chunks:[], ctx:null, timer:null, levelTimer:null }; }
 function vrDeviceId(){ try{ return localStorage.getItem('vrInputDeviceId')||''; }catch(e){ return ''; } }
 function vrSetDeviceId(id){ try{ localStorage.setItem('vrInputDeviceId', id||''); }catch(e){} }
-function vrListInputDevices(selectEl){ if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return; navigator.mediaDevices.enumerateDevices().then(list=>{ const mics = list.filter(d=>d.kind==='audioinput'); const cur = vrDeviceId(); selectEl.innerHTML = mics.length ? mics.map((d,i)=>`<option value="${d.deviceId}" ${d.deviceId===cur?'selected':''}>${d.label || ('ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ '+(i+1))}</option>`).join('') : `<option value="">ÐÐ¸ÐºÑÐ¾ÑÐ¾Ð½ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ</option>`; }).catch(()=>{}); }
+function vrListInputDevices(selectEl){ if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return; navigator.mediaDevices.enumerateDevices().then(list=>{ const mics = list.filter(d=>d.kind==='audioinput'); const cur = vrDeviceId(); selectEl.innerHTML = mics.length ? mics.map((d,i)=>`<option value="${d.deviceId}" ${d.deviceId===cur?'selected':''}>${d.label || ('Микрофон '+(i+1))}</option>`).join('') : `<option value="">Микрофон по умолчанию</option>`; }).catch(()=>{}); }
 function vrUid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function vrNewMarker(t){ return { id: vrUid(), t: Math.round(t*10)/10, label: '', createdAt: new Date().toISOString() }; }
 function vrMarkerTime(m){ return m.t!=null ? m.t : (m.sec||0); }
@@ -3757,7 +3757,7 @@ function paintKabinet(s){
     </div>` : ''}
   `;
 
-  const rec = state.kabinetRec; const takes = intake.referenceTakes || []; const recordHtml = ` ${kbSection('record','Ð ÐÐ¤ÐÐ ÐÐÐ¡-ÐÐÐÐÐ¡Ð¬ ÐÐ ÐÐ¥ÐÐÐ','Ð·Ð°Ð¿Ð¸ÑÑÐ²Ð°ÐµÑÑÑ Ð·Ð´ÐµÑÑ, Ð² Ð±ÑÐ°ÑÐ·ÐµÑÐµ', '')} ${open.record ? vrRecorderHtml('kabinet_'+s.id, rec, takes, {showUpload:true}) : ''} `;
+  const rec = state.kabinetRec; const takes = intake.referenceTakes || []; const recordHtml = ` ${kbSection('record','РЕФЕРЕНС-ЗАПИСЬ НА ВХОДЕ','записывается здесь, в браузере', '')} ${open.record ? vrRecorderHtml('kabinet_'+s.id, rec, takes, {showUpload:true}) : ''} `;
 // Каждое занятие теперь может содержать несколько записей («takes» из
   // рекордера в Дневнике занятий) — разворачиваем их в отдельные строки.
   // Старые занятия (сделанные ещё прежней версией вкладки) хранят одну
