@@ -341,7 +341,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-take-title-input{font-size:13.5px;font-weight:700;background:#332C26;color:#F7F3EC;border:1px solid #4A4038;border-radius:6px;padding:2px 6px;font-family:inherit;}
 .vr-take-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:#A2968A;}
 .vr-take-wave{position:relative;display:flex;gap:1px;align-items:center;height:30px;margin-top:8px;cursor:pointer;}
-.vr-take-bar{width:2px;border-radius:1px;background:#5E544B;flex-shrink:0;}
+.vr-take-bar{flex:1 1 0%;border-radius:2px;background:#5E544B;}
 .vr-take-bar.played{background:#A8452C;}
 .vr-take-pin{position:absolute;top:0;bottom:0;width:1px;background:#7C9A62;pointer-events:none;}
 .vr-take-transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -2101,7 +2101,7 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   } else {
     body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select><label class="vr-check-label"><input type="checkbox" data-vr-visible="${recKey}" ${rec.visibleToStudent!==false?'checked':''} /> Сразу ученику</label>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
-  const takesHtml = takesArr.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #423A34;display:flex;flex-direction:column;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
+  const takesHtml = takesArr.length ? `<div style="margin:14px -20px -18px -20px;padding:14px 20px 18px 20px;background:#231F1B;border-radius:0 0 16px 16px;display:flex;flex-direction:column;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
   return `<div class="vr-box">${body}${takesHtml}</div>`;
 }
 function dnUpdateRecDom(recKey, rec){
