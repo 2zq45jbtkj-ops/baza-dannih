@@ -1415,10 +1415,10 @@ function dnCache(s){
   return state.diaryCache[s.id] || (state.diaryCache[s.id] = {lessons:[]});
 }
 
-function dnBlankDraft(){
+function dnBlankDraft(seed){
     const today = new Date().toISOString().slice(0,10);
     return {
-          id: null, date: today, topic: '', workLow: '', workHigh: '', goal: '',
+          id: null, date: today, topic: '', workLow: (seed&&seed.workLow)||'', workHigh: (seed&&seed.workHigh)||'', goal: '',
           structures: [], intensity: null, grade: null, cvtModes: [], anchors: [],
           newProblem: '', hw: '', takes: [], _creating: null,
           steps: [], newTool: DN_TOOL_GROUPS[0].items[0], hard: null, tone: null,
@@ -1428,7 +1428,7 @@ function dnBlankDraft(){
     };
 }
 function dnDraft(s){
-  if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft();
+  if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft((function(){var ls=(dnCache(s).lessons||[]).slice().sort(function(a,b){return (b.lessonDate||'').localeCompare(a.lessonDate||'')||(b.id-a.id);}); return ls.length?ls[0]:null;})());
   return state.diaryDrafts[s.id];
 }
 function dnBlankRec(){ return vrBlankRec(); }
@@ -1751,7 +1751,7 @@ function dnStructuresModesText(l){
 }
 const DN_DETAIL_LABEL_STYLE = 'display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;';
 
-function dnHistoryCardHtml(l){
+function dnHistoryCardHtml(l, prev){
   const band = dnGradeBand(l.grade);
   return `
   <div style="background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;">
@@ -1767,7 +1767,7 @@ function dnHistoryCardHtml(l){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;font-size:13px;margin-top:12px;">
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div>
-      <div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(l.workLow||l.workHigh) ? (l.workLow||'—')+' — '+(l.workHigh||'—') : '—'}</div>
+      <div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var ch=prev?((l.workLow||'')!==(prev.workLow||'')||(l.workHigh||'')!==(prev.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div>
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Структуры / моды</b>${dnStructuresModesText(l)}</div>
       ${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div>
@@ -1868,7 +1868,7 @@ function dnHistorySectionHtml(s, lessons, editingId){
     <section>
       <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; color: #A09488; margin-bottom: 14px;">Записи занятий</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        ${sorted.length ? sorted.map(l=> String(editingId)===String(l.id) ? dnEditCardHtml(l) : dnHistoryCardHtml(l)).join('') : `<div class="admin-note">Занятий пока не записано.</div>`}
+        ${sorted.length ? sorted.map((l,i)=> String(editingId)===String(l.id) ? dnEditCardHtml(l) : dnHistoryCardHtml(l, sorted[i+1])).join('') : `<div class="admin-note">Занятий пока не записано.</div>`}
       </div>
     </section>
   `;
