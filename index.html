@@ -1554,7 +1554,7 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                                                                                                                                                     <button type="button" data-dn-step-up="${i}" title="Выше" style="${dnArrowStyle(i>0)}">▲</button>
                                                                                                                                                                                                                                                                                                                                                                     <button type="button" data-dn-step-down="${i}" title="Ниже" style="${dnArrowStyle(i<draft.steps.length-1)}">▼</button>
                                                                                                                                                                                                                                                                                                                                                                                   </div>
-                                                                                                                                                                                                                                                                                                                                                                                                <div data-dn-ctx="new:step:${i}" style="flex: 1; min-width: 0;">${kbSpravochnikSingleControl('dnTool', st.tool)}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                <div data-dn-ctx="new:step:${i}" style="flex: 1; min-width: 0;">${kbSpravochnikSingleControl('dnTool', st.tool, 'dnTool@new:step:'+i)}</div>
                                                                                                                                                                                                                                                                                                                                                                                                                                             <button type="button" data-dn-step-remove="${i}" title="Убрать шаг" style="flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #EDE6DC; background: #fff; color: #A09488; font-size: 15px; line-height: 1; cursor: pointer;">×</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                                         </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
@@ -1567,7 +1567,7 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             `).join('')}
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div data-dn-ctx="new:newstep" style="flex: 1; min-width: 200px;">${kbSpravochnikSingleControl('dnTool', draft.newTool)}</div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div data-dn-ctx="new:newstep" style="flex: 1; min-width: 200px;">${kbSpravochnikSingleControl('dnTool', draft.newTool, 'dnTool@new:newstep')}</div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           <button type="button" data-dn-add-step="1" style="padding: 10px 16px; border-radius: 10px; border: 1px dashed #D9CEC0; background: none; color: #6E645A; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">+ Добавить шаг</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     </div>
@@ -3345,7 +3345,7 @@ function kbDictRows(fieldKey){
     .concat(d.added.map(l=>({label:l, kind:'added'})));
 }
 
-function kbDictAddingHtml(fieldKey){
+function kbDictAddingHtml(fieldKey, instanceKey){
   const dd = state.kabinetDictDD;
   return `
     <div style="margin-top:6px;">
@@ -3354,7 +3354,7 @@ function kbDictAddingHtml(fieldKey){
         <button type="button" data-kb-dict-commit="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:none;background:#4E7047;color:#fff;font-size:14px;cursor:pointer;">✓</button>
         <button type="button" data-kb-dict-cancel-add="${fieldKey}" style="width:32px;height:32px;flex:none;border-radius:9px;border:1px solid #E4DCD1;background:#fff;color:#8A8076;font-size:13px;cursor:pointer;">✕</button>
       </div>
-      ${dd.error && dd.openKey===fieldKey ? `<div style="font-size:12px;color:#A8452C;margin-top:5px;">${dd.error}</div>` : ''}
+      ${dd.error && dd.openKey===(instanceKey||fieldKey) ? `<div style="font-size:12px;color:#A8452C;margin-top:5px;">${dd.error}</div>` : ''}
     </div>
   `;
 }
@@ -3452,19 +3452,19 @@ function kbSpravochnikField(label, fieldKey, values){
 // standalone (kbSpravochnikSingleField below) or side-by-side inside a
 // .kb-pair (e.g. each note of Диапазон по факту / Тесситура / Где ломается
 // регистр is its own independent single-select field sharing one card).
-function kbSpravochnikSingleControl(fieldKey, value){
+function kbSpravochnikSingleControl(fieldKey, value, instanceKey){
   const dd = state.kabinetDictDD;
-  const isAdding = dd.openKey === fieldKey && dd.adding;
-  const isOpen = dd.openKey === fieldKey && !dd.adding;
+  const isAdding = dd.openKey === (instanceKey||fieldKey) && dd.adding;
+  const isOpen = dd.openKey === (instanceKey||fieldKey) && !dd.adding;
 
   const valueHtml = value
     ? `<span style="font-size:16px;font-weight:600;color:var(--text);">${value}</span>`
     : `<span class="kb-multi-placeholder">— выбрать —</span>`;
 
-  const addingHtml = kbDictAddingHtml(fieldKey);
+  const addingHtml = kbDictAddingHtml(fieldKey, instanceKey);
 
   const triggerHtml = `
-    <button type="button" class="kb-multi-trigger" data-kb-dict-toggle="${fieldKey}">
+    <button type="button" class="kb-multi-trigger" data-kb-dict-toggle="${instanceKey||fieldKey}">
       ${valueHtml}
       <span class="kb-multi-caret">${isOpen?'▲':'▼'}</span>
     </button>
@@ -3477,7 +3477,7 @@ function kbSpravochnikSingleControl(fieldKey, value){
         ${rows.map(r=> kbDictChipRow(fieldKey, r, value===r.label, 'data-kb-dict-select-one')).join('')}
       </div>
       <div class="kb-dict-divider"></div>
-      <button type="button" data-kb-dict-start-add="${fieldKey}" style="padding:9px 10px;border:none;background:none;border-radius:9px;color:#A8452C;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;">+ Добавить свой вариант</button>
+      <button type="button" data-kb-dict-start-add="${instanceKey||fieldKey}" style="padding:9px 10px;border:none;background:none;border-radius:9px;color:#A8452C;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;">+ Добавить свой вариант</button>
     </div>
   `;
 
