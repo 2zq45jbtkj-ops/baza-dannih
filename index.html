@@ -1744,11 +1744,6 @@ function dnIntensityBarHtml(n){
   const cells = Array.from({length:10}).map((_,i)=> `<span style="display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:2px;background:${i<v?'#A8452C':'#EFE7DC'};"></span>`).join('');
   return `<div style="display:flex;align-items:center;gap:8px;">${cells}<span style="font-size:12.5px;font-weight:700;color:var(--text);">${n!=null?n+'/10':'—'}</span></div>`;
 }
-function dnStructuresModesText(l){
-  const structLabels = (l.structures||[]).map(k=>{ const st = KB_STRUCTURES.find(x=>x.key===k); return st?st.label:k; });
-  const parts = structLabels.concat(l.cvtModes||[]).concat(l.anchors||[]);
-  return parts.length ? parts.join(', ') : '—';
-}
 const DN_DETAIL_LABEL_STYLE = 'display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;';
 
 function dnHistoryCardHtml(l, prev){
@@ -1768,8 +1763,7 @@ function dnHistoryCardHtml(l, prev){
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div>
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var ch=prev?((l.workLow||'')!==(prev.workLow||'')||(l.workHigh||'')!==(prev.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div>
-      <div><b style="${DN_DETAIL_LABEL_STYLE}">Структуры / моды</b>${dnStructuresModesText(l)}</div>
-      ${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
+${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div>
     </div>
     ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=> vrTakeRowLight('light_'+l.id, t)).join('')}</div>` : ''}
@@ -1803,13 +1797,6 @@ function dnEditCardHtml(l){
         <span style="${dnLabelStyle()}">Цель урока</span>
         <input type="text" data-dn-field="goal" data-dn-ctx="${ctx}" placeholder="что делаем и какую задачу закрываем" value="${ed.goal||''}" style="${dnFieldInputStyle()}" />
       </label>
-    </div>
-
-    <div style="margin-top: 20px;">
-      ${dnUpperLabel('Фигуры и структуры, применяемые в записи')}
-      <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 5px 8px; justify-content: start; justify-items: start;">
-        ${KB_STRUCTURES.map(st=>`<button type="button" class="kb-small-btn${(ed.structures||[]).indexOf(st.key)>=0?' on':''}" data-dn-toggle-structure="${st.key}" data-dn-ctx="${ctx}">${st.label}</button>`).join('')}
-      </div>
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
