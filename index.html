@@ -1763,7 +1763,7 @@ function dnHistoryCardHtml(l, prev){
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div>
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var ch=prev?((l.workLow||'')!==(prev.workLow||'')||(l.workHigh||'')!==(prev.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div>
-${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
+      ${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
       <div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div>
     </div>
     ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=> vrTakeRowLight('light_'+l.id, t)).join('')}</div>` : ''}
