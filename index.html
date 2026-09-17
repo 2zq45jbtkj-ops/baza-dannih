@@ -1759,13 +1759,7 @@ function dnHistoryCardHtml(l, prev){
         <button type="button" class="kb-ghost-btn" title="Удалить занятие" data-dn-delete="${l.id}">✕</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;font-size:13px;margin-top:12px;">
-      <div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>
-      <div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div>
-      <div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var ch=prev?((l.workLow||'')!==(prev.workLow||'')||(l.workHigh||'')!==(prev.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div>
-      ${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}
-      <div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div>
-    </div>
+    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:13px;"><div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:180px;"><div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}<div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div></div><div style="display:flex;gap:16px;flex:1;min-width:200px;"><div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div><div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var ch=prev?((l.workLow||'')!==(prev.workLow||'')||(l.workHigh||'')!==(prev.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div></div></div>
     ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=> vrTakeRowLight('light_'+l.id, t)).join('')}</div>` : ''}
   </div>`;
 }
