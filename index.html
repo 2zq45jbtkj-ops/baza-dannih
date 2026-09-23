@@ -1507,7 +1507,7 @@ function dnFormHtml(s, draft){
       { key:'no', label:'✗', title:'не пошло', accent:'#A8452C' }
         ];
     const level = DN_LEVEL_DATA.find(l=>l.code===draft.level) || DN_LEVEL_DATA[0];
-    state.kbDicts.dnHwTopic.core = level.topics.slice();
+    state.kbDicts.dnHwTopic.core = catalogNames((draft.level||'').replace('Уровень ','').trim() || 'A');
     const doneTotal = 5, doneNum = 3;
     const donePercent = Math.round(doneNum/doneTotal*100);
     const dueLatest = draft.assigned.length ? draft.assigned.map(h=>h.due).slice().sort()[0] : null;
@@ -3243,7 +3243,7 @@ state.kbDicts = {
   dnWorkHigh: { core: KB_NOTES.slice(), pinned: [], added: [] },
   dnNewProblem: { core: KB_COMPLAINTS.slice(), pinned: [], added: [] },
   dnTool: { core: DN_TOOL_GROUPS.reduce((acc,g)=>acc.concat(g.items),[]), pinned: [], added: [] },
-  dnHwTopic: { core: DN_LEVEL_DATA[0].topics.slice(), pinned: [], added: [] }
+  dnHwTopic: { core: catalogNames('A'), pinned: [], added: [] }
 };
 state.kbDictsLoaded = false;
 // Один общий "открытый справочник" за раз — так же, как в исходном
