@@ -340,7 +340,7 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 .vr-take-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
 .vr-take-title{font-size:13.5px;font-weight:700;color:#F7F3EC;cursor:text;}
 .vr-take-title-input{font-size:13.5px;font-weight:700;background:#332C26;color:#F7F3EC;border:1px solid #4A4038;border-radius:6px;padding:2px 6px;font-family:inherit;}
-.vr-take-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:#A2968A;}
+.vr-take-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:#A2968A;margin-left:48px;}
 .vr-take-wave{position:relative;display:flex;gap:1px;align-items:center;height:30px;margin-top:8px;cursor:pointer;}
 .vr-take-bar{flex:1 1 0%;border-radius:2px;background:#5E544B;}
 .vr-take-bar.played{background:#A8452C;}
@@ -1427,10 +1427,7 @@ function dnBlankDraft(seed){
           assigned: [], sent: false
     };
 }
-function dnDraft(s){
-  if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft((function(){var ls=(dnCache(s).lessons||[]).slice().sort(function(a,b){return (b.lessonDate||'').localeCompare(a.lessonDate||'')||(b.id-a.id);}); return ls.length?ls[0]:null;})());
-  return state.diaryDrafts[s.id];
-}
+function dnProfileRange(s){ const intake = (state.kabinetCache[s.id] && state.kabinetCache[s.id].intake) || {}; return { workLow: intake.rangeLow || '', workHigh: intake.rangeHigh || '' }; } function dnDraft(s){ if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft(dnProfileRange(s)); return state.diaryDrafts[s.id]; }
 function dnBlankRec(){ return vrBlankRec(); }
 function dnRec(s){
   if(!state.diaryRec[s.id]) state.diaryRec[s.id] = dnBlankRec();
@@ -1444,31 +1441,7 @@ function dnEditDraft(lessonId){
   return state.diaryEditDrafts[lessonId] || (state.diaryEditDrafts[lessonId] = {});
 }
 
-function renderDiary(s){
-  const c = document.getElementById('tabContent');
-  const needDicts = !state.kbDictsLoaded;
-  if(state.diaryCache[s.id] && !needDicts){ paintDiary(s); return; }
-  c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`;
-  const cached = state.diaryCache[s.id];
-  const tasks = [
-    cached ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
-  ];
-  if(needDicts) tasks.push(apiGet('/api/dicts'));
-  Promise.all(tasks).then(([lessonsRes, dictsRes])=>{
-    state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] };
-    if(needDicts){
-      const server = (dictsRes && dictsRes.dicts) || {};
-      Object.keys(state.kbDicts).forEach(k=>{
-        const row = server[k];
-        if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]});
-      });
-      state.kbDictsLoaded = true;
-    }
-    paintDiary(s);
-  }).catch(err=>{
-    c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`;
-  });
-}
+function renderDiary(s){ const c = document.getElementById('tabContent'); const needDicts = !state.kbDictsLoaded; state.kabinetIntakeLoaded = state.kabinetIntakeLoaded || {}; const needIntake = !state.kabinetIntakeLoaded[s.id]; if(state.diaryCache[s.id] && !needDicts && !needIntake){ paintDiary(s); return; } c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`; const cached = state.diaryCache[s.id]; const tasks = [ cached ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id)), needIntake ? apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)) : Promise.resolve(null) ]; if(needDicts) tasks.push(apiGet('/api/dicts')); Promise.all(tasks).then(([lessonsRes, intakeRes, dictsRes])=>{ state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] }; if(needIntake){ state.kabinetCache[s.id] = Object.assign({}, state.kabinetCache[s.id], { intake: (intakeRes && intakeRes.intake) || {} }); state.kabinetIntakeLoaded[s.id] = true; } if(needDicts){ const server = (dictsRes && dictsRes.dicts) || {}; Object.keys(state.kbDicts).forEach(k=>{ const row = server[k]; if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]}); }); state.kbDictsLoaded = true; } paintDiary(s); }).catch(err=>{ c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`; }); }
 
 function paintDiary(s){
   const c = document.getElementById('tabContent');
@@ -1742,7 +1715,7 @@ function dnIntensityBarHtml(n){
 }
 const DN_DETAIL_LABEL_STYLE = 'display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;';
 
-function dnHistoryCardHtml(l, prev){
+function dnHistoryCardHtml(l, profileRange){
   const band = dnGradeBand(l.grade);
   return `
   <div style="background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;">
@@ -1755,7 +1728,7 @@ function dnHistoryCardHtml(l, prev){
         <button type="button" class="kb-ghost-btn" title="Удалить занятие" data-dn-delete="${l.id}">✕</button>
       </div>
     </div>
-    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:13px;"><div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:180px;"><div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}<div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div></div><div style="display:flex;gap:16px;flex:1;min-width:200px;"><div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div><div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var ch=prev?((l.workLow||'')!==(prev.workLow||'')||(l.workHigh||'')!==(prev.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div></div></div>
+    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:13px;"><div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:180px;"><div><b style="${DN_DETAIL_LABEL_STYLE}">Цель урока</b>${l.goal||'—'}</div>${l.newProblem ? `<div><b style="${DN_DETAIL_LABEL_STYLE}">Новые проблемы</b>${l.newProblem}</div>` : ''}<div><b style="${DN_DETAIL_LABEL_STYLE}">Домашнее задание</b>${l.hw||'—'}</div></div><div style="display:flex;gap:16px;flex:1;min-width:200px;"><div><b style="${DN_DETAIL_LABEL_STYLE}">Сила урока</b>${dnIntensityBarHtml(l.intensity)}</div><div><b style="${DN_DETAIL_LABEL_STYLE}">Диапазон в работе</b>${(function(){var rt=(l.workLow||l.workHigh)?(l.workLow||'—')+' — '+(l.workHigh||'—'):'—'; var hasVal=!!(l.workLow||l.workHigh); var ch=hasVal&&profileRange?((l.workLow||'')!==(profileRange.workLow||'')||(l.workHigh||'')!==(profileRange.workHigh||'')):false; return ch?'<span style="display:inline-block;padding:1px 8px;border-radius:7px;background:#EFF4ED;border:1px solid #D9E4D5;color:#4E7047;font-weight:700;">'+rt+'</span>':rt;})()}</div></div></div>
     ${(l.takes && l.takes.length) ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">${l.takes.map(t=> vrTakeRowLight('light_'+l.id, t)).join('')}</div>` : ''}
   </div>`;
 }
@@ -1841,11 +1814,11 @@ function dnEditCardHtml(l){
 
 function dnHistorySectionHtml(s, lessons, editingId){
   const sorted = (lessons||[]).slice().sort((a,b)=> (b.lessonDate||'').localeCompare(a.lessonDate||'') || (b.id - a.id));
-  return `
+const profileRange = dnProfileRange(s);   return `
     <section>
       <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; color: #A09488; margin-bottom: 14px;">Записи занятий</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        ${sorted.length ? sorted.map((l,i)=> String(editingId)===String(l.id) ? dnEditCardHtml(l) : dnHistoryCardHtml(l, sorted[i+1])).join('') : `<div class="admin-note">Занятий пока не записано.</div>`}
+        ${sorted.length ? sorted.map((l,i)=> String(editingId)===String(l.id) ? dnEditCardHtml(l) : dnHistoryCardHtml(l, profileRange)).join('') : `<div class="admin-note">Занятий пока не записано.</div>`}
       </div>
     </section>
   `;
@@ -3824,30 +3797,7 @@ function paintKabinet(s){
   // рекордера в Дневнике занятий) — разворачиваем их в отдельные строки.
   // Старые занятия (сделанные ещё прежней версией вкладки) хранят одну
   // ссылку в mediaUrl — показываем и её тоже, для обратной совместимости.
-  const files = [];
-  lessons.forEach(l=>{
-    const dateStr = (l.lessonDate||'').split('-').reverse().join('.');
-    const topic = l.topic || l.rangeWorked || l.whatWorked || '—';
-    (l.takes||[]).forEach(t=>{
-      files.push({ name: t.name || (dateStr+'_'+(s.name||'').replace(/\s+/g,'_')+'.webm'), topic, url: t.dataUrl, hasAudio: true });
-    });
-    if(l.mediaUrl){
-      files.push({ name: dateStr+'_'+(s.name||'').replace(/\s+/g,'_')+'.webm', topic, url: l.mediaUrl, hasAudio: true });
-    }
-  });
-  const filesHtml = `
-    ${kbSection('files','ЗАПИСИ С УРОКОВ','дата_имя ученика')}
-    ${open.files ? `
-    <div class="kb-files-box">
-      ${files.length ? files.map(f=>`
-        <div class="kb-file-row">
-          <div class="kb-file-name">${f.name}</div>
-          <div class="kb-file-topic">${f.topic}</div>
-          ${f.hasAudio ? `<audio controls src="${f.url}" style="height:34px;"></audio>` : `<span class="kb-file-missing">запись не приложена</span>`}
-        </div>
-      `).join('') : `<div class="kb-files-empty">Записей пока нет — появятся после первых занятий в «Дневнике занятий».</div>`}
-    </div>` : ''}
-  `;
+  const fileEntries = []; lessons.forEach(l=>{ const dateStr = (l.lessonDate||'').split('-').reverse().join('.'); (l.takes||[]).forEach(t=>{ fileEntries.push({ownerKey:'files_'+l.id, take:t}); }); if(l.mediaUrl){ fileEntries.push({ownerKey:'files_'+l.id, take:{ id:'legacy', name: dateStr+'_'+(s.name||'').replace(/\s+/g,'_')+'.webm', dataUrl: l.mediaUrl, peaks: [], durationSec: 0, visibleToStudent: true }}); } }); const filesHtml = ` ${kbSection('files','ЗАПИСИ С УРОКОВ','дата_имя ученика')} ${open.files ? ` <div class="kb-files-box"> ${fileEntries.length ? fileEntries.map(f=> vrTakeRowLight(f.ownerKey, f.take)).join('') : `<div class="kb-files-empty">Записей пока нет — появятся после первых занятий в «Дневнике занятий».</div>`} </div>` : ''} `;
 
   const summaryHtml = `
     <div class="kb-summary">
@@ -4058,11 +4008,12 @@ function wireKabinetHandlers(s){
   }
 
   dnRecorderWire(s, 'kabinet_'+s.id, state.kabinetRec, 'kabinet', ()=> (kbCache(s).intake.referenceTakes||[]), (next)=>{ kbCache(s).intake.referenceTakes = next; }, null, { repaint:()=>paintKabinet(s), fileTagSuffix:'_reference', onUpload:(file)=>kbUploadFile(s, file), onKabinetSave:(next)=>kbSaveTakes(s, next) });
-const pdfBtn = document.getElementById('kbExportPdfBtn');
+kbWireFilesRows(s); const pdfBtn = document.getElementById('kbExportPdfBtn');
   if(pdfBtn) pdfBtn.onclick = ()=> alert('Отправка PDF ученику — в разработке. Нужно решить отдельно: email, ссылка на скачивание или Telegram. Как определимся — подключим.');
 }
 
-function kbUploadFile(s, file){
+function kbWireFilesRows(s){ const root = document.getElementById('tabContent'); if(!root) return; const cache = kbCache(s); const lessons = cache.lessons || []; lessons.forEach(function(l){ (l.takes||[]).forEach(function(t){ const ownerKey = 'files_' + l.id; const rk = ownerKey + '_' + t.id; const getTakes = function(){ return l.takes || []; }; const setTakes = function(next){ l.takes = next; }; const persist = function(){ dnQueueSave(l.id, {takes: l.takes}, function(lesson){ if(lesson){ const idx = lessons.findIndex(function(x){ return String(x.id)===String(lesson.id); }); if(idx>=0) lessons[idx] = lesson; } }); }; vrWireTakeRow(root, rk, t, getTakes, setTakes, persist, function(){ paintKabinet(s); }, true); }); }); }
+  function kbUploadFile(s, file){
   if(file.size > 4200000){
     alert('Файл слишком большой для сохранения в базе (лимит ~4 МБ на запись). Загрузите файл покороче.');
     return;
