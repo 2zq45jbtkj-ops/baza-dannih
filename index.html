@@ -40,8 +40,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .s-status.status-color-active{color:#6E8C6A;}
 .s-status.status-color-paused{color:#9A8E82;}
 .s-status.status-color-trial{color:#C96B5C;}
-.mask-toggle{border:1px solid var(--line);background:var(--bg);border-radius:20px;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;}
-.mask-toggle.active{background:#E8DDD5;border-color:#D4C4B8;}
+.mask-toggle{border:1px solid var(--line);background:var(--bg);border-radius:20px;width:34px;height:34px;font-size:13px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;flex-shrink:0;}
+.mask-toggle.active{background:#E8DDD5;border-color:#D4C4B8;color:#A8452C;}
 .student-item.masked .s-name{filter:blur(5px);user-select:none;transition:filter 0.2s;}
 .student-item.masked .avatar{filter:blur(3px);transition:filter 0.2s;}
 .status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;}
@@ -564,13 +564,34 @@ if(!state.data.variant) state.data.variant = 'wheel';
 if(!state.data.theme) state.data.theme = 'light';
 let _maskActive = false;
 let _maskTimer = null;
+let _maskCountdown = 0;
+function _maskTick(){
+  _maskCountdown--;
+  const btn = document.getElementById('maskToggle');
+  if(_maskCountdown <= 0){
+    clearInterval(_maskTimer); _maskTimer = null; _maskCountdown = 0;
+    _maskActive = true;
+    if(btn){ btn.textContent = '0'; btn.classList.add('active'); }
+    renderStudentList();
+  } else {
+    if(btn) btn.textContent = String(_maskCountdown);
+  }
+}
 function scheduleAutoMask(){
-  clearTimeout(_maskTimer);
-  _maskTimer = setTimeout(function(){ _maskActive = true; renderStudentList(); }, 6000);
+  clearInterval(_maskTimer);
+  _maskCountdown = 10;
+  _maskActive = false;
+  const btn = document.getElementById('maskToggle');
+  if(btn){ btn.textContent = '10'; btn.classList.remove('active'); }
+  _maskTimer = setInterval(_maskTick, 1000);
 }
 function toggleMask(){
-  _maskActive = !_maskActive;
-  clearTimeout(_maskTimer); _maskTimer = null;
+  clearInterval(_maskTimer); _maskTimer = null;
+  if(_maskActive || _maskCountdown > 0){
+    _maskActive = false; _maskCountdown = 0;
+  } else {
+    _maskActive = true; _maskCountdown = 0;
+  }
   renderStudentList();
 }
 
@@ -706,7 +727,7 @@ function render(){
     <div class="sidebar" id="sidebarEl" style="width:${state.sidebarWidth}px">
       <div class="sidebar-search">
         <input type="text" id="studentSearch" placeholder="Поиск ученика…" value="${(state.search||'').replace(/"/g,'&quot;')}">
-        <button class="mask-toggle${_maskActive?' active':''}" id="maskToggle" title="Скрыть имена">👁</button>
+        <button class="mask-toggle${(_maskActive||_maskCountdown>0)?' active':''}" id="maskToggle" title="Скрыть имена / показать">${_maskActive?'0':_maskCountdown>0?String(_maskCountdown):'10'}</button>
         <button class="theme-toggle" id="themeToggle" title="Тёмная/светлая тема">${state.data.theme==='dark'?'☀️':'🌙'}</button>
       </div>
       <div class="search-meta" id="searchMeta"></div>
