@@ -40,6 +40,10 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .s-status.status-color-active{color:#6E8C6A;}
 .s-status.status-color-paused{color:#9A8E82;}
 .s-status.status-color-trial{color:#C96B5C;}
+.mask-toggle{border:1px solid var(--line);background:var(--bg);border-radius:20px;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;}
+.mask-toggle.active{background:#E8DDD5;border-color:#D4C4B8;}
+.student-item.masked .s-name{filter:blur(5px);user-select:none;transition:filter 0.2s;}
+.student-item.masked .avatar{filter:blur(3px);transition:filter 0.2s;}
 .status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;}
 .dot-active{background:#6FA36F;} .dot-trial{background:var(--blue);} .dot-paused{background:#C7BDB2;}
 .add-student-btn{margin:12px 10px 0;width:calc(100% - 20px);padding:10px;border-radius:10px;border:1px dashed var(--terracotta);background:none;color:var(--terracotta-dark);font-size:13.5px;font-weight:600;cursor:pointer;flex-shrink:0;}
@@ -558,6 +562,17 @@ const state = {
 state.activeStudentId = state.data.students[0]?.id || null;
 if(!state.data.variant) state.data.variant = 'wheel';
 if(!state.data.theme) state.data.theme = 'light';
+let _maskActive = false;
+let _maskTimer = null;
+function scheduleAutoMask(){
+  clearTimeout(_maskTimer);
+  _maskTimer = setTimeout(function(){ _maskActive = true; renderStudentList(); }, 6000);
+}
+function toggleMask(){
+  _maskActive = !_maskActive;
+  clearTimeout(_maskTimer); _maskTimer = null;
+  renderStudentList();
+}
 
 const AVATAR_PALETTE = [
   ['#E4C9A8','#7A5A32'], ['#C3D6C0','#4E7047'], ['#D3C6E0','#6B4E8A'],
@@ -627,7 +642,8 @@ function renderStudentList(){
       ? 'Пробный · анкета не заполнена'
       : (statusLabel(s.status) + (count!=null ? ' · ' + lessonsLabel(count) : ''));
     const statusColorClass = s.status==='active' ? 'status-color-active' : s.status==='trial' ? 'status-color-trial' : 'status-color-paused';
-    return `<div class="student-item ${s.id===state.activeStudentId?'active':''}" data-id="${s.id}">
+    const isMasked = _maskActive && s.id !== state.activeStudentId;
+    return `<div class="student-item ${s.id===state.activeStudentId?'active':''}${isMasked?' masked':''}" data-id="${s.id}">
             <div class="avatar" style="background:${av[0]};color:${av[1]};">${initials(s.name)}</div>
             <div>
               <div class="s-name">${s.name}</div>
@@ -639,6 +655,7 @@ function renderStudentList(){
     el.onclick = ()=>{
       state.activeStudentId = el.dataset.id;
       state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
+      scheduleAutoMask();
       render();
     };
   });
@@ -689,6 +706,7 @@ function render(){
     <div class="sidebar" id="sidebarEl" style="width:${state.sidebarWidth}px">
       <div class="sidebar-search">
         <input type="text" id="studentSearch" placeholder="Поиск ученика…" value="${(state.search||'').replace(/"/g,'&quot;')}">
+        <button class="mask-toggle${_maskActive?' active':''}" id="maskToggle" title="Скрыть имена">👁</button>
         <button class="theme-toggle" id="themeToggle" title="Тёмная/светлая тема">${state.data.theme==='dark'?'☀️':'🌙'}</button>
       </div>
       <div class="search-meta" id="searchMeta"></div>
@@ -703,6 +721,7 @@ function render(){
     state.data.theme = state.data.theme==='dark' ? 'light' : 'dark';
     saveData(); render();
   };
+  document.getElementById('maskToggle').onclick = toggleMask;
   const searchInput = document.getElementById('studentSearch');
   searchInput.oninput = (e)=>{ state.search = e.target.value; renderStudentList(); };
   renderStudentList();
