@@ -1441,7 +1441,7 @@ function dnEditDraft(lessonId){
   return state.diaryEditDrafts[lessonId] || (state.diaryEditDrafts[lessonId] = {});
 }
 
-function renderDiary(s){ const c = document.getElementById('tabContent'); const needDicts = !state.kbDictsLoaded; state.kabinetIntakeLoaded = state.kabinetIntakeLoaded || {}; const needIntake = !state.kabinetIntakeLoaded[s.id]; if(state.diaryCache[s.id] && !needDicts && !needIntake){ paintDiary(s); return; } c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`; const cached = state.diaryCache[s.id]; const tasks = [ cached ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id)), needIntake ? apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)) : Promise.resolve(null) ]; if(needDicts) tasks.push(apiGet('/api/dicts')); Promise.all(tasks).then(([lessonsRes, intakeRes, dictsRes])=>{ state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] }; if(needIntake){ state.kabinetCache[s.id] = Object.assign({}, state.kabinetCache[s.id], { intake: (intakeRes && intakeRes.intake) || {} }); state.kabinetIntakeLoaded[s.id] = true; } if(needDicts){ const server = (dictsRes && dictsRes.dicts) || {}; Object.keys(state.kbDicts).forEach(k=>{ const row = server[k]; if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]}); }); state.kbDictsLoaded = true; } paintDiary(s); }).catch(err=>{ c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`; }); }
+function renderDiary(s){ const c = document.getElementById('tabContent'); const needDicts = !state.kbDictsLoaded; state.kabinetIntakeLoaded = state.kabinetIntakeLoaded || {}; const needIntake = !state.kabinetIntakeLoaded[s.id]; if(state.diaryCache[s.id] && !needDicts && !needIntake){ paintDiary(s); return; } c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`; const cached = state.diaryCache[s.id]; const tasks = [ (cached && cached.lessons) ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id)), needIntake ? apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)) : Promise.resolve(null) ]; if(needDicts) tasks.push(apiGet('/api/dicts')); Promise.all(tasks).then(([lessonsRes, intakeRes, dictsRes])=>{ state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] }; if(needIntake){ state.kabinetCache[s.id] = Object.assign({}, state.kabinetCache[s.id], { intake: (intakeRes && intakeRes.intake) || {} }); state.kabinetIntakeLoaded[s.id] = true; } if(needDicts){ const server = (dictsRes && dictsRes.dicts) || {}; Object.keys(state.kbDicts).forEach(k=>{ const row = server[k]; if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]}); }); state.kbDictsLoaded = true; } paintDiary(s); }).catch(err=>{ c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`; }); }
 
 function paintDiary(s){
   const c = document.getElementById('tabContent');
@@ -3535,12 +3535,12 @@ function kbSection(key, label, hint, extraBtnsHtml){
 function renderKabinet(s){
   const c = document.getElementById('tabContent');
   const needDicts = !state.kbDictsLoaded;
-  if(state.kabinetCache[s.id] && !needDicts){ paintKabinet(s); return; }
+  if(state.kabinetCache[s.id] && state.kabinetCache[s.id].lessons && !needDicts){ paintKabinet(s); return; }
   c.innerHTML = `<div class="kb-loading">Загружаю анкету…</div>`;
   const cached = state.kabinetCache[s.id];
   const tasks = [
     cached ? Promise.resolve({intake: cached.intake}) : apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
-    cached ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
+    (cached && cached.lessons) ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
   ];
   if(needDicts) tasks.push(apiGet('/api/dicts'));
   Promise.all(tasks).then(([intakeRes, lessonsRes, dictsRes])=>{
