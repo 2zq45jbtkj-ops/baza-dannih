@@ -1897,7 +1897,7 @@ function dnFinalizeSave(s){
     cache.lessons = [lesson].concat((cache.lessons||[]).filter(l=>String(l.id)!==String(lesson.id)));
     delete state.diaryDrafts[s.id];
     delete state.diaryRec[s.id];
-    delete state.kabinetCache[s.id];
+    if(state.kabinetCache[s.id]) delete state.kabinetCache[s.id].lessons;
     invalidateLessonCount(s);
     paintDiary(s);
   };
