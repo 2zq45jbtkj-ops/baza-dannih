@@ -3611,6 +3611,7 @@ function paintKabinet(s){
   const generalHtml = `
     ${kbSection('general','ОБЩЕЕ','заполняется один раз', `<button type="button" class="kb-ghost-btn${cmp?' active':''}" data-kb-compare-toggle="1">${cmp?'Скрыть сравнение':'Сравнить со стартом'}</button>`)}
     ${open.general ? `
+    <div class="kb-anamnesis-box">
     <div class="kb-grid">
       ${kbSpravochnikSingleField('Возраст', 'age', intake.age!=null ? String(intake.age) : '')}
       ${kbSpravochnikSingleField('Тип голоса на слух', 'voiceType', intake.voiceType, '<div class="kb-card-note">оценка педагога, не поле из бота</div>')}
@@ -3644,6 +3645,7 @@ function paintKabinet(s){
           </div>
         </div>
       </div>
+    </div>
     </div>
     ${cmp ? `
     <div class="kb-compare-box">
