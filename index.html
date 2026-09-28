@@ -417,6 +417,61 @@ input[type="date"] {
   -moz-appearance: textfield;
   appearance: none;
 }
+/* ── Diary card helpers (replaces inline #fff/border) ── */
+.dn-card{background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;}
+body.dark .dn-card{background:var(--panel);border-color:var(--line);}
+.dn-field-box{display:flex;align-items:center;height:46px;box-sizing:border-box;padding:0 13px;border:1px solid #E4DCD1;border-radius:11px;background:#FAF7F2;}
+body.dark .dn-field-box{background:var(--bg);border-color:var(--line);}
+/* ── Dark mode overrides ── */
+body.dark .student-item.active{background:#302820;border-color:#4A3830;}
+body.dark .chip.status-active{background:#1E3020;color:#6DA874;border-color:#2E4830;}
+body.dark .chip.status-trial{background:#1C2630;color:#78A8C8;border-color:#2A3A48;}
+body.dark .chip.flag{background:#301C14;border-color:#5A3020;}
+body.dark .status-pill-active{background:#1E3020;color:#6DA874;}
+body.dark .status-pill-trial{background:#301C18;color:#D8936A;}
+body.dark .status-pill-paused{background:#2A2520;color:#9A9088;}
+body.dark .card-error{background:#341818;border-color:#5A2C2C;color:#E0A0A0;}
+body.dark .kb-dict-dropdown{background:#2A2420;border-color:#4A3A30;box-shadow:0 12px 28px rgba(0,0,0,.5);}
+body.dark .kb-dict-divider{background:#3A342F;}
+body.dark .kb-chip-item{border-color:#4A3A30;}
+body.dark .kb-chip-item.selected{background:#382E28;border-color:#5A4838;}
+body.dark .kb-chip-select{color:#EFE9E3;}
+body.dark .kb-chip-pin{color:#C97B62;border-left-color:#4A3A30;}
+body.dark .kb-chip-del{color:#7A6E66;border-left-color:#4A3A30;}
+body.dark .kb-dict-confirm{background:#382820;}
+body.dark .kb-admin-badge{background:#4A2820;}
+body.dark .kb-compare-delta{background:#1E3020;color:#6DA874;}
+body.dark .kb-compare-start{color:#7A6E62;}
+body.dark .kb-modes-badge{background:#3A2A20;color:#C0A080;}
+body.dark .kb-modes-card{background:#332A22;border-color:#4A3B2E;}
+body.dark input[type="range"].kb-metal::-webkit-slider-runnable-track{background:linear-gradient(90deg,#3A342E,#2C2420);}
+body.dark input[type="range"].kb-metal::-moz-range-track{background:linear-gradient(90deg,#3A342E,#2C2420);}
+body.dark input[type="range"].kb-metal::-webkit-slider-thumb{border-color:#1C1A18;}
+body.dark input[type="range"].kb-metal::-moz-range-thumb{border-color:#1C1A18;}
+body.dark .vr-light-row{background:#2A2420;border-color:#3A342F;}
+body.dark .vr-light-play{background:#EFE9E3;color:#1C1A18;}
+body.dark .vr-light-title{color:#EFE9E3;}
+body.dark .vr-light-bar{background:#4A4038;}
+body.dark .vr-light-time{color:#9A9088;}
+body.dark .vr-light-rate{background:#2A2420;border-color:#4A4038;color:#B8ADA1;}
+body.dark .vr-light-menu-btn{background:#2A2420;border-color:#4A4038;color:#B8ADA1;}
+body.dark .vr-light-menu{background:#2A2420;border-color:#4A4038;box-shadow:0 8px 20px rgba(0,0,0,.4);}
+body.dark .vr-light-menu button,body.dark .vr-light-menu a{color:#EFE9E3;}
+body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{background:#382E28;}
+/* ── Артикуляционные особенности ── */
+.art-entry-card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
+.art-entry-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.art-entry-badge{width:36px;height:36px;border-radius:50%;background:var(--terracotta-dark);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.art-block-label{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.art-prep-list{margin:4px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:3px;}
+.art-prep-list li{font-size:13px;line-height:1.4;}
+.art-method-card{padding:10px 12px;background:var(--bg);border-radius:10px;display:flex;flex-direction:column;gap:6px;}
+.art-method-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.art-method-name{font-size:13px;font-weight:700;flex:1;min-width:80px;}
+.art-method-desc{font-size:12px;color:var(--muted);line-height:1.4;}
+.art-type-note{background:var(--bg);border-left:3px solid var(--terracotta);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;line-height:1.4;}
+.art-sing-note{background:var(--bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;}
+.art-add-row{padding-top:14px;border-top:1px solid var(--line);}
 </style>
 </head>
 <body>
@@ -1430,13 +1485,13 @@ const DN_DICT_FIELDS = new Set(['dnWorkLow','dnWorkHigh','dnNewProblem']);
       return 'width:32px;height:38px;border-radius:9px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border:1px solid '+(active?accent:'#E4DCD1')+';background:'+(active?accent:'#fff')+';color:'+(active?'#fff':'#A09488')+';';
   }
   function dnPillStyle(active, accent){
-      return 'width:34px;height:34px;border-radius:9px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;border:1px solid '+(active?accent:'#E4DCD1')+';background:'+(active?accent:'#FAF7F2')+';color:'+(active?'#fff':'#6E645A')+';';
+      return 'width:34px;height:34px;border-radius:9px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;border:1px solid '+(active?accent:'var(--line)')+';background:'+(active?accent:'var(--bg)')+';color:'+(active?'#fff':'var(--muted)')+';';
   }
   function dnPrimaryBtnStyle(active, extra){
       return 'padding:11px 20px;border-radius:11px;border:1px solid '+(active?'#8FA97C':'#A8452C')+';background:'+(active?'#EEF3E8':'#A8452C')+';color:'+(active?'#4E6B3B':'#fff')+';font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;'+(extra||'');
   }
   function dnProblemFieldStyle(open){
-      return 'display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:11px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;color:#23201D;background:#FAF7F2;border:1px solid '+(open?'#A8452C':'#E4DCD1')+';';
+      return 'display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:11px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;color:var(--text);background:var(--bg);border:1px solid '+(open?'#A8452C':'var(--line)')+';';
   }
   function dnProblemRowStyle(sel, added){
       return 'display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px;border:none;border-radius:9px;background:'+(sel?'#F6EFE9':'transparent')+';font-family:inherit;font-size:13.5px;font-weight:'+(sel?'700':'600')+';color:'+(added?'#A09488':'#4A423B')+';cursor:pointer;';
@@ -1501,13 +1556,13 @@ function paintDiary(s){
 }
 
 function dnFieldInputStyle(){
-  return 'width:100%;height:46px;box-sizing:border-box;padding:11px 13px;border:1px solid #E4DCD1;border-radius:11px;background:#FAF7F2;font-size:15px;font-weight:600;color:#23201D;';
+  return 'width:100%;height:46px;box-sizing:border-box;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);font-size:15px;font-weight:600;color:var(--text);';
 }
 function dnLabelStyle(){
-  return 'display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#A09488;margin-bottom:6px;';
+  return 'display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;';
 }
 function dnUpperLabel(text){
-  return `<div style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#A09488;margin-bottom:8px;">${text}</div>`;
+  return `<div style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">${text}</div>`;
 }
 
 function dnFormHtml(s, draft){
@@ -1541,7 +1596,7 @@ function dnFormHtml(s, draft){
                                                                                       </label>
                                                                                             <label style="display: block;">
                                                                                                     <span style="${dnLabelStyle()}">Диапазон на уроке</span>
-                                                                                                            <div style="display: flex; align-items: center; gap: 6px; height: 46px; box-sizing: border-box; padding: 0 10px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+                                                                                                            <div class="dn-field-box" style="gap: 6px; padding: 0 10px;">
                                                                                                                       <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkLow', draft.workLow)}</div>
                                                                                                                                                       <span style="color:#C6BAAC;">—</span>
                                                                                                                                                                 <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkHigh', draft.workHigh)}</div>
@@ -1571,7 +1626,7 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                                                                                                                                                                                                                                             <button type="button" data-dn-step-remove="${i}" title="Убрать шаг" style="flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #EDE6DC; background: #fff; color: #A09488; font-size: 15px; line-height: 1; cursor: pointer;">×</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                                         </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <input type="text" placeholder="что делали и что получилось" data-dn-step-note="${i}" value="${(st.note||'').replace(/"/g,'&quot;')}" style="flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid #E4DCD1; border-radius: 10px; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; color: #23201D;" />
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <input type="text" placeholder="что делали и что получилось" data-dn-step-note="${i}" value="${(st.note||'').replace(/"/g,'&quot;')}" style="flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--text);" />
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 <div style="flex: none; display: flex; gap: 4px;">
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 ${resOpts.map(r=>`<button type="button" data-dn-step-result="${i}" data-res="${r.key}" title="${r.title}" style="${dnResultBtnStyle(st.res===r.key, r.accent)}">${r.label}</button>`).join('')}
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </div>
@@ -1622,8 +1677,8 @@ function dnFormHtml(s, draft){
                                                           </div>
                                                                     </div>` : ''}
                                                                             </div>
-                                                                                    <input type="text" placeholder="или своя формулировка" data-dn-own-problem="1" value="${(draft.ownProblem||'').replace(/"/g,'&quot;')}" style="flex: 1; min-width: 200px; height: 44px; padding: 0 12px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2; font-family: inherit; font-size: 14px; font-weight: 600; color: #23201D;" />
-                                                                                            <button type="button" data-dn-own-problem-add="1" style="height: 44px; padding: 0 16px; border-radius: 11px; border: 1px solid #E4DCD1; background: #fff; color: #6E645A; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">Добавить</button>
+                                                                                    <input type="text" placeholder="или своя формулировка" data-dn-own-problem="1" value="${(draft.ownProblem||'').replace(/"/g,'&quot;')}" style="flex: 1; min-width: 200px; height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--bg); font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text);" />
+                                                                                            <button type="button" data-dn-own-problem-add="1" style="height: 44px; padding: 0 16px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">Добавить</button>
                                                                                                   </div>
                                                                                                         ${draft.probs.length ? `
                                                                                                               <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;">
@@ -1656,7 +1711,7 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                                                                                                                                             </div>
                                                                                                                                                                                                                                                                                                                                                     <div style="font-size: 12px; color: #A09488; margin-top: 8px;">${level.hint} · темы совпадают с Колесом баланса и срезами</div>
                                                                                                                                                                                                                                                                                                                                                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-                                                                                                                                                                                                                                                                                                                                                                      <div data-dn-ctx="new" style="flex: 2; min-width: 230px; height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2; display: flex; align-items: center;">${kbSpravochnikSingleControl('dnHwTopic', draft.hwPick)}</div>
+                                                                                                                                                                                                                                                                                                                                                                      <div data-dn-ctx="new" class="dn-field-box" style="flex: 2; min-width: 230px; height: 44px; padding: 0 12px;">${kbSpravochnikSingleControl('dnHwTopic', draft.hwPick)}</div>
                                                                                                                                                                                                                                                                                                                                                                                                                   <input type="date" data-dn-hw-due="1" value="${draft.hwDue||''}" style="flex: 1; min-width: 150px; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 11px; font-family: inherit; font-size: 14px; font-weight: 600; color: #23201D; background: ${draft.dueWarn?'#FBF0EC':'#FAF7F2'}; border: 1px solid ${draft.dueWarn?'#A8452C':'#E4DCD1'};" />
                                                                                                                                                                                                                                                                                                                                                                                                                             <button type="button" data-dn-add-hw="1" style="height: 44px; padding: 0 16px; border-radius: 11px; border: 1px solid #E4DCD1; background: #fff; color: #6E645A; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;">Добавить задание</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                     </div>
@@ -1735,9 +1790,9 @@ function dnTrendSectionHtml(lessons){
           <span style="color: #A8452C;">● 1–3</span>
         </div>
       </div>
-      <div style="background: #fff; border: 1px solid #ECE5DB; border-radius: 16px; padding: 18px 20px; display: flex; align-items: center; gap: 22px; flex-wrap: wrap;">
+      <div class="dn-card" style="display: flex; align-items: center; gap: 22px; flex-wrap: wrap;">
         ${dnTrendSvg(graded)}
-        <div style="font-size: 14px; color: #6E645A; line-height: 1.5; flex: 1; min-width: 220px;">${summary}</div>
+        <div style="font-size: 14px; color: var(--muted); line-height: 1.5; flex: 1; min-width: 220px;">${summary}</div>
       </div>
     </section>
   `;
@@ -1753,14 +1808,14 @@ function dnIntensityBarHtml(n){
   const cells = Array.from({length:10}).map((_,i)=> `<span style="display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:2px;background:${i<v?'#A8452C':'#EFE7DC'};"></span>`).join('');
   return `<div style="display:flex;align-items:center;gap:8px;">${cells}<span style="font-size:12.5px;font-weight:700;color:var(--text);">${n!=null?n+'/10':'—'}</span></div>`;
 }
-const DN_DETAIL_LABEL_STYLE = 'display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;';
+const DN_DETAIL_LABEL_STYLE = 'display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:2px;color:var(--muted);';
 
 function dnHistoryCardHtml(l, profileRange){
   const band = dnGradeBand(l.grade);
   return `
-  <div style="background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;">
+  <div class="dn-card">
     <div style="display:grid;grid-template-columns:78px minmax(0,1fr) max-content max-content;align-items:center;gap:10px;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#9A8E82;">${dnFmtDate(l.lessonDate)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);">${dnFmtDate(l.lessonDate)}</div>
       <div style="font-size:16px;font-weight:700;">${l.topic || '—'}</div>
       ${band ? `<span style="padding:4px 10px;border-radius:8px;background:${band.bg};border:1px solid ${band.border};color:${band.color};font-size:12.5px;font-weight:700;">${l.grade}/10</span>` : `<span style="font-size:12.5px;color:#C0B4A6;">—</span>`}
       <div style="display:flex;gap:8px;">
@@ -1779,7 +1834,7 @@ function dnEditCardHtml(l){
   const recKey = 'edit_' + l.id;
   const rec = dnEditRec(l.id);
   return `
-  <div style="background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;">
+  <div class="dn-card">
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px;">
       <label style="display: block;">
         <span style="${dnLabelStyle()}">Дата</span>
@@ -1791,7 +1846,7 @@ function dnEditCardHtml(l){
       </label>
       <label style="display: block;">
         <span style="${dnLabelStyle()}">Диапазон в работе</span>
-        <div style="display: flex; align-items: center; gap: 14px; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+        <div class="dn-field-box" style="gap: 14px;">
           <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkLow', ed.workLow)}</div>
           <div data-dn-ctx="${ctx}">${kbSpravochnikSingleControl('dnWorkHigh', ed.workHigh)}</div>
         </div>
@@ -1832,7 +1887,7 @@ function dnEditCardHtml(l){
     <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px;">
       <label style="display: block;">
         <span style="${dnLabelStyle()}">Новые проблемы</span>
-        <div style="display: flex; align-items: center; height: 46px; box-sizing: border-box; padding: 0 13px; border: 1px solid #E4DCD1; border-radius: 11px; background: #FAF7F2;">
+        <div class="dn-field-box">
           <div data-dn-ctx="${ctx}" style="flex:1;">${kbSpravochnikSingleControl('dnNewProblem', ed.newProblem)}</div>
         </div>
       </label>
