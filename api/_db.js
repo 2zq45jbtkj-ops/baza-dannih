@@ -150,6 +150,8 @@ async function ensureSchema(p) {
   await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS takes JSONB DEFAULT '[]';`);
   await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();`);
 
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS articulatory JSONB DEFAULT '[]';`);
+
   ensured = true;
 
     // Дневник занятий — редизайн формы «Новая запись» (структурированные шаги,

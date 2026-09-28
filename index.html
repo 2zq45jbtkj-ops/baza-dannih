@@ -515,6 +515,124 @@ const LEVEL_COLORS = {A:'var(--lvlA)', B:'var(--lvlB)', C:'var(--lvlC)', D:'var(
 const LEVEL_ORDER = ['A','B','C','D'];
 const COMPARE_PALETTE = ['#6C91A6','#C9A227','#7A6C9E','#3E6B3E','#B23A48','#4E7A91'];
 
+const ART_KB = {
+  'Р':{ label:'Р', defectName:'Ротацизм / параротацизм',
+    prep:['"Парус" — язык вверх к нёбу','"Лошадка" — щёлканье языком','"Грибок" — растяжка подъязычной связки','"Барабан" — д-д-д у альвеол'],
+    types:[
+      { name:'Горловой Р', note:'Вибрирует увуля (маленький язычок), а не кончик языка',
+        methods:[
+          { name:'Механическая вибрация', desc:'Зондом подталкивать кончик языка снизу при протяжном Д — добиться передней вибрации' },
+          { name:'Тр-р через губы', desc:'Тр-р-р на выдохе через сжатые губы, постепенно переключаться на языковую позицию' },
+          { name:'"Болтушка"', desc:'Быстрые касания кончиком по альвеолам — нарабатываем подъём и вибрацию' },
+        ]},
+      { name:'Боковой Р', note:'Вибрирует боковой край языка — воздух идёт сбоку',
+        methods:[
+          { name:'Постановка от Д', desc:'Д-Д-Д с механическим покачиванием языка в узкой щели у альвеол' },
+          { name:'Постановка от Ж', desc:'Долгое Ж → плавно двигаем язык вперёд к бугоркам до вибрации' },
+        ]},
+      { name:'Отсутствие / замена Р', note:'Р пропускается или заменяется (Л, В, Й…)',
+        methods:[
+          { name:'"Барабан" → Р', desc:'Д-Д-Д у альвеол → ускорить до вибрации кончика, добавить голос' },
+          { name:'"Вентилятор"', desc:'Дуть на кончик языка у верхних зубов — ощутить вибрацию от воздушной струи' },
+        ]},
+    ],
+    singNote:'Ставить Р в распевки только после чёткого изолированного звука — иначе горловой вариант закрепляется.',
+  },
+  'Л':{ label:'Л', defectName:'Ламбдацизм / параламбдацизм',
+    prep:['"Лопатка" — расслабленный язык на нижней губе','"Иголочка" — напряжённый острый кончик','"Качели" — кончик вверх–вниз'],
+    types:[
+      { name:'Замена Л → В / У', note:'Двугубный вариант — участвуют губы, язык не работает',
+        methods:[
+          { name:'Постановка от А', desc:'Длинное А с кончиком языка, прижатым к нёбу — убрать губы из движения' },
+          { name:'Контроль в зеркало', desc:'Губы не должны двигаться при произнесении Л — добиться неподвижности' },
+        ]},
+      { name:'Замена Л → Й', note:'Средняя спинка поднимается вместо кончика',
+        methods:[
+          { name:'Межзубный Л', desc:'Л с языком между зубами → постепенно убираем зубы из уклада' },
+          { name:'"Пароход"', desc:'Долгое Ы с прикушенным языком — ощущение поднятого кончика' },
+        ]},
+    ],
+    singNote:'Л в пении часто смягчается — следить за твёрдостью в словах "полёт", "волна", "слово".',
+  },
+  'С/З':{ label:'С / З', defectName:'Сигматизм / парасигматизм',
+    prep:['"Заборчик" — зубы сближены, улыбка','"Желобок" — сделать ложочку из языка','"Горка" — кончик к нижним зубам, спинка поднята'],
+    types:[
+      { name:'Межзубный С', note:'Язык между зубами — воздух рассеивается',
+        methods:[
+          { name:'Зубной барьер', desc:'Поставить карандаш между зубами — язык физически не может высунуться' },
+          { name:'Постановка от И', desc:'Долгое И с закрытыми зубами → плавный переход к С' },
+        ]},
+      { name:'Боковой С', note:'Воздух идёт сбоку — звук "хлюпает"',
+        methods:[
+          { name:'"Желобок"', desc:'Усиленная работа на удержание желобка — воздух только по центру' },
+          { name:'От Ф', desc:'Длинное Ф → постепенно перемещаем язык в позицию С не теряя центральной струи' },
+        ]},
+      { name:'Шипящий С (С → Ш)', note:'Язык поднимается слишком высоко',
+        methods:[
+          { name:'Снижение спинки', desc:'Кончик к нижним зубам, слегка давим пальцем на спинку языка через щёку' },
+        ]},
+    ],
+    singNote:'На высоких нотах язык уходит назад и вверх — С может превращаться в Ш; контролировать в распевках.',
+  },
+  'Ш/Ж':{ label:'Ш / Ж', defectName:'Шипящий сигматизм',
+    prep:['"Чашечка" — края языка подняты','"Фокус" — дуть на кончик носа через загнутый язык','"Вкусное варенье" — облизать верхнюю губу'],
+    types:[
+      { name:'Межзубный Ш', note:'Язык между зубами',
+        methods:[
+          { name:'Ограничитель', desc:'Шпатель у зубов — язык не выходит, воздух направляем вверх' },
+          { name:'От С', desc:'Длинное С → поднимаем язык к нёбу, не теряя воздушной струи' },
+        ]},
+      { name:'Боковой Ш', note:'Воздух по бокам — нет чашечки',
+        methods:[
+          { name:'"Чашечка"', desc:'Бока языка плотно прилегают к верхним коренным — только потом добавляем воздух' },
+        ]},
+      { name:'Свистящий Ш (Ш → С)', note:'Язык слишком низко / плоский',
+        methods:[
+          { name:'Подъём языка', desc:'Загнуть кончик вверх механически, потом удерживать самостоятельно' },
+        ]},
+    ],
+    singNote:'Ш в пении "смягчается" на подъёме — слушать на слоге "ша" на разных высотах и ступенях.',
+  },
+  'К/Г/Х':{ label:'К / Г / Х', defectName:'Каппацизм / гаммацизм / хитизм',
+    prep:['"Горка" высокая — задняя спинка к нёбу','Осознанное тихое покашливание — ощутить заднеязычный контакт','"Полоскание горла"'],
+    types:[
+      { name:'К → Т, Г → Д', note:'Передний уклад вместо заднеязычного',
+        methods:[
+          { name:'Механическая постановка', desc:'Пальцем придержать кончик языка за нижними зубами → произносить Т → получается К' },
+          { name:'От покашливания', desc:'Осознанное тихое покашливание → изолированный К → слоги КА, КО, КУ' },
+        ]},
+    ],
+    singNote:'К/Г могут провоцировать зажим гортани — следить за свободой глотки при пении слогов "ка", "га", "ха".',
+  },
+  'Озвончение':{ label:'Озвончение', defectName:'Дефект озвончения (оглушение парных)',
+    prep:['Рука на горло — почувствовать вибрацию при В, З, Д','Тянуть З-З-З и переходить в С-С-С — контраст','Мычание — включение голосовых связок'],
+    types:[
+      { name:'Оглушение парных (Б→П, Д→Т…)', note:'Звонкие произносятся как глухие',
+        methods:[
+          { name:'Вибрационный контроль', desc:'Рука на горло при каждом звонком — добиться вибрации' },
+          { name:'Пение звонких', desc:'Тянуть В-В-В, З-З-З нараспев — постоянная работа связок помогает' },
+        ]},
+    ],
+    singNote:'На вокале озвончение улучшается само — связки работают постоянно. Следить в разговорной речи между занятиями.',
+  },
+  'Смягчение':{ label:'Смягчение', defectName:'Дефект смягчения',
+    prep:['"Заборчик" с разными гласными','Слоги ТА–ТЯ, ТА–ТЯ — контраст твёрдого и мягкого','Минимальные пары: мал–мял, рад–ряд'],
+    types:[
+      { name:'Только твёрдые (нет мягких)', note:'Мяч → "мач", пять → "пат"',
+        methods:[
+          { name:'Контрастные пары', desc:'МА–МЯ, ТА–ТЯ, НА–НЯ — слуховое различение, затем повторение' },
+          { name:'Распевки на мягких', desc:'Слоги МЯ, НЯ, ЛЯ, ДЯ — через пение легче получить нужную позицию' },
+        ]},
+      { name:'Только мягкие (нет твёрдых)', note:'Рука → "рюка", сок → "сёк"',
+        methods:[
+          { name:'Контрастные пары', desc:'РА–РЯ — сначала добиться твёрдого, затем чередовать' },
+          { name:'Слова с твёрдыми', desc:'Намеренно: трава, сом, рот, зуб — с зеркалом, утрированно' },
+        ]},
+    ],
+    singNote:'В пении позиция гласных меняется — следить за согласными в распевках на слогах с разными согласными.',
+  },
+};
+
 function catalogNames(level){ return CATALOG[level].map(e=>e[0]); }
 function shortLabelFor(topic){
   const entry = (CATALOG[topic.level]||[]).find(e=>e[0]===topic.name);
@@ -598,7 +716,7 @@ const state = {
   sidebarWidth: 288,
   lessonCounts: {},
   introCollapsed: false,
-  kabinetOpen: { general:true, anamnesis:true, evt:true, qualities:true, record:true, files:true },
+  kabinetOpen: { general:true, articulatory:true, anamnesis:true, evt:true, qualities:true, record:true, files:true },
   kabinetCache: {},
   kabinetCompareOpen: false,
   kabinetSaveSeq: {},
@@ -3695,6 +3813,82 @@ function kbFlushKabinet(s){
     });
 }
 
+function kbArticulatoryHtml(intake){
+  const entries = Array.isArray(intake.articulatory) ? intake.articulatory : [];
+  const open = state.kabinetOpen;
+
+  const letterBtns = Object.keys(ART_KB).map(k=>{
+    const already = entries.some(e=>e.letter===k);
+    return `<button type="button" data-art-add="${k}" style="padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:${already?'var(--bg)':'var(--panel)'};color:${already?'var(--muted)':'var(--text)'};font-size:13px;font-weight:700;cursor:pointer;opacity:${already?'.5':'1'};">${ART_KB[k].label}</button>`;
+  }).join('');
+
+  const entriesHtml = entries.map((entry,ei)=>{
+    const kb = ART_KB[entry.letter];
+    if(!kb) return '';
+    const ti = entry.typeIdx||0;
+    const type = kb.types[ti]||kb.types[0];
+
+    const typeBtns = kb.types.map((t,i)=>`<button type="button" data-art-type-entry="${ei}" data-art-type-idx="${i}" style="padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:${i===ti?'var(--terracotta-dark)':'var(--bg)'};color:${i===ti?'#fff':'var(--muted)'};font-size:11.5px;font-weight:700;cursor:pointer;">${t.name}</button>`).join('');
+
+    const methodsHtml = type.methods.map(m=>`
+      <div class="art-method-card">
+        <div class="art-method-name">${m.name}</div>
+        <div class="art-method-desc">${m.desc}</div>
+      </div>`).join('');
+
+    const ta = (attr,val,ph)=>`<textarea rows="3" ${attr}="${ei}" placeholder="${ph}" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-family:inherit;font-size:12.5px;color:var(--text);resize:vertical;">${val||''}</textarea>`;
+
+    return `
+      <div class="art-entry-card" style="margin-bottom:14px;">
+        <div class="art-entry-head">
+          <div class="art-entry-badge">${kb.label}</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px;font-weight:800;color:var(--text);">${kb.defectName}</div>
+            <div style="font-size:12px;color:var(--muted);">${type.name}</div>
+          </div>
+          <button type="button" data-art-del="${ei}" style="width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:12px;cursor:pointer;flex-shrink:0;">✕</button>
+        </div>
+
+        <div>
+          <div class="art-block-label">Вариант дефекта</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">${typeBtns}</div>
+        </div>
+
+        ${type.note?`<div class="art-type-note">${type.note}</div>`:''}
+
+        <div>
+          <div class="art-block-label">Подготовительные упражнения</div>
+          <ul class="art-prep-list">${kb.prep.map(p=>`<li>${p}</li>`).join('')}</ul>
+        </div>
+
+        <div>
+          <div class="art-block-label">Методы постановки</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">${methodsHtml}</div>
+        </div>
+
+        ${kb.singNote?`<div class="art-sing-note">На вокале: ${kb.singNote}</div>`:''}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <label><div class="art-block-label">Что делали</div>${ta('data-art-tried',entry.tried,'методы и упражнения…')}</label>
+          <label><div class="art-block-label">Что помогло</div>${ta('data-art-helped',entry.helped,'подходы с результатом…')}</label>
+          <label><div class="art-block-label">Что не сработало</div>${ta('data-art-nowork',entry.nowork,'методы без эффекта…')}</label>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    ${kbSection('articulatory','АРТИКУЛЯЦИОННЫЕ ОСОБЕННОСТИ','произносительные дефекты — план работы генерируется автоматически')}
+    ${open.articulatory ? `
+    <div class="kb-anamnesis-box">
+      ${entriesHtml}
+      <div${entries.length?` class="art-add-row"`:''}>
+        <div class="art-block-label">Добавить дефект</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">${letterBtns}</div>
+      </div>
+    </div>` : ''}
+  `;
+}
+
 function paintKabinet(s){
   const c = document.getElementById('tabContent');
   const cache = kbCache(s);
@@ -3906,9 +4100,12 @@ function paintKabinet(s){
     </div>
   `;
 
+  const articulatoryHtml = kbArticulatoryHtml(intake);
+
   c.innerHTML = `
     <div class="kb-wrap">
       <section>${generalHtml}</section>
+      <section>${articulatoryHtml}</section>
       <section>${anamnesisHtml}</section>
       <section>${evtHtml}</section>
       <section>${qualitiesHtml}</section>
@@ -3947,6 +4144,53 @@ function wireKabinetHandlers(s){
   });
   c.querySelectorAll('textarea[data-kb-field]').forEach(el=>{
     el.onchange = ()=> saveKabinet(s, {[el.dataset.kbField]: el.value || null});
+  });
+
+  // Артикуляционные особенности
+  function artSave(){ saveKabinet(s, { articulatory: kbCache(s).intake.articulatory }); }
+
+  c.querySelectorAll('[data-art-add]').forEach(el=>{
+    el.onclick = ()=>{
+      const letter = el.dataset.artAdd;
+      const arr = Array.isArray(kbCache(s).intake.articulatory) ? kbCache(s).intake.articulatory.slice() : [];
+      if(arr.some(e=>e.letter===letter)) return;
+      arr.push({ letter, typeIdx:0, tried:'', helped:'', nowork:'' });
+      kbCache(s).intake.articulatory = arr;
+      artSave();
+    };
+  });
+
+  c.querySelectorAll('[data-art-del]').forEach(el=>{
+    el.onclick = ()=>{
+      const ei = Number(el.dataset.artDel);
+      const arr = (kbCache(s).intake.articulatory||[]).slice();
+      arr.splice(ei,1);
+      kbCache(s).intake.articulatory = arr;
+      artSave();
+    };
+  });
+
+  c.querySelectorAll('[data-art-type-entry]').forEach(el=>{
+    el.onclick = ()=>{
+      const ei = Number(el.dataset.artTypeEntry);
+      const ti = Number(el.dataset.artTypeIdx);
+      const arr = (kbCache(s).intake.articulatory||[]).slice();
+      if(arr[ei]){ arr[ei] = Object.assign({},arr[ei],{typeIdx:ti}); }
+      kbCache(s).intake.articulatory = arr;
+      artSave();
+    };
+  });
+
+  ['tried','helped','nowork'].forEach(field=>{
+    c.querySelectorAll(`[data-art-${field}]`).forEach(el=>{
+      el.onchange = ()=>{
+        const ei = Number(el.dataset[`art${field.charAt(0).toUpperCase()+field.slice(1)}`]);
+        const arr = (kbCache(s).intake.articulatory||[]).slice();
+        if(arr[ei]){ arr[ei] = Object.assign({},arr[ei],{[field]:el.value}); }
+        kbCache(s).intake.articulatory = arr;
+        artSave();
+      };
+    });
   });
 
   const compareBtn = c.querySelector('[data-kb-compare-toggle]');
