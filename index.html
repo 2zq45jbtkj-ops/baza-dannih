@@ -579,10 +579,10 @@ function _maskTick(){
 }
 function scheduleAutoMask(){
   clearInterval(_maskTimer);
-  _maskCountdown = 10;
+  _maskCountdown = 6;
   _maskActive = false;
   const btn = document.getElementById('maskToggle');
-  if(btn){ btn.textContent = '10'; btn.classList.remove('active'); }
+  if(btn){ btn.textContent = '6'; btn.classList.remove('active'); }
   _maskTimer = setInterval(_maskTick, 1000);
 }
 function toggleMask(){
@@ -727,7 +727,7 @@ function render(){
     <div class="sidebar" id="sidebarEl" style="width:${state.sidebarWidth}px">
       <div class="sidebar-search">
         <input type="text" id="studentSearch" placeholder="Поиск ученика…" value="${(state.search||'').replace(/"/g,'&quot;')}">
-        <button class="mask-toggle${(_maskActive||_maskCountdown>0)?' active':''}" id="maskToggle" title="Скрыть имена / показать">${_maskActive?'0':_maskCountdown>0?String(_maskCountdown):'10'}</button>
+        <button class="mask-toggle${(_maskActive||_maskCountdown>0)?' active':''}" id="maskToggle" title="Скрыть имена / показать">${_maskActive?'0':_maskCountdown>0?String(_maskCountdown):'6'}</button>
         <button class="theme-toggle" id="themeToggle" title="Тёмная/светлая тема">${state.data.theme==='dark'?'☀️':'🌙'}</button>
       </div>
       <div class="search-meta" id="searchMeta"></div>
