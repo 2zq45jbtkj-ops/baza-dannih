@@ -480,7 +480,36 @@ body.dark .vr-light-menu-btn{background:#fff;border-color:#E0D5C8;color:#6E645A;
 body.dark .vr-light-menu{background:#fff;border-color:#E4DCD1;box-shadow:0 8px 20px rgba(0,0,0,.25);}
 body.dark .vr-light-menu button,body.dark .vr-light-menu a{color:#23201D;}
 body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{background:#F4EEE6;}
-body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{background:#382E28;}
+body.dark .vr-box{background:#F2ECE7;}
+body.dark .vr-takes-wrap{background:#E8DDD5!important;}
+body.dark .vr-caption{color:#8A8078;}
+body.dark .vr-caption.saved{color:#4E7047;}
+body.dark .vr-timer{color:#8A8078;}
+body.dark .vr-timer.live{color:#23201D;}
+body.dark .vr-timer.warn{color:#A8452C;}
+body.dark .vr-select{border-color:#D4C4B8;background:#fff;color:#5A504A;}
+body.dark .vr-check-label{color:#6E645A;}
+body.dark .vr-ctl-btn{border-color:#D4C4B8;color:#6E645A;}
+body.dark .vr-ctl-btn:hover{background:#E8DDD5;}
+body.dark .vr-ctl-btn.danger:hover{color:#A8452C;border-color:#E0553A;}
+body.dark .vr-marker-chip{background:#E8DDD5;color:#5A504A;}
+body.dark .vr-discard-link{color:#6E645A;}
+body.dark .vr-upload-label{color:#6E645A;}
+body.dark .vr-saving-phase{color:#6E645A;}
+body.dark .vr-spinner{border-color:#D4C4B8;border-top-color:#A8452C;}
+body.dark .vr-saving-pct{color:#8A8078;}
+body.dark .vr-progress-track{background:#E4DCD1;}
+body.dark .vr-take + .vr-take{border-top-color:#E4DCD1;}
+body.dark .vr-take-title{color:#23201D;}
+body.dark .vr-take-title-input{background:#E8DDD5;color:#23201D;border-color:#D4C4B8;}
+body.dark .vr-take-meta{color:#8A8078;}
+body.dark .vr-take-bar{background:#D4C4B8;}
+body.dark .vr-tr-btn{border-color:#D4C4B8;color:#6E645A;}
+body.dark .vr-tr-btn:hover{background:#E8DDD5;}
+body.dark .vr-tr-play{background:#23201D;color:#F7F3EC;border-color:#23201D;}
+body.dark .vr-take-time{color:#8A8078;}
+body.dark .vr-mk-chip{background:#E8DDD5;color:#4E7047;}
+body.dark .vr-mk-input{background:#fff;color:#23201D;border-color:#D4C4B8;}
 body.dark [data-dn-level]{background:var(--panel)!important;border-color:var(--line)!important;color:var(--muted)!important;}
 body.dark [data-dn-level].dn-level-active{background:var(--terracotta-dark)!important;border-color:var(--terracotta-dark)!important;color:#fff!important;}
 body.dark input[data-dn-hw-due]{background:var(--bg)!important;border-color:var(--line)!important;color:var(--text)!important;color-scheme:dark;}
@@ -2460,7 +2489,7 @@ function vrRecorderHtml(recKey, rec, takes, opts){
   } else {
     body = `<div class="vr-row"><button type="button" class="vr-btn" data-vr-rec-btn="${recKey}" ${rec.saving?'disabled':''}>Записать</button><div style="flex:1;min-width:140px;"><div class="vr-caption">Запись голоса ученика</div><div class="vr-timer" data-vr-timer="${recKey}">00:00</div></div><select class="vr-select" data-vr-device="${recKey}"><option value="">Микрофон по умолчанию</option></select>${opts.showUpload ? `<label class="vr-upload-label">Загрузить файл<input type="file" accept="audio/*" data-vr-upload="${recKey}" style="display:none;"></label>` : ''}</div>${rec.error ? `<div class="vr-error">${rec.error}</div>` : ''}`;
   }
-  const takesHtml = takesArr.length ? `<div style="margin:14px -20px -18px -20px;padding:14px 20px 18px 20px;background:#231F1B;border-radius:0 0 16px 16px;display:flex;flex-direction:column;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
+  const takesHtml = takesArr.length ? `<div class="vr-takes-wrap" style="margin:14px -20px -18px -20px;padding:14px 20px 18px 20px;background:#231F1B;border-radius:0 0 16px 16px;display:flex;flex-direction:column;">${takesArr.map(t=> vrTakeRowDark(recKey, t)).join('')}</div>` : '';
   return `<div class="vr-box">${body}${takesHtml}</div>`;
 }
 function dnUpdateRecDom(recKey, rec){
