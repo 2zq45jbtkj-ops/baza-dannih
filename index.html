@@ -478,9 +478,77 @@ body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{backgroun
 .art-type-note{background:var(--bg);border-left:3px solid var(--terracotta);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;line-height:1.4;}
 .art-sing-note{background:var(--bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;}
 .art-add-row{padding-top:14px;border-top:1px solid var(--line);}
+
+/* ---------- password lock overlay ---------- */
+#site-lock{position:fixed;inset:0;z-index:99999;background:#F2ECE7;display:flex;align-items:center;justify-content:center;}
+#site-lock.hidden{display:none;}
+.lock-card{background:#fff;border:1px solid #E4E0DA;border-radius:20px;padding:40px 36px;width:360px;max-width:calc(100vw - 40px);box-shadow:0 4px 32px rgba(0,0,0,.07);}
+.lock-logo{font-size:28px;font-weight:800;color:#AE5F3F;letter-spacing:-.02em;margin-bottom:6px;}
+.lock-sub{font-size:13px;color:#8A8078;margin-bottom:28px;}
+.lock-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A8078;margin-bottom:6px;}
+.lock-input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1.5px solid #E4E0DA;background:#F9F6F3;font-size:15px;color:#2E2A27;font-family:inherit;outline:none;}
+.lock-input:focus{border-color:#AE5F3F;}
+.lock-err{font-size:13px;color:#A8452C;margin-top:8px;min-height:18px;}
+.lock-btn{width:100%;margin-top:20px;padding:14px;border-radius:14px;border:none;background:#AE5F3F;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.lock-btn:hover{background:#8A3324;}
+.lock-btn:disabled{background:#C7CDD1;cursor:default;}
 </style>
 </head>
 <body>
+
+<div id="site-lock">
+  <div class="lock-card">
+    <div class="lock-logo">Лаборатория звука</div>
+    <div class="lock-sub">Введи пароль для доступа к базе данных</div>
+    <div class="lock-label">Пароль</div>
+    <input id="lock-input" class="lock-input" type="password" placeholder="••••••••••••••••••••" autocomplete="current-password">
+    <div id="lock-err" class="lock-err"></div>
+    <button id="lock-btn" class="lock-btn" disabled>Войти</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var MAX_AGE = 30 * 24 * 3600 * 1000; // 30 дней
+  var ts = parseInt(localStorage.getItem('bd_auth_ts') || '0', 10);
+  if (Date.now() - ts < MAX_AGE) {
+    document.getElementById('site-lock').classList.add('hidden');
+    return;
+  }
+  var input = document.getElementById('lock-input');
+  var btn   = document.getElementById('lock-btn');
+  var err   = document.getElementById('lock-err');
+  input.addEventListener('input', function() { btn.disabled = !input.value.trim(); err.textContent = ''; });
+  input.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !btn.disabled) btn.click(); });
+  btn.addEventListener('click', function() {
+    var pw = input.value.trim();
+    if (!pw) return;
+    btn.disabled = true; btn.textContent = 'Проверяем…';
+    fetch('/api/site-login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.ok) {
+        localStorage.setItem('bd_auth_ts', String(Date.now()));
+        document.getElementById('site-lock').classList.add('hidden');
+      } else {
+        err.textContent = 'Неверный пароль.';
+        btn.disabled = false; btn.textContent = 'Войти';
+        input.select();
+      }
+    })
+    .catch(function(){
+      err.textContent = 'Нет соединения — попробуй ещё раз.';
+      btn.disabled = false; btn.textContent = 'Войти';
+    });
+  });
+  setTimeout(function(){ input.focus(); }, 50);
+})();
+</script>
+
 <div class="app" id="app"></div>
 
 <script>
