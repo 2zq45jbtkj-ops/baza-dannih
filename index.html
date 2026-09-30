@@ -847,6 +847,9 @@ function renderStudentList(){
   }).join('');
   wrap.querySelectorAll('.student-item').forEach(el=>{
     el.onclick = ()=>{
+      if(state.activeStudentId !== el.dataset.id){
+        state.kabinetOpen = { general:true, articulatory:true, anamnesis:true, evt:true, qualities:true, record:true, files:true };
+      }
       state.activeStudentId = el.dataset.id;
       state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
       scheduleAutoMask();
