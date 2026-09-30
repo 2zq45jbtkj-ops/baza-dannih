@@ -163,6 +163,13 @@ async function ensureSchema(p) {
     await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS new_problems TEXT[] DEFAULT '{}';`);
     await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS hw_items JSONB DEFAULT '[]';`);
     await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS hw_sent BOOLEAN DEFAULT false;`);
+
+  // Telegram-интеграция: уникальный непредсказуемый токен для каждого ученика.
+  // Ученик вводит его в Telegram Mini App один раз — бот его запоминает.
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS telegram_token TEXT;`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_students_telegram_token ON students(telegram_token) WHERE telegram_token IS NOT NULL;`);
+  // Генерируем токены для существующих учеников без токена (gen_random_uuid — встроен в Postgres 13+)
+  await p.query(`UPDATE students SET telegram_token = gen_random_uuid()::text WHERE telegram_token IS NULL;`);
 }
 
 async function query(sql, params) {

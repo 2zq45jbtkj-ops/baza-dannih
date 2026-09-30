@@ -1,4 +1,5 @@
 const { query } = require('./_db');
+const { randomUUID } = require('crypto');
 
 function rowToJson(row) {
   return {
@@ -6,6 +7,7 @@ function rowToJson(row) {
     name: row.name,
     status: row.status,
     schedule: row.schedule,
+    telegramToken: row.telegram_token || null,
     createdAt: row.created_at
   };
 }
@@ -30,9 +32,10 @@ module.exports = async (req, res) => {
       }
       const id = b.id || ('s' + Date.now() + Math.floor(Math.random() * 1000));
       const status = b.status || 'trial';
+      const token = randomUUID();
       const r = await query(
-        'INSERT INTO students (id, name, status) VALUES ($1,$2,$3) RETURNING *',
-        [id, String(b.name).trim(), status]
+        'INSERT INTO students (id, name, status, telegram_token) VALUES ($1,$2,$3,$4) RETURNING *',
+        [id, String(b.name).trim(), status, token]
       );
       res.status(200).json({ student: rowToJson(r.rows[0]) });
       return;
@@ -53,6 +56,8 @@ module.exports = async (req, res) => {
       if (b.name !== undefined && String(b.name).trim()) { sets.push(`name = $${i++}`); values.push(String(b.name).trim()); }
       if (b.status !== undefined) { sets.push(`status = $${i++}`); values.push(b.status); }
       if (b.schedule !== undefined) { sets.push(`schedule = $${i++}`); values.push(b.schedule); }
+      // regenerateToken: true → выдаём новый UUID (старый перестаёт работать в боте)
+      if (b.regenerateToken) { sets.push(`telegram_token = $${i++}`); values.push(randomUUID()); }
       if (!sets.length) { res.status(400).json({ error: 'nothing to update' }); return; }
       values.push(id);
       const r = await query(`UPDATE students SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, values);

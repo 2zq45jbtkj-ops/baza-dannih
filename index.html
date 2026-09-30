@@ -62,6 +62,12 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .student-header-name{margin:6px 0 0;font-size:40px;font-weight:800;letter-spacing:-.025em;cursor:pointer;}
 .student-header-name:hover{outline:1px dashed var(--terracotta-light);outline-offset:4px;}
 .student-header-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.tg-token-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin-bottom:14px;}
+.tg-token-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+.tg-token-val{font-family:monospace;font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.tg-token-btn{flex-shrink:0;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.tg-token-btn:hover{background:var(--line);}
+.tg-token-btn.copied{background:var(--terracotta-dark);color:#fff;border-color:var(--terracotta-dark);}
 .pill-select-wrap{position:relative;display:inline-flex;align-items:center;border-radius:999px;}
 .pill-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:none;border-radius:999px;padding:8px 28px 8px 15px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;color:inherit;background:transparent;}
 .pill-select-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:11px;color:inherit;opacity:.75;}
@@ -959,14 +965,16 @@ async function addStudent(){
   if(!name || !name.trim()) return;
   const trimmed = name.trim();
   let id = 's' + Date.now();
+  let telegramToken = null;
   try{
     const resp = await apiSend('/api/students', 'POST', { name: trimmed, status: 'trial' });
     if(resp && resp.student && resp.student.id) id = resp.student.id;
+    if(resp && resp.student && resp.student.telegramToken) telegramToken = resp.student.telegramToken;
   }catch(e){
     alert('Не удалось сохранить ученика в базе данных: ' + (e.message||e) + '\nУченик добавлен только локально и пропадёт при следующей загрузке с другого устройства.');
   }
   state.data.students.push({
-    id, name: trimmed, status: 'trial',
+    id, name: trimmed, status: 'trial', telegramToken,
     org: { schedule:'—', format:'Онлайн', source:'Прочее', freq:'Пробное занятие' },
     voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
     range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
@@ -991,10 +999,12 @@ async function syncStudentsFromServer(){
         loc.name = srv.name;
         loc.status = srv.status;
         if(srv.schedule){ loc.org.freq = srv.schedule; }
+        if(srv.telegramToken) loc.telegramToken = srv.telegramToken;
         return loc;
       }
       return {
         id: srv.id, name: srv.name, status: srv.status,
+        telegramToken: srv.telegramToken || null,
         org: { schedule:'—', format:'Онлайн', source:'Прочее', freq: srv.schedule || 'Пробное занятие' },
         voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
         range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
@@ -1049,6 +1059,17 @@ function renderMain(s){
       </div>
     </div>
 
+    <div class="tg-token-row">
+      <span class="tg-token-label">Telegram</span>
+      ${s.telegramToken
+        ? `<span class="tg-token-val" id="tgTokenVal">${s.telegramToken}</span>
+           <button class="tg-token-btn" id="tgTokenCopy">Копировать</button>
+           <button class="tg-token-btn" id="tgTokenRegen" title="Новый код (старый перестанет работать)">↻</button>`
+        : `<span class="tg-token-val" style="color:var(--muted);">код не выдан</span>
+           <button class="tg-token-btn" id="tgTokenRegen">Выдать код</button>`
+      }
+    </div>
+
     <div class="tabs-row">
       <div class="tabs">
         <div class="tab ${state.activeTab==='profile'?'active':''}" data-tab="profile">Кабинет</div>
@@ -1088,6 +1109,34 @@ function renderMain(s){
       .catch(err=>{ alert('Не удалось сохранить: ' + (err.message||err)); })
       .then(()=>{ setTimeout(()=>{ if(el) el.classList.remove('saved'); }, 900); });
   };
+
+  const tgCopyBtn = document.getElementById('tgTokenCopy');
+  if(tgCopyBtn){
+    tgCopyBtn.onclick = ()=>{
+      navigator.clipboard.writeText(s.telegramToken || '').then(()=>{
+        tgCopyBtn.textContent = 'Скопировано!';
+        tgCopyBtn.classList.add('copied');
+        setTimeout(()=>{ tgCopyBtn.textContent = 'Копировать'; tgCopyBtn.classList.remove('copied'); }, 1800);
+      }).catch(()=>{
+        const el = document.getElementById('tgTokenVal');
+        if(el){ const r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+      });
+    };
+  }
+  const tgRegenBtn = document.getElementById('tgTokenRegen');
+  if(tgRegenBtn){
+    tgRegenBtn.onclick = async ()=>{
+      if(!confirm('Сгенерировать новый код? Старый код у ученика перестанет работать — нужно будет отправить ему новый.')) return;
+      try{
+        const resp = await apiUpdateStudent(s.id, { regenerateToken: true });
+        if(resp && resp.student && resp.student.telegramToken){
+          s.telegramToken = resp.student.telegramToken;
+          saveData();
+          render();
+        }
+      }catch(e){ alert('Ошибка: ' + (e.message||e)); }
+    };
+  }
 
   document.querySelectorAll('.tab').forEach(el=>{
     el.onclick = ()=>{
@@ -3744,7 +3793,7 @@ function kbSection(key, label, hint, extraBtnsHtml){
         <span class="kb-chevron">${open?'▾':'▸'}</span>${label}
       </button>
       ${hint? `<div class="kb-sec-hint">${hint}</div>` : ''}
-      ${extraBtnsHtml? `<div class="kb-sec-actions">${extraBtnsHtml}</div>` : ''}
+      ${extraBtnsHtml && open? `<div class="kb-sec-actions">${extraBtnsHtml}</div>` : ''}
     </div>`;
 }
 
