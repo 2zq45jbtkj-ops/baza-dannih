@@ -430,6 +430,7 @@ body.dark .dn-card{background:var(--panel);border-color:var(--line);}
 body.dark .dn-field-box{background:var(--bg);border-color:var(--line);}
 /* ── Dark mode overrides ── */
 body.dark .student-item.active{background:#302820;border-color:#4A3830;}
+body.dark .student-item.active .s-name{color:var(--text);}
 body.dark .chip.status-active{background:#1E3020;color:#6DA874;border-color:#2E4830;}
 body.dark .chip.status-trial{background:#1C2630;color:#78A8C8;border-color:#2A3A48;}
 body.dark .chip.flag{background:#301C14;border-color:#5A3020;}
@@ -454,15 +455,16 @@ body.dark input[type="range"].kb-metal::-webkit-slider-runnable-track{background
 body.dark input[type="range"].kb-metal::-moz-range-track{background:linear-gradient(90deg,#3A342E,#2C2420);}
 body.dark input[type="range"].kb-metal::-webkit-slider-thumb{border-color:#1C1A18;}
 body.dark input[type="range"].kb-metal::-moz-range-thumb{border-color:#1C1A18;}
-body.dark .vr-light-row{background:#2A2420;border-color:#3A342F;}
-body.dark .vr-light-play{background:#EFE9E3;color:#1C1A18;}
-body.dark .vr-light-title{color:#EFE9E3;}
-body.dark .vr-light-bar{background:#4A4038;}
-body.dark .vr-light-time{color:#9A9088;}
-body.dark .vr-light-rate{background:#2A2420;border-color:#4A4038;color:#B8ADA1;}
-body.dark .vr-light-menu-btn{background:#2A2420;border-color:#4A4038;color:#B8ADA1;}
-body.dark .vr-light-menu{background:#2A2420;border-color:#4A4038;box-shadow:0 8px 20px rgba(0,0,0,.4);}
-body.dark .vr-light-menu button,body.dark .vr-light-menu a{color:#EFE9E3;}
+body.dark .vr-light-row{background:#F2ECE7;border-color:#E0D5C8;}
+body.dark .vr-light-play{background:#23201D;color:#F7F3EC;}
+body.dark .vr-light-title{color:#23201D;}
+body.dark .vr-light-bar{background:#D4CBC2;}
+body.dark .vr-light-time{color:#7A706A;}
+body.dark .vr-light-rate{background:#fff;border-color:#E0D5C8;color:#5A504A;}
+body.dark .vr-light-menu-btn{background:#fff;border-color:#E0D5C8;color:#6E645A;}
+body.dark .vr-light-menu{background:#fff;border-color:#E4DCD1;box-shadow:0 8px 20px rgba(0,0,0,.25);}
+body.dark .vr-light-menu button,body.dark .vr-light-menu a{color:#23201D;}
+body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{background:#F4EEE6;}
 body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{background:#382E28;}
 /* ── Артикуляционные особенности ── */
 .art-entry-card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
@@ -1819,7 +1821,7 @@ function dnFormHtml(s, draft){
     const donePercent = Math.round(doneNum/doneTotal*100);
     const dueLatest = draft.assigned.length ? draft.assigned.map(h=>h.due).slice().sort()[0] : null;
     return `
-      <section style="background: #fff; border: 1px solid #ECE5DB; border-radius: 18px; padding: 22px 24px;">
+      <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px;">
           <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px;">
                 <div style="font-size: 16px; font-weight: 800;">Новая запись</div>
                       <div style="font-size: 12.5px; color: #B8ADA1;">короткие поля, 30 секунд после занятия</div>
