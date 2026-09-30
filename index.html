@@ -1114,6 +1114,21 @@ async function addStudent(){
   state.activeStudentId = id;
   saveData(); render();
 }
+async function deleteStudent(s){
+  if(!s) return;
+  if(!confirm('Удалить ученика «'+s.name+'»?\nВсе данные (дневник, срезы, записи) будут удалены без возможности восстановления.')) return;
+  try{
+    await apiSend('/api/students?id=' + encodeURIComponent(s.id), 'DELETE');
+  }catch(e){
+    alert('Не удалось удалить ученика из базы: ' + (e.message||e));
+    return;
+  }
+  state.data.students = state.data.students.filter(x=>x.id!==s.id);
+  if(state.activeStudentId===s.id){
+    state.activeStudentId = state.data.students[0] ? state.data.students[0].id : null;
+  }
+  saveData(); render();
+}
 async function syncStudentsFromServer(){
   try{
     const data = await apiGet('/api/students');
@@ -1165,7 +1180,8 @@ function renderMain(s){
 
   const count = state.lessonCounts[s.id];
   const eyebrowText = 'Карточка ученика' + (count!=null ? ' · ' + lessonsLabel(count) : '');
-  const statusOptions = OPTIONS.status.map(o=>`<option value="${o[0]}" ${s.status===o[0]?'selected':''}>${o[1]}</option>`).join('');
+  const statusOptions = OPTIONS.status.map(o=>`<option value="${o[0]}" ${s.status===o[0]?'selected':''}>${o[1]}</option>`).join('')
+    + `<option value="__delete__">Удалить ученика ⌘⌫</option>`;
   const scheduleOptions = OPTIONS.freq.map(f=>`<option value="${f}" ${s.org.freq===f?'selected':''}>${f}</option>`).join('');
 
   main.innerHTML = `
@@ -1220,6 +1236,7 @@ function renderMain(s){
 
   document.getElementById('statusPillSelect').onchange = (e)=>{
     const val = e.target.value;
+    if(val==='__delete__'){ e.target.value = s.status; deleteStudent(s); return; }
     s.status = val; saveData();
     apiUpdateStudent(s.id, {status: val}).catch(err=>{ alert('Не удалось сохранить статус в базе: ' + (err.message||err)); });
     render();
@@ -2401,6 +2418,17 @@ document.addEventListener('keydown', function(e){
   btn.click();
 });
 
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Backspace' && e.key!=='Delete') return;
+  if(!(e.metaKey || e.ctrlKey)) return;
+  if(e.repeat) return;
+  const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  const s = getStudent(state.activeStudentId);
+  if(!s) return;
+  e.preventDefault();
+  deleteStudent(s);
+});
 document.addEventListener('keydown', function(e){
   if(e.code!=='Space' && e.key!==' ') return;
   if(e.repeat) return;
