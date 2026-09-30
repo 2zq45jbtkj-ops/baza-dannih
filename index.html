@@ -523,12 +523,20 @@ body.dark input[type="date"]{color-scheme:dark;}
 .art-prep-list{margin:4px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:3px;}
 .art-prep-list li{font-size:13px;line-height:1.4;}
 .art-method-card{padding:10px 12px;background:var(--bg);border-radius:10px;display:flex;flex-direction:column;gap:6px;}
+.art-method-card.marked-ok{box-shadow:inset 0 0 0 1px #4E7047;}
+.art-method-card.marked-fail{box-shadow:inset 0 0 0 1px var(--terracotta-dark);}
 .art-method-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .art-method-name{font-size:13px;font-weight:700;flex:1;min-width:80px;}
 .art-method-desc{font-size:12px;color:var(--muted);line-height:1.4;}
+.art-method-marks{display:flex;gap:4px;flex-shrink:0;}
+.art-mark-btn{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;}
+.art-mark-btn.ok.active{background:#EFF4ED;border-color:#D9E4D5;color:#4E7047;}
+.art-mark-btn.fail.active{background:var(--terracotta-bg);border-color:#EFD4C6;color:var(--terracotta-dark);}
+body.dark .art-mark-btn.ok.active{background:#1E3020;border-color:#2E4830;color:#6DA874;}
+body.dark .art-mark-btn.fail.active{background:#3A2018;border-color:#5A3020;color:#E0A899;}
 .art-type-note{background:var(--bg);border-left:3px solid var(--terracotta);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;line-height:1.4;}
 .art-sing-note{background:var(--bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;}
-.art-add-row{padding-top:14px;border-top:1px solid var(--line);}
+.art-add-row{padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px;}
 
 /* ---------- password lock overlay ---------- */
 #site-lock{position:fixed;inset:0;z-index:99999;background:#F2ECE7;display:flex;align-items:center;justify-content:center;}
@@ -4003,11 +4011,22 @@ function kbArticulatoryHtml(intake){
 
     const typeBtns = kb.types.map((t,i)=>`<button type="button" data-art-type-entry="${ei}" data-art-type-idx="${i}" style="padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:${i===ti?'var(--terracotta-dark)':'var(--bg)'};color:${i===ti?'#fff':'var(--muted)'};font-size:11.5px;font-weight:700;cursor:pointer;">${t.name}</button>`).join('');
 
-    const methodsHtml = type.methods.map(m=>`
-      <div class="art-method-card">
-        <div class="art-method-name">${m.name}</div>
+    const marks = entry.methodMarks || {};
+    const methodsHtml = type.methods.map((m,mi)=>{
+      const markKey = ti+'_'+mi;
+      const mark = marks[markKey];
+      return `
+      <div class="art-method-card${mark==='ok'?' marked-ok':mark==='fail'?' marked-fail':''}">
+        <div class="art-method-head">
+          <div class="art-method-name">${m.name}</div>
+          <div class="art-method-marks">
+            <button type="button" class="art-mark-btn ok${mark==='ok'?' active':''}" data-art-mark-entry="${ei}" data-art-mark-key="${markKey}" data-art-mark-value="ok" title="Сработало">✓</button>
+            <button type="button" class="art-mark-btn fail${mark==='fail'?' active':''}" data-art-mark-entry="${ei}" data-art-mark-key="${markKey}" data-art-mark-value="fail" title="Не сработало">✕</button>
+          </div>
+        </div>
         <div class="art-method-desc">${m.desc}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     const ta = (attr,val,ph)=>`<textarea rows="3" ${attr}="${ei}" placeholder="${ph}" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-family:inherit;font-size:12.5px;color:var(--text);resize:vertical;">${val||''}</textarea>`;
 
@@ -4053,11 +4072,11 @@ function kbArticulatoryHtml(intake){
     ${kbSection('articulatory','АРТИКУЛЯЦИОННЫЕ ОСОБЕННОСТИ','произносительные дефекты — план работы генерируется автоматически')}
     ${open.articulatory ? `
     <div class="kb-anamnesis-box">
-      ${entriesHtml}
       <div${entries.length?` class="art-add-row"`:''}>
         <div class="art-block-label">Добавить дефект</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">${letterBtns}</div>
       </div>
+      ${entriesHtml}
     </div>` : ''}
   `;
 }
@@ -4351,6 +4370,23 @@ function wireKabinetHandlers(s){
       if(arr[ei]){ arr[ei] = Object.assign({},arr[ei],{typeIdx:ti}); }
       kbCache(s).intake.articulatory = arr;
       artSave();
+    };
+  });
+
+  c.querySelectorAll('[data-art-mark-entry]').forEach(el=>{
+    el.onclick = ()=>{
+      const ei = Number(el.dataset.artMarkEntry);
+      const key = el.dataset.artMarkKey;
+      const value = el.dataset.artMarkValue;
+      const arr = (kbCache(s).intake.articulatory||[]).slice();
+      if(!arr[ei]) return;
+      const marks = Object.assign({}, arr[ei].methodMarks||{});
+      marks[key] = marks[key]===value ? null : value;
+      if(!marks[key]) delete marks[key];
+      arr[ei] = Object.assign({},arr[ei],{methodMarks:marks});
+      kbCache(s).intake.articulatory = arr;
+      artSave();
+      paintKabinet(s);
     };
   });
 
