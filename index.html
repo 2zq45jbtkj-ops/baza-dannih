@@ -277,6 +277,8 @@ body.dark .dn-grade-badge[data-tier="high"]{background:#1E3020!important;border-
 body.dark .dn-grade-badge[data-tier="mid"]{background:var(--panel)!important;border-color:var(--line)!important;color:var(--muted)!important;}
 body.dark .dn-grade-badge[data-tier="low"]{background:#3A2018!important;border-color:#5A3020!important;color:#E0A899!important;}
 body.dark .dn-range-changed{background:#1E3020!important;border-color:#2E4830!important;color:#6DA874!important;}
+body.dark .dn-trend-area{fill:#2E2A26!important;}
+body.dark .dn-trend-line{stroke:#5A5048!important;}
 .kb-side-col{display:flex;flex-direction:column;gap:10px;}
 .kb-modes-card{background:#F4EFE8;border:1px solid #E4DACC;border-radius:16px;padding:19px 21px;}
 body.dark .kb-modes-card{background:#332A22;border-color:#4A3B2E;}
@@ -2015,7 +2017,7 @@ function dnGradeBand(g){
 function dnTrendSvg(graded){
   const w = 360, h = 90, pad = 10;
   if(!graded.length){
-    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="flex:none;"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#EFE7DC" stroke-width="2"/></svg>`;
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="flex:none;"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" class="dn-trend-line" stroke="#EFE7DC" stroke-width="2"/></svg>`;
   }
   const n = graded.length;
   const stepX = n>1 ? (w - pad*2)/(n-1) : 0;
@@ -2026,8 +2028,8 @@ function dnTrendSvg(graded){
   const dots = pts.map((p,i)=> `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${dnGradeColor(graded[i].grade)}" />`).join('');
   return `
     <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="flex:none;">
-      <path d="${areaD}" fill="#F1EDE5" stroke="none" />
-      <path d="${pathD}" fill="none" stroke="#C9BCAE" stroke-width="1.6" />
+      <path d="${areaD}" class="dn-trend-area" fill="#F1EDE5" stroke="none" />
+      <path d="${pathD}" class="dn-trend-line" fill="none" stroke="#C9BCAE" stroke-width="1.6" />
       ${dots}
     </svg>
   `;
