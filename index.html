@@ -511,7 +511,8 @@ body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{backgroun
 (function() {
   var MAX_AGE = 30 * 24 * 3600 * 1000; // 30 дней
   var ts = parseInt(localStorage.getItem('bd_auth_ts') || '0', 10);
-  if (Date.now() - ts < MAX_AGE) {
+  var onLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (onLocalhost || Date.now() - ts < MAX_AGE) {
     document.getElementById('site-lock').classList.add('hidden');
     return;
   }
