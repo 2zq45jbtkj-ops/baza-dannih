@@ -170,6 +170,29 @@ async function ensureSchema(p) {
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_students_telegram_token ON students(telegram_token) WHERE telegram_token IS NOT NULL;`);
   // Генерируем токены для существующих учеников без токена (gen_random_uuid — встроен в Postgres 13+)
   await p.query(`UPDATE students SET telegram_token = gen_random_uuid()::text WHERE telegram_token IS NULL;`);
+
+  // Дистанционный плеер: минусовки ученика, раздельно вокал/инструментал
+  // (загружаются вручную — уже разделены заранее, например в Moises).
+  // Файлы лежат в Vercel Blob, здесь хранится только метаданные + ссылки.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS player_tracks (
+      id TEXT PRIMARY KEY,
+      student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      vocal_url TEXT,
+      instrumental_url TEXT,
+      duration_sec NUMERIC,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_player_tracks_student ON player_tracks(student_id, created_at DESC);`);
+  // Приватные метки преподавателя на треке — {id, t, label, createdAt}[].
+  // Ученику никогда не отдаются (see api/student-public.js — там их просто нет в ответе).
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS markers JSONB DEFAULT '[]';`);
+
+  // Голосовые аттракторы — оценка критичности отклонения от нейтрали (1–10)
+  // по каждой структуре, если выбрано значение, отличное от neutral.
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS structure_severity JSONB DEFAULT '{}';`);
 }
 
 async function query(sql, params) {

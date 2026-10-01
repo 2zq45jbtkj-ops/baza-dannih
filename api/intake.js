@@ -59,6 +59,7 @@ function rowToJson(row) {
     // в базе нетронутым, просто больше не показывается в Кабинете)
     repertoire: row.repertoire,
     articulatory: row.articulatory || [],
+    structureSeverity: row.structure_severity || {},
 
     updatedAt: row.updated_at
   };
@@ -132,7 +133,8 @@ module.exports = async (req, res) => {
         /* 46 */ Array.isArray(b.goals) ? b.goals : [],
         /* 47 */ Array.isArray(b.genres) ? b.genres : [],
         /* 48 */ b.repertoire || null,
-        /* 49 */ JSON.stringify(Array.isArray(b.articulatory) ? b.articulatory : [])
+        /* 49 */ JSON.stringify(Array.isArray(b.articulatory) ? b.articulatory : []),
+        /* 50 */ JSON.stringify(b.structureSeverity && typeof b.structureSeverity === 'object' ? b.structureSeverity : {})
       ];
 
       const r = await query(
@@ -146,7 +148,7 @@ module.exports = async (req, res) => {
            baseline_range_low, baseline_range_high, baseline_tess_low, baseline_tess_high, baseline_register_break,
            lar_status, diagnosis, alcohol, pms_factor,
            structures, qualities, modes, anchors, metallic_percent, reference_takes,
-           goals, genres, repertoire, articulatory,
+           goals, genres, repertoire, articulatory, structure_severity,
            updated_at
          ) VALUES (
            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
@@ -154,7 +156,7 @@ module.exports = async (req, res) => {
            $31,$32,$33,$34,$35,
            $36,$37,$38,$39,
            $40,$41,$42,$43,$44,$45,
-           $46,$47,$48,$49,
+           $46,$47,$48,$49,$50,
            now()
          )
          ON CONFLICT (student_id) DO UPDATE SET
@@ -183,6 +185,7 @@ module.exports = async (req, res) => {
            metallic_percent = EXCLUDED.metallic_percent, reference_takes = EXCLUDED.reference_takes,
            goals = EXCLUDED.goals, genres = EXCLUDED.genres, repertoire = EXCLUDED.repertoire,
            articulatory = EXCLUDED.articulatory,
+           structure_severity = EXCLUDED.structure_severity,
            updated_at = now()
          RETURNING *`,
         params

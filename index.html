@@ -258,6 +258,11 @@ body.dark .kb-admin-badge{background:#4A2E28;}
 .kb-small-btn{padding:7px 12px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--bg);border:1px solid var(--line);color:var(--muted);}
 .kb-small-btn.on{background:#2C2724;border-color:#2C2724;color:#F7F2EB;font-weight:700;}
 .kb-small-btn.risk{background:#F6EAE5;border-color:#E0553A;color:var(--terracotta-dark);font-weight:700;}
+.kb-structure-severity{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+.kb-structure-severity-label{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--terracotta-dark);margin-bottom:6px;}
+.kb-structure-severity-scale{display:flex;gap:3px;flex-wrap:wrap;}
+.kb-sev-btn{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:10.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;}
+.kb-sev-btn.on{background:var(--terracotta-dark);border-color:var(--terracotta-dark);color:#fff;}
 .kb-qual-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;}
 .kb-qual-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px 21px;}
 .kb-qual-title-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
@@ -277,6 +282,7 @@ body.dark .dn-grade-badge[data-tier="high"]{background:#1E3020!important;border-
 body.dark .dn-grade-badge[data-tier="mid"]{background:var(--panel)!important;border-color:var(--line)!important;color:var(--muted)!important;}
 body.dark .dn-grade-badge[data-tier="low"]{background:#3A2018!important;border-color:#5A3020!important;color:#E0A899!important;}
 body.dark .dn-range-changed{background:#1E3020!important;border-color:#2E4830!important;color:#6DA874!important;}
+body.dark .kb-small-btn.risk{background:#3A2018;border-color:#5A3020;color:#E0A899;}
 body.dark .dn-trend-area{fill:#2E2A26!important;}
 body.dark .dn-trend-line{stroke:#5A5048!important;}
 .kb-side-col{display:flex;flex-direction:column;gap:10px;}
@@ -4222,6 +4228,7 @@ function paintKabinet(s){
 
   const structures = Object.assign({}, kbNeutralStructures(), intake.structures||{});
   const anchors = Object.assign({}, intake.anchors||{});
+  const severities = Object.assign({}, intake.structureSeverity||{});
   const evtHtml = `
     ${kbSection('evt','ГОЛОСОВЫЕ АТТРАКТОРЫ','отметьте привычки/аттракторы, которые слышите в референс-исполнении — нажмите, чтобы отметить', `
       <button type="button" class="kb-ghost-btn" data-kb-reset-structures="1">Сбросить в нейтраль</button>
@@ -4229,7 +4236,10 @@ function paintKabinet(s){
     `)}
     ${open.evt ? `
     <div class="kb-structure-grid">
-      ${KB_STRUCTURES.map(st=>`
+      ${KB_STRUCTURES.map(st=>{
+        const deviates = structures[st.key] !== st.neutral;
+        const sev = severities[st.key];
+        return `
         <div class="kb-structure-card">
           <div class="kb-structure-top">
             <div class="kb-structure-label">${st.label}</div>
@@ -4238,13 +4248,20 @@ function paintKabinet(s){
           <div class="kb-structure-opts">
             ${st.options.map(o=>{
               const on = structures[st.key] === o;
-              const risky = st.risk && st.risk.indexOf(o) >= 0;
+              const risky = on && o !== st.neutral;
               const cls = on ? (risky?'kb-small-btn risk':'kb-small-btn on') : 'kb-small-btn';
               return `<button type="button" class="${cls}" data-kb-structure="${st.key}" data-kb-value="${o}">${o}</button>`;
             }).join('')}
           </div>
+          ${deviates ? `
+          <div class="kb-structure-severity">
+            <div class="kb-structure-severity-label">Критичность для голоса ${sev?('· '+sev+'/10'):''}</div>
+            <div class="kb-structure-severity-scale">
+              ${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" class="kb-sev-btn${sev===n?' on':''}" data-kb-severity="${st.key}" data-kb-severity-value="${n}">${n}</button>`).join('')}
+            </div>
+          </div>` : ''}
         </div>
-      `).join('')}
+      `;}).join('')}
       <div class="kb-structure-card">
         <div class="kb-structure-top">
           <div class="kb-structure-label">Анкеровка</div>
@@ -4540,6 +4557,18 @@ function wireKabinetHandlers(s){
       const structures = Object.assign({}, kbNeutralStructures(), cache.intake.structures||{});
       structures[el.dataset.kbStructure] = el.dataset.kbValue;
       saveKabinet(s, {structures});
+    };
+  });
+
+  c.querySelectorAll('[data-kb-severity]').forEach(el=>{
+    el.onclick = ()=>{
+      const cache = kbCache(s);
+      const key = el.dataset.kbSeverity;
+      const value = Number(el.dataset.kbSeverityValue);
+      const severities = Object.assign({}, cache.intake.structureSeverity||{});
+      severities[key] = severities[key]===value ? null : value;
+      if(!severities[key]) delete severities[key];
+      saveKabinet(s, {structureSeverity: severities});
     };
   });
 
