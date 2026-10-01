@@ -3997,6 +3997,12 @@ function kbCache(s){
 function saveKabinet(s, patch){
   const cache = kbCache(s);
   cache.intake = Object.assign({}, cache.intake, patch);
+  // Repaint immediately with the optimistic local state so clicks feel
+  // instant — the network round-trip below can take a noticeable moment,
+  // and the user shouldn't have to wait for it just to see their own click
+  // register. kbFlushKabinet() repaints again once the server confirms,
+  // reconciling with res.intake (harmless no-op repaint in the common case).
+  paintKabinet(s);
   // Two POSTs fired back-to-back can reach Postgres out of order — whichever
   // one physically commits last wins, even if it carries older data. Rapid
   // clicks (e.g. picking several chips in a multi-select in a row) reliably
