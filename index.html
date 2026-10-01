@@ -2417,10 +2417,33 @@ document.addEventListener('keydown', function(e){
   if(e.repeat) return;
   const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
   if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  const pauseBtn = document.querySelector('[data-vr-pause]');
+  if(pauseBtn){ e.preventDefault(); pauseBtn.click(); return; }
   const audio = document.querySelector('[data-vr-audio]');
   if(!audio) return;
   e.preventDefault();
   if(audio.paused) audio.play(); else audio.pause();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key!=='r' && e.key!=='R') return;
+  if(e.repeat) return;
+  if(e.metaKey || e.ctrlKey) return;
+  const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  const btn = document.querySelector('[data-vr-rec-btn]');
+  if(!btn || btn.disabled) return;
+  e.preventDefault();
+  btn.click();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Escape') return;
+  if(e.repeat) return;
+  const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+  if(tag==='input' || tag==='textarea' || tag==='select' || (document.activeElement && document.activeElement.isContentEditable)) return;
+  const discardBtn = document.querySelector('[data-vr-discard]') || document.querySelector('[data-vr-discard-pending]');
+  if(!discardBtn) return;
+  e.preventDefault();
+  discardBtn.click();
 });
 
 function vrTakeMetaLine(t){
