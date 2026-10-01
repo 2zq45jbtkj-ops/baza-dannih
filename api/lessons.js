@@ -1,4 +1,28 @@
 const { query } = require('./_db');
+const { sendTelegramMessage } = require('./_telegram');
+
+function fmtDue(due) {
+  if (!due) return '';
+  const parts = String(due).slice(0, 10).split('-');
+  return parts.length === 3 ? ' — до ' + parts[2] + '.' + parts[1] + '.' + parts[0] : '';
+}
+
+// Отправляет ученику уведомление о домашнем задании в Telegram, если у него
+// сохранён chat_id (см. POST /api/student-public). Ошибка отправки не должна
+// ронять сохранение урока — поэтому исключения здесь гасятся молча.
+async function notifyHomeworkSent(studentId, hwItems) {
+  try {
+    const items = Array.isArray(hwItems) ? hwItems : [];
+    if (!items.length) return;
+    const sr = await query('SELECT telegram_chat_id FROM students WHERE id = $1', [studentId]);
+    const chatId = sr.rows[0] && sr.rows[0].telegram_chat_id;
+    if (!chatId) return;
+    const lines = items.map(it => `• [Уровень ${it.level}] ${it.title}${fmtDue(it.due)}`).join('\n');
+    await sendTelegramMessage(chatId, `📚 Новое домашнее задание:\n\n${lines}\n\nОткрой мини-приложение, чтобы посмотреть подробности.`);
+  } catch (e) {
+    // намеренно молча — доставка в Telegram не должна блокировать сохранение
+  }
+}
 function rowToJson(row) {
   return {
     id: row.id,
@@ -89,6 +113,9 @@ module.exports = async (req, res) => {
                     !!b.hwSent
         ]
       );
+      if (b.hwSent) {
+        await notifyHomeworkSent(r.rows[0].student_id, r.rows[0].hw_items);
+      }
       res.status(200).json({ lesson: rowToJson(r.rows[0]) });
       return;
     }
@@ -138,6 +165,9 @@ module.exports = async (req, res) => {
         vals
       );
       if (!r.rows[0]) { res.status(404).json({ error: 'not found' }); return; }
+      if (Object.prototype.hasOwnProperty.call(b, 'hwSent') && b.hwSent) {
+        await notifyHomeworkSent(r.rows[0].student_id, r.rows[0].hw_items);
+      }
       res.status(200).json({ lesson: rowToJson(r.rows[0]) });
       return;
     }

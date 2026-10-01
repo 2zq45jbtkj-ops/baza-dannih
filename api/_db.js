@@ -193,6 +193,12 @@ async function ensureSchema(p) {
   // Голосовые аттракторы — оценка критичности отклонения от нейтрали (1–10)
   // по каждой структуре, если выбрано значение, отличное от neutral.
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS structure_severity JSONB DEFAULT '{}';`);
+
+  // Telegram chat_id ученика — записывается Mini App при открытии (см.
+  // POST /api/student-public), нужен чтобы бот мог написать ученику сам,
+  // без того чтобы он первым написал боту. Используется при отправке
+  // домашнего задания (см. api/lessons.js).
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;`);
 }
 
 async function query(sql, params) {
