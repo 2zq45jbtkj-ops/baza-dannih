@@ -616,6 +616,12 @@ body.dark .art-mark-btn.fail.active{background:#3A2018;border-color:#5A3020;colo
 })();
 </script>
 
+<!-- qrcode-generator by Kazuhiko Arase, MIT license — vendored inline (no build step, no CDN).
+     Used only for the QR codes in "Отправить PDF ученику" (api/recording.js). -->
+<script>
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(o*r,n*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+</script>
+
 <div class="app" id="app"></div>
 
 <script>
@@ -1137,11 +1143,14 @@ async function syncStudentsFromServer(){
         loc.status = srv.status;
         if(srv.schedule){ loc.org.freq = srv.schedule; }
         if(srv.telegramToken) loc.telegramToken = srv.telegramToken;
+        loc.packageSize = srv.packageSize;
+        loc.packageStartDate = srv.packageStartDate;
         return loc;
       }
       return {
         id: srv.id, name: srv.name, status: srv.status,
         telegramToken: srv.telegramToken || null,
+        packageSize: srv.packageSize, packageStartDate: srv.packageStartDate,
         org: { schedule:'—', format:'Онлайн', source:'Прочее', freq: srv.schedule || 'Пробное занятие' },
         voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
         range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
@@ -4733,7 +4742,7 @@ function wireKabinetHandlers(s){
 
   dnRecorderWire(s, 'kabinet_'+s.id, state.kabinetRec, 'kabinet', ()=> (kbCache(s).intake.referenceTakes||[]), (next)=>{ kbCache(s).intake.referenceTakes = next; }, null, { repaint:()=>paintKabinet(s), fileTagSuffix:'_reference', onUpload:(file)=>kbUploadFile(s, file), onKabinetSave:(next)=>kbSaveTakes(s, next) });
 kbWireFilesRows(s); const pdfBtn = document.getElementById('kbExportPdfBtn');
-  if(pdfBtn) pdfBtn.onclick = ()=> alert('Отправка PDF ученику — в разработке. Нужно решить отдельно: email, ссылка на скачивание или Telegram. Как определимся — подключим.');
+  if(pdfBtn) pdfBtn.onclick = ()=> pdfOpenPreview(s);
 }
 
 function kbWireFilesRows(s){ const root = document.getElementById('tabContent'); if(!root) return; const cache = kbCache(s); const lessons = cache.lessons || []; lessons.forEach(function(l){ (l.takes||[]).forEach(function(t){ const ownerKey = 'files_' + l.id; const rk = ownerKey + '_' + t.id; const getTakes = function(){ return l.takes || []; }; const setTakes = function(next){ l.takes = next; }; const persist = function(){ dnQueueSave(l.id, {takes: l.takes}, function(lesson){ if(lesson){ const idx = lessons.findIndex(function(x){ return String(x.id)===String(lesson.id); }); if(idx>=0) lessons[idx] = lesson; } }); }; vrWireTakeRow(root, rk, t, getTakes, setTakes, persist, function(){ paintKabinet(s); }, true); }); }); }
@@ -4772,6 +4781,584 @@ function kbSaveTakes(s, takes){
 }
 
 function kbPad(n){ return n<10 ? '0'+n : String(n); }
+
+/* ============================================================
+   PDF УЧЕНИКА («Карточка ученика · передача») — кнопка в сводке
+   Кабинета. Вёрстка скопирована из присланного эталона
+   («ПРОМТ — PDF ученика A4.md» + .dc.html), часть данных которых
+   в базе ещё не было (абонемент, песни с тональностью/статусом,
+   решённые проблемы, две короткие заметки) — правятся прямо в
+   предпросмотре перед печатью и сохраняются, чтобы не вводить
+   заново в следующий раз. Печать — через окно с window.print(),
+   открытое сразу по клику (до await), чтобы не словить блокировку
+   всплывающих окон.
+   ============================================================ */
+
+const PDF_MONTHS_SHORT = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const PDF_SONG_STATUSES = ['новая','в работе','готова','на паузе'];
+
+function pdfMonthShort(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr);
+  return isNaN(d) ? '' : PDF_MONTHS_SHORT[d.getMonth()];
+}
+function pdfFmtDateShort(dateStr){
+  if(!dateStr) return '';
+  const p = String(dateStr).slice(0,10).split('-');
+  return p.length===3 ? p[2]+'.'+p[1] : '';
+}
+function pdfFmtDateFull(dateStr){
+  if(!dateStr) return '';
+  const p = String(dateStr).slice(0,10).split('-');
+  return p.length===3 ? p[2]+'.'+p[1]+'.'+p[0] : '';
+}
+function pdfEsc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function pdfDurationStr(sec){
+  sec = Math.round(Number(sec)||0);
+  const m = Math.floor(sec/60), r = sec%60;
+  return m+':'+(r<10?'0':'')+r;
+}
+function pdfProblemCategory(name){
+  for(const g of DN_PROBLEM_GROUPS){ if(g.items.indexOf(name)>=0) return g.label; }
+  return 'Другое';
+}
+
+function pdfBuildProblems(lessons, resolvedProblems){
+  const resolvedMap = {};
+  (resolvedProblems||[]).forEach(r=>{ if(r && r.name) resolvedMap[r.name] = r.resolvedMonth || ''; });
+  const firstSeen = {};
+  lessons.slice().sort((a,b)=> String(a.lessonDate||'').localeCompare(String(b.lessonDate||''))).forEach(l=>{
+    (l.newProblems||[]).forEach(name=>{ if(name && !firstSeen[name]) firstSeen[name] = l.lessonDate; });
+  });
+  const open = [], resolved = [];
+  Object.keys(firstSeen).forEach(name=>{
+    const category = pdfProblemCategory(name);
+    const sinceMonth = pdfMonthShort(firstSeen[name]);
+    if(Object.prototype.hasOwnProperty.call(resolvedMap, name)){
+      resolved.push({ name, category, sinceMonth, toMonth: resolvedMap[name] });
+    } else {
+      open.push({ name, category, sinceMonth });
+    }
+  });
+  return { open, resolved };
+}
+
+function pdfBuildTopics(lessons){
+  const graded = lessons.filter(l=>l.grade!=null).slice().sort((a,b)=> String(a.lessonDate||'').localeCompare(String(b.lessonDate||'')));
+  function prevGrade(date){
+    let prev = null;
+    for(const l of graded){ if(String(l.lessonDate||'') < String(date||'')) prev = l; else break; }
+    return prev ? prev.grade : null;
+  }
+  const withTopic = lessons.filter(l=>l.topic).slice().sort((a,b)=> String(b.lessonDate||'').localeCompare(String(a.lessonDate||'')));
+  return withTopic.slice(0,5).map(l=>{
+    const g = l.grade;
+    const pg = g!=null ? prevGrade(l.lessonDate) : null;
+    let flag = 'так же';
+    if(g!=null && pg!=null) flag = g>pg ? 'лучше' : (g<pg ? 'хуже' : 'так же');
+    return { date: pdfFmtDateShort(l.lessonDate), topic: l.topic, comment: l.goal||'', score: g, flag };
+  });
+}
+
+function pdfCollectLessonTakes(lessons){
+  const items = [];
+  lessons.forEach(l=>{ (l.takes||[]).forEach(t=>{ items.push({ lessonId: l.id, lessonDate: l.lessonDate, take: t }); }); });
+  items.sort((a,b)=> String(a.lessonDate||'').localeCompare(String(b.lessonDate||'')) || String(a.take.createdAt||'').localeCompare(String(b.take.createdAt||'')));
+  return items;
+}
+// Порядок по просьбе Николая: первая запись — с самого первого урока,
+// 2 оставшиеся — из последних уроков (не фиксированная тройка
+// "референс/середина/последний" из исходного эталона).
+function pdfPickRecordings(lessons){
+  const items = pdfCollectLessonTakes(lessons);
+  if(!items.length) return [];
+  const picked = [Object.assign({ label: 'Первый урок' }, items[0])];
+  const rest = items.slice(1);
+  const recent = rest.slice(-2);
+  recent.forEach((it,i)=>{
+    const label = (recent.length===2 && i===0) ? ('Урок ' + pdfFmtDateShort(it.lessonDate)) : 'Последний урок';
+    picked.push(Object.assign({ label }, it));
+  });
+  return picked;
+}
+
+function pdfQrSvg(url){
+  try{
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
+  }catch(e){ return ''; }
+}
+
+function pdfBuildModel(s, cache){
+  const intake = cache.intake || {};
+  const lessons = cache.lessons || [];
+  let packageLeft = null;
+  if(s.packageSize && s.packageStartDate){
+    const used = lessons.filter(l=> String(l.lessonDate||'') >= String(s.packageStartDate)).length;
+    packageLeft = Math.max(0, Number(s.packageSize) - used);
+  }
+  return {
+    studentId: s.id,
+    name: s.name || '',
+    lessonsCount: lessons.length,
+    packageSize: s.packageSize || null,
+    packageStartDate: s.packageStartDate || null,
+    packageLeft,
+    age: intake.age!=null ? String(intake.age) : '',
+    voiceType: intake.voiceType || '',
+    goal: (intake.goals && intake.goals[0]) || '',
+    genres: (intake.genres||[]).join(', '),
+    genreRefs: intake.genreRefs || '',
+    experienceLevel: intake.experienceLevel || '',
+    priorExperience: intake.priorExperience || '',
+    currentFocus: intake.currentFocus || '',
+    songs: Array.isArray(intake.repertoireSongs) ? intake.repertoireSongs.map(x=>Object.assign({},x)) : [],
+    topics: pdfBuildTopics(lessons),
+    recordings: pdfPickRecordings(lessons),
+    problems: pdfBuildProblems(lessons, intake.resolvedProblems),
+    diagnosis: intake.diagnosis || '',
+    smoking: intake.smoking || '',
+    pmsFactor: intake.pmsFactor || '',
+    lessonConsiderations: intake.lessonConsiderations || '',
+    symptomDuration: intake.symptomDuration || '',
+    larStatus: intake.larStatus || '',
+    vocalLoadJob: intake.vocalLoadJob || '',
+    hydration: intake.hydration || '',
+    sleep: intake.sleep || '',
+    _resolvedDirty: []
+  };
+}
+
+/* ---------- Предпросмотр (редактируемый оверлей) ---------- */
+
+async function pdfOpenPreview(s){
+  const cache = kbCache(s);
+  if(!cache.lessons){
+    try{
+      const [intakeRes, lessonsRes] = await Promise.all([
+        apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)),
+        apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id))
+      ]);
+      cache.intake = (intakeRes && intakeRes.intake) || {};
+      cache.lessons = (lessonsRes && lessonsRes.lessons) || [];
+    }catch(e){ alert('Не удалось загрузить данные: ' + (e.message||e)); return; }
+  }
+  state.pdfPreview = { s, model: pdfBuildModel(s, cache) };
+  pdfRenderOverlay();
+}
+
+function pdfCloseOverlay(){
+  const el = document.getElementById('pdfOverlay');
+  if(el) el.remove();
+  state.pdfPreview = null;
+}
+
+function pdfRenderOverlay(){
+  let el = document.getElementById('pdfOverlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'pdfOverlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(20,18,16,0.55);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:40px 16px;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = pdfEditableHtml(state.pdfPreview.model);
+  pdfWireOverlay();
+}
+
+function pdfEdBlock(label, innerHtml){
+  return `<div style="margin-bottom:18px;">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#A09488;margin-bottom:8px;">${pdfEsc(label)}</div>
+    ${innerHtml}
+  </div>`;
+}
+
+function pdfSongsRowsHtml(songs){
+  if(!songs.length) return '<div style="color:#A09488;font-size:12.5px;margin-bottom:8px;">Пока нет песен — добавь ниже.</div>';
+  return songs.map((song,i)=>`
+    <div data-pdf-song-idx="${i}" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+      <input type="text" data-pdf-song-field="title" value="${pdfEsc(song.title)}" placeholder="Песня" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+      <input type="text" data-pdf-song-field="artist" value="${pdfEsc(song.artist)}" placeholder="Исполнитель" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+      <input type="text" data-pdf-song-field="comment" value="${pdfEsc(song.comment)}" placeholder="над чем работаем" style="flex:2;min-width:160px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+      <input type="text" data-pdf-song-field="key" value="${pdfEsc(song.key)}" placeholder="Fm" style="width:54px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+      <select data-pdf-song-field="status" style="width:112px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+        ${PDF_SONG_STATUSES.map(st=>`<option value="${st}" ${song.status===st?'selected':''}>${st}</option>`).join('')}
+      </select>
+      <button type="button" data-pdf-song-remove="${i}" title="Удалить" style="width:30px;height:30px;border:1px solid #E4DCD1;border-radius:7px;background:#fff;color:#8A7E74;cursor:pointer;">✕</button>
+    </div>`).join('');
+}
+
+function pdfEditableHtml(model){
+  const problemRow = (p, resolved)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;font-size:12.5px;border-bottom:1px solid #F0EAE1;">
+    <span>${pdfEsc(p.name)} <span style="color:#A09488;">· ${pdfEsc(p.category)} · ${resolved?pdfEsc(p.sinceMonth+'→'+p.toMonth):'с '+pdfEsc(p.sinceMonth)}</span></span>
+    ${resolved?'':`<button type="button" data-pdf-resolve="${pdfEsc(p.name)}" style="flex-shrink:0;border:1px solid #E4DCD1;border-radius:7px;background:#fff;padding:5px 10px;font-size:11.5px;cursor:pointer;">Отметить решённой</button>`}
+  </div>`;
+
+  return `<div style="background:#FBF8F3;border-radius:16px;max-width:860px;width:100%;padding:28px 28px 20px;position:relative;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#23201D;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <button type="button" id="pdfCloseBtn" style="position:absolute;top:16px;right:16px;width:30px;height:30px;border:none;background:none;color:#8A7E74;font-size:16px;cursor:pointer;">✕</button>
+    <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#A8452C;font-weight:800;">Карточка ученика · передача — предпросмотр</div>
+    <div style="font-size:24px;font-weight:800;margin:6px 0 20px;">${pdfEsc(model.name)}</div>
+
+    ${pdfEdBlock('Абонемент', `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <label style="font-size:12.5px;color:#6E645A;">Занятий в абонементе<br>
+          <input type="number" min="1" id="pdfPackageSize" value="${model.packageSize||''}" style="width:90px;margin-top:4px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+        </label>
+        <label style="font-size:12.5px;color:#6E645A;">Абонемент действует с<br>
+          <input type="date" lang="ru" id="pdfPackageStart" value="${model.packageStartDate||''}" style="margin-top:4px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+        </label>
+        <span style="font-size:12px;color:#8A7E74;align-self:flex-end;">${model.packageLeft!=null ? 'Осталось: ' + model.packageLeft + ' из ' + model.packageSize : 'Заполни один раз — дальше считается само'}</span>
+      </div>`)}
+
+    ${pdfEdBlock('Цель, с которой работаем сейчас', `
+      <input type="text" id="pdfCurrentFocus" value="${pdfEsc(model.currentFocus)}" placeholder="например: стабильный микст в зоне фа1–ля1 без ухода в фальцет" style="width:100%;padding:9px 11px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13.5px;">`)}
+
+    ${pdfEdBlock('Песни в работе', `
+      <div id="pdfSongsRows">${pdfSongsRowsHtml(model.songs)}</div>
+      <button type="button" id="pdfAddSongBtn" style="border:1px solid #E4DCD1;border-radius:7px;background:#fff;padding:7px 12px;font-size:12.5px;cursor:pointer;color:#A8452C;font-weight:700;">+ Добавить песню</button>`)}
+
+    ${pdfEdBlock('Проблемы', `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div>
+          <div style="color:#A8452C;font-weight:800;font-size:11.5px;margin-bottom:6px;">Открытые · ${model.problems.open.length}</div>
+          ${model.problems.open.map(p=>problemRow(p,false)).join('') || '<div style="color:#A09488;font-size:12px;">Нет</div>'}
+        </div>
+        <div>
+          <div style="color:#4C7A45;font-weight:800;font-size:11.5px;margin-bottom:6px;">Решённые · ${model.problems.resolved.length}</div>
+          ${model.problems.resolved.map(p=>problemRow(p,true)).join('') || '<div style="color:#A09488;font-size:12px;">Нет</div>'}
+        </div>
+      </div>`)}
+
+    ${pdfEdBlock('Что учитывать на уроке (по пункту на строку)', `
+      <textarea id="pdfConsiderations" rows="3" style="width:100%;padding:9px 11px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;resize:vertical;">${pdfEsc(model.lessonConsiderations)}</textarea>`)}
+
+    <div style="position:sticky;bottom:-20px;background:#FBF8F3;padding:14px 0 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #E4DCD1;margin-top:8px;">
+      <button type="button" id="pdfCancelBtn" style="border:1px solid #E4DCD1;border-radius:9px;background:#fff;padding:10px 18px;font-size:13.5px;cursor:pointer;">Отмена</button>
+      <button type="button" id="pdfConfirmBtn" style="border:none;border-radius:9px;background:#A8452C;color:#fff;padding:10px 18px;font-size:13.5px;font-weight:700;cursor:pointer;">Подтвердить и открыть для печати</button>
+    </div>
+  </div>`;
+}
+
+function pdfWireOverlay(){
+  const el = document.getElementById('pdfOverlay');
+  if(!el) return;
+  el.onclick = (e)=>{ if(e.target===el) pdfCloseOverlay(); };
+  const closeBtn = document.getElementById('pdfCloseBtn'); if(closeBtn) closeBtn.onclick = pdfCloseOverlay;
+  const cancelBtn = document.getElementById('pdfCancelBtn'); if(cancelBtn) cancelBtn.onclick = pdfCloseOverlay;
+  const confirmBtn = document.getElementById('pdfConfirmBtn'); if(confirmBtn) confirmBtn.onclick = pdfConfirm;
+
+  const addSongBtn = document.getElementById('pdfAddSongBtn');
+  if(addSongBtn) addSongBtn.onclick = ()=>{
+    state.pdfPreview.model.songs.push({ title:'', artist:'', comment:'', key:'', status:'новая' });
+    pdfRenderOverlay();
+  };
+  el.querySelectorAll('[data-pdf-song-remove]').forEach(btn=>{
+    btn.onclick = ()=>{
+      state.pdfPreview.model.songs.splice(Number(btn.dataset.pdfSongRemove), 1);
+      pdfRenderOverlay();
+    };
+  });
+  el.querySelectorAll('[data-pdf-song-idx]').forEach(row=>{
+    const i = Number(row.dataset.pdfSongIdx);
+    row.querySelectorAll('[data-pdf-song-field]').forEach(inp=>{
+      inp.onchange = ()=>{ state.pdfPreview.model.songs[i][inp.dataset.pdfSongField] = inp.value; };
+    });
+  });
+  el.querySelectorAll('[data-pdf-resolve]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const name = btn.dataset.pdfResolve;
+      const model = state.pdfPreview.model;
+      const month = PDF_MONTHS_SHORT[new Date().getMonth()];
+      const idx = model.problems.open.findIndex(x=>x.name===name);
+      if(idx>=0){
+        const p = model.problems.open[idx];
+        model.problems.open.splice(idx,1);
+        model.problems.resolved.push({ name: p.name, category: p.category, sinceMonth: p.sinceMonth, toMonth: month });
+        model._resolvedDirty.push({ name: p.name, resolvedMonth: month });
+      }
+      pdfRenderOverlay();
+    };
+  });
+}
+
+async function pdfConfirm(){
+  const { s, model } = state.pdfPreview;
+  const confirmBtn = document.getElementById('pdfConfirmBtn');
+  if(confirmBtn){ confirmBtn.disabled = true; confirmBtn.textContent = 'Готовлю…'; }
+
+  // Открываем вкладку сразу, синхронно по клику — после await её откроет
+  // блокировщик всплывающих окон.
+  const printWin = window.open('', '_blank');
+
+  const focusInput = document.getElementById('pdfCurrentFocus');
+  const considerInput = document.getElementById('pdfConsiderations');
+  const packageSizeInput = document.getElementById('pdfPackageSize');
+  const packageStartInput = document.getElementById('pdfPackageStart');
+  model.currentFocus = focusInput ? focusInput.value.trim() : model.currentFocus;
+  model.lessonConsiderations = considerInput ? considerInput.value : model.lessonConsiderations;
+  model.packageSize = (packageSizeInput && packageSizeInput.value) ? Number(packageSizeInput.value) : null;
+  model.packageStartDate = (packageStartInput && packageStartInput.value) ? packageStartInput.value : null;
+
+  const cache = kbCache(s);
+  if(model.packageSize && model.packageStartDate){
+    const used = (cache.lessons||[]).filter(l=> String(l.lessonDate||'') >= model.packageStartDate).length;
+    model.packageLeft = Math.max(0, model.packageSize - used);
+  } else {
+    model.packageLeft = null;
+  }
+
+  try{
+    await apiSend('/api/students?id=' + encodeURIComponent(s.id), 'PATCH', { packageSize: model.packageSize, packageStartDate: model.packageStartDate });
+    s.packageSize = model.packageSize; s.packageStartDate = model.packageStartDate;
+
+    const resolvedProblems = (cache.intake.resolvedProblems || []).slice();
+    model._resolvedDirty.forEach(r=>{ if(!resolvedProblems.some(x=>x.name===r.name)) resolvedProblems.push(r); });
+    await saveKabinet(s, {
+      repertoireSongs: model.songs,
+      resolvedProblems,
+      currentFocus: model.currentFocus,
+      lessonConsiderations: model.lessonConsiderations
+    });
+
+    for(const rec of model.recordings){
+      if(!rec.take.publicToken){
+        rec.take.publicToken = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(16).slice(2));
+        const lesson = (cache.lessons||[]).find(l=>String(l.id)===String(rec.lessonId));
+        if(lesson){
+          await new Promise(resolve=>{ dnQueueSave(lesson.id, { takes: lesson.takes }, ()=> resolve()); });
+        }
+      }
+    }
+  }catch(e){
+    alert('Не удалось сохранить часть правок: ' + (e.message||e) + '\nПечатаю с тем, что успело сохраниться.');
+  }
+
+  const html = pdfRenderPrint(model);
+  if(printWin){
+    printWin.document.open();
+    printWin.document.write(html);
+    printWin.document.close();
+    printWin.onload = ()=> setTimeout(()=> printWin.print(), 300);
+  } else {
+    alert('Браузер заблокировал открытие вкладки — разреши всплывающие окна для этого сайта и нажми кнопку ещё раз.');
+  }
+  pdfCloseOverlay();
+}
+
+/* ---------- Печатная версия (точная копия эталона) ---------- */
+
+function pdfGenCard(label, value, note, spanCols){
+  if(!value) return '';
+  return `<div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:12px 14px;${spanCols?`grid-column:span ${spanCols};`:''}">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#A09488;font-weight:700;margin-bottom:4px;">${pdfEsc(label)}</div>
+    <div style="font-size:13.5px;font-weight:700;">${pdfEsc(value)}</div>
+    ${note ? `<div style="font-size:10.5px;color:#8A7E74;margin-top:3px;">${pdfEsc(note)}</div>` : ''}
+  </div>`;
+}
+
+function pdfSongStatusStyle(status){
+  if(status==='готова') return { bg:'#EFF5EE', color:'#4C7A45' };
+  if(status==='в работе') return { bg:'#F6EFE2', color:'#9A6A1F' };
+  return { bg:'#F4EEE6', color:'#6E645A' };
+}
+function pdfFlagStyle(flag){
+  if(flag==='лучше') return { bg:'#EFF5EE', color:'#4C7A45' };
+  if(flag==='хуже') return { bg:'#F1E7E3', color:'#A8452C' };
+  return { bg:'#F4EEE6', color:'#6E645A' };
+}
+
+function pdfSongsCard(songs){
+  if(!songs.length) return '';
+  const rows = songs.map(song=>{
+    const st = pdfSongStatusStyle(song.status);
+    return `<div class="pdf-row" style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #F0EAE1;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;"><span style="font-weight:700;">${pdfEsc(song.title)}</span>${song.artist?` <span style="color:#6E645A;">— ${pdfEsc(song.artist)}</span>`:''}</div>
+        ${song.comment?`<div style="font-size:10.5px;color:#8A7E74;margin-top:2px;">${pdfEsc(song.comment)}</div>`:''}
+      </div>
+      <div class="mono" style="font-size:11px;color:#6E645A;width:56px;text-align:right;">${pdfEsc(song.key||'')}</div>
+      <div style="width:96px;text-align:right;">${song.status?`<span style="display:inline-block;background:${st.bg};color:${st.color};font-size:10.5px;font-weight:700;border-radius:999px;padding:4px 10px;">${pdfEsc(song.status)}</span>`:''}</div>
+    </div>`;
+  }).join('');
+  return `<div class="sec-title">ПЕСНИ В РАБОТЕ</div><div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:0 14px;">${rows}</div>`;
+}
+
+function pdfTopicsCard(topics){
+  if(!topics.length) return '';
+  const rows = topics.map(t=>{
+    const fl = pdfFlagStyle(t.flag);
+    return `<div class="pdf-row" style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #F0EAE1;">
+      <div class="mono" style="font-size:11px;color:#8A7E74;width:52px;">${pdfEsc(t.date)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;">${pdfEsc(t.topic)}</div>
+        ${t.comment?`<div style="font-size:10.5px;color:#8A7E74;margin-top:2px;">${pdfEsc(t.comment)}</div>`:''}
+      </div>
+      <div class="mono" style="font-size:12px;width:54px;text-align:right;">${t.score!=null?t.score+'/10':''}</div>
+      <div style="width:92px;text-align:right;">${t.score!=null?`<span style="display:inline-block;background:${fl.bg};color:${fl.color};font-size:10.5px;font-weight:700;border-radius:999px;padding:4px 10px;">${pdfEsc(t.flag)}</span>`:''}</div>
+    </div>`;
+  }).join('');
+  return `<div class="sec-title">ПОСЛЕДНИЕ 5 ТЕМ И РЕЗУЛЬТАТ</div><div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:0 14px;">${rows}</div>`;
+}
+
+function pdfRecordingsCard(model){
+  if(!model.recordings.length) return '';
+  const origin = (typeof location!=='undefined' && location.origin) ? location.origin : '';
+  const cards = model.recordings.map(r=>{
+    const url = origin + '/api/recording?token=' + encodeURIComponent(r.take.publicToken||'');
+    const svg = r.take.publicToken ? pdfQrSvg(url) : '';
+    const metaParts = [pdfFmtDateFull(r.lessonDate)];
+    if(r.take.durationSec) metaParts.push(pdfDurationStr(r.take.durationSec));
+    else if(r.take.meta) metaParts.push(r.take.meta);
+    return `<div style="background:#2A2622;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;">
+      <div style="width:62px;height:62px;border-radius:6px;background:#fff;flex-shrink:0;overflow:hidden;">${svg}</div>
+      <div style="min-width:0;">
+        <div style="font-size:11.5px;font-weight:700;color:#F2EDE5;">${pdfEsc(r.label)}</div>
+        <div class="mono" style="font-size:9.5px;color:#A2968A;margin-top:3px;">${pdfEsc(metaParts.join(' · '))}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="sec-title" style="margin-top:0;">ЗАПИСИ ГОЛОСА</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${cards}</div>`;
+}
+
+function pdfProblemsCard(model){
+  const { open, resolved } = model.problems;
+  if(!open.length && !resolved.length) return '';
+  const openRow = p => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:11px;">
+      <span style="font-weight:700;">${pdfEsc(p.name)}</span>
+      <span style="color:#A09488;white-space:nowrap;">${pdfEsc(p.category)} · с ${pdfEsc(p.sinceMonth)}</span>
+    </div>`;
+  const resolvedRow = p => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:11px;">
+      <span style="font-weight:700;color:#5C544C;">${pdfEsc(p.name)}</span>
+      <span style="color:#A09488;white-space:nowrap;">${pdfEsc(p.category)} · ${pdfEsc(p.sinceMonth)}→${pdfEsc(p.toMonth)}</span>
+    </div>`;
+  return `<div class="sec-title">ПРОБЛЕМЫ</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:12px 14px;">
+      <div style="font-size:11px;font-weight:800;color:#A8452C;margin-bottom:6px;">Открытые · ${open.length}</div>
+      ${open.map(openRow).join('')}
+    </div>
+    <div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:12px 14px;">
+      <div style="font-size:11px;font-weight:800;color:#4C7A45;margin-bottom:6px;">Решённые · ${resolved.length}</div>
+      ${resolved.map(resolvedRow).join('')}
+    </div>
+  </div>`;
+}
+
+function pdfAnamnesisCard(label, value){
+  if(!value) return '';
+  return `<div style="background:#F4EEE6;border-radius:10px;padding:10px 12px;">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#A09488;font-weight:700;margin-bottom:4px;">${pdfEsc(label)}</div>
+    <div style="font-size:12.5px;font-weight:700;">${pdfEsc(value)}</div>
+  </div>`;
+}
+
+function pdfMedicalSection(model){
+  const cards = [
+    pdfGenCard('Диагноз', model.diagnosis),
+    pdfGenCard('Курение', model.smoking),
+    pdfGenCard('ПМС-фактор', model.pmsFactor)
+  ].join('');
+  const considerations = (model.lessonConsiderations||'').split('\n').map(x=>x.trim()).filter(Boolean);
+  const considerCard = considerations.length ? `<div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:12px 14px;margin-top:10px;">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#A09488;font-weight:700;margin-bottom:6px;">ЧТО УЧИТЫВАТЬ НА УРОКЕ</div>
+    ${considerations.map(c=>`<div style="font-size:12px;margin-top:4px;">— ${pdfEsc(c)}</div>`).join('')}
+  </div>` : '';
+  if(!cards && !considerCard) return '';
+  return `<div style="border-top:1px solid #E4DCD1;margin-top:26px;padding-top:18px;">
+    <div style="font-size:20px;font-weight:800;margin-bottom:12px;">Медицинское и чувствительное</div>
+    ${cards ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${cards}</div>` : ''}
+    ${considerCard}
+  </div>`;
+}
+
+function pdfAnamnesisSection(model){
+  const cards = [
+    pdfAnamnesisCard('Длительность симптомов', model.symptomDuration),
+    pdfAnamnesisCard('ЛОР / фониатр', model.larStatus),
+    pdfAnamnesisCard('Нагрузка вне пения', model.vocalLoadJob),
+    pdfAnamnesisCard('Гидратация', model.hydration),
+    pdfAnamnesisCard('Сон', model.sleep)
+  ].join('');
+  if(!cards) return '';
+  return `<div class="sec-title">ГОЛОСОВОЙ АНАМНЕЗ</div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${cards}</div>`;
+}
+
+function pdfFooter(model, pageLabel){
+  return `<div style="position:absolute;left:56px;right:56px;bottom:40px;border-top:1px solid #E4DCD1;padding-top:10px;display:flex;justify-content:space-between;font-size:9.5px;color:#8A7E74;">
+    <div>Дата печати: ${pdfEsc(model.printDate)}</div>
+    <div class="mono">${pageLabel}</div>
+  </div>`;
+}
+
+function pdfPrintPage1(model){
+  const genCards = [
+    pdfGenCard('Возраст', model.age),
+    pdfGenCard('Тип голоса на слух', model.voiceType, 'оценка педагога'),
+    pdfGenCard('Цель обучения', model.goal),
+    pdfGenCard('Жанр и референсы', model.genres, model.genreRefs),
+    pdfGenCard('Опыт пения', model.experienceLevel, model.priorExperience, 2)
+  ].join('') + pdfGenCard('Цель, с которой работаем сейчас', model.currentFocus, null, 3);
+
+  const badge = (model.packageLeft!=null && model.packageLeft<=1)
+    ? `<div style="display:inline-block;margin-top:8px;background:#F1E7E3;color:#A8452C;font-size:10.5px;font-weight:800;border-radius:6px;padding:5px 10px;">Абонемент заканчивается: осталось ${model.packageLeft} ${pluralRu(model.packageLeft, ['занятие','занятия','занятий'])}</div>`
+    : '';
+
+  return `<div class="pdf-page">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #E4DCD1;padding-bottom:20px;">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:#A8452C;font-weight:800;">КАРТОЧКА УЧЕНИКА · ПЕРЕДАЧА</div>
+        <div style="font-size:32px;font-weight:800;margin-top:6px;">${pdfEsc(model.name)}</div>
+        <div class="mono" style="font-size:11px;color:#8A7E74;margin-top:8px;">${pdfEsc(lessonsLabel(model.lessonsCount))} пройдено</div>
+        ${badge}
+      </div>
+      <div style="text-align:right;font-size:11.5px;color:#23201D;flex-shrink:0;">
+        <div style="font-weight:800;">Николай Септ</div>
+        <div style="color:#8A7E74;">преподаватель</div>
+        <div style="color:#8A7E74;">+7 904 474-87-13 · @nikolaisept</div>
+      </div>
+    </div>
+
+    <div class="sec-title" style="margin-top:20px;">ОБЩЕЕ</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${genCards}</div>
+
+    ${pdfSongsCard(model.songs)}
+    ${pdfTopicsCard(model.topics)}
+    ${pdfFooter(model, '1 / 2')}
+  </div>`;
+}
+
+function pdfPrintPage2(model){
+  return `<div class="pdf-page">
+    ${pdfRecordingsCard(model)}
+    ${pdfProblemsCard(model)}
+    ${pdfMedicalSection(model)}
+    ${pdfAnamnesisSection(model)}
+    ${pdfFooter(model, '2 / 2')}
+  </div>`;
+}
+
+function pdfRenderPrint(model){
+  model.printDate = pdfFmtDateFull(new Date().toISOString().slice(0,10));
+  const css = `
+    @page { size: A4; margin: 0; }
+    *{box-sizing:border-box;}
+    body{margin:0;background:#FBF8F3;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#23201D;}
+    .mono{font-family:'JetBrains Mono',monospace;}
+    .pdf-page{width:794px;min-height:1123px;padding:52px 56px 40px;position:relative;page-break-after:always;}
+    .pdf-page:last-child{page-break-after:auto;}
+    .sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#A09488;margin:20px 0 8px;}
+    .pdf-row:last-child{border-bottom:none !important;}
+    @media print { body{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }
+    @media screen { body{display:flex;flex-direction:column;align-items:center;gap:20px;padding:20px 0;} .pdf-page{box-shadow:0 4px 24px rgba(0,0,0,.12);} }
+  `;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${pdfEsc(model.name)} — карточка ученика</title><style>${css}</style></head><body>
+  ${pdfPrintPage1(model)}
+  ${pdfPrintPage2(model)}
+  </body></html>`;
+}
 
 // Close an open Справочник dropdown (Цель обучения / Жанр / Возраст /
 // Тип голоса на слух / Жалобы / any future field using this component)

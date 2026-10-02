@@ -7,6 +7,8 @@ function rowToJson(row) {
     name: row.name,
     status: row.status,
     schedule: row.schedule,
+    packageSize: row.package_size,
+    packageStartDate: row.package_start_date,
     telegramToken: row.telegram_token || null,
     createdAt: row.created_at
   };
@@ -56,6 +58,8 @@ module.exports = async (req, res) => {
       if (b.name !== undefined && String(b.name).trim()) { sets.push(`name = $${i++}`); values.push(String(b.name).trim()); }
       if (b.status !== undefined) { sets.push(`status = $${i++}`); values.push(b.status); }
       if (b.schedule !== undefined) { sets.push(`schedule = $${i++}`); values.push(b.schedule); }
+      if (b.packageSize !== undefined) { sets.push(`package_size = $${i++}`); values.push(b.packageSize === null || b.packageSize === '' ? null : Number(b.packageSize)); }
+      if (b.packageStartDate !== undefined) { sets.push(`package_start_date = $${i++}`); values.push(b.packageStartDate || null); }
       // regenerateToken: true → выдаём новый UUID (старый перестаёт работать в боте)
       if (b.regenerateToken) { sets.push(`telegram_token = $${i++}`); values.push(randomUUID()); }
       if (!sets.length) { res.status(400).json({ error: 'nothing to update' }); return; }

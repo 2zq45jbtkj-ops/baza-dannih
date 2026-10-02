@@ -199,6 +199,24 @@ async function ensureSchema(p) {
   // без того чтобы он первым написал боту. Используется при отправке
   // домашнего задания (см. api/lessons.js).
   await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;`);
+
+  // PDF ученика (карточка-передача): абонемент — вручную вводится размер
+  // и дата начала текущего абонемента, "осталось" считается на лету как
+  // package_size минус число занятий с package_start_date.
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS package_size INTEGER;`);
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS package_start_date DATE;`);
+
+  // PDF ученика: «Песни в работе» — список песен с тональностью/статусом,
+  // отдельно от старого текстового repertoire (intake, "что хочет разбирать")
+  // и от локального моканного стейта вкладки "Репертуар" (future[]).
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS repertoire_songs JSONB DEFAULT '[]';`);
+  // PDF ученика: «Проблемы» — какие из new_problems дневника отмечены решёнными
+  // (и в каком месяце), чтобы отличать "Открытые" от "Решённые".
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS resolved_problems JSONB DEFAULT '[]';`);
+  // PDF ученика: две короткие заметки преподавателя, которых нет больше нигде
+  // в Кабинете — заполняются/правятся прямо в предпросмотре PDF.
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS current_focus TEXT;`);
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS lesson_considerations TEXT;`);
 }
 
 async function query(sql, params) {

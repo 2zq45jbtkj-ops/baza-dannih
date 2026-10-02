@@ -61,6 +61,13 @@ function rowToJson(row) {
     articulatory: row.articulatory || [],
     structureSeverity: row.structure_severity || {},
 
+    // PDF ученика («карточка-передача»): песни с тональностью/статусом и
+    // отметки, какие из new_problems дневника уже решены.
+    repertoireSongs: row.repertoire_songs || [],
+    resolvedProblems: row.resolved_problems || [],
+    currentFocus: row.current_focus,
+    lessonConsiderations: row.lesson_considerations,
+
     updatedAt: row.updated_at
   };
 }
@@ -134,7 +141,11 @@ module.exports = async (req, res) => {
         /* 47 */ Array.isArray(b.genres) ? b.genres : [],
         /* 48 */ b.repertoire || null,
         /* 49 */ JSON.stringify(Array.isArray(b.articulatory) ? b.articulatory : []),
-        /* 50 */ JSON.stringify(b.structureSeverity && typeof b.structureSeverity === 'object' ? b.structureSeverity : {})
+        /* 50 */ JSON.stringify(b.structureSeverity && typeof b.structureSeverity === 'object' ? b.structureSeverity : {}),
+        /* 51 */ JSON.stringify(Array.isArray(b.repertoireSongs) ? b.repertoireSongs : []),
+        /* 52 */ JSON.stringify(Array.isArray(b.resolvedProblems) ? b.resolvedProblems : []),
+        /* 53 */ b.currentFocus || null,
+        /* 54 */ b.lessonConsiderations || null
       ];
 
       const r = await query(
@@ -149,6 +160,7 @@ module.exports = async (req, res) => {
            lar_status, diagnosis, alcohol, pms_factor,
            structures, qualities, modes, anchors, metallic_percent, reference_takes,
            goals, genres, repertoire, articulatory, structure_severity,
+           repertoire_songs, resolved_problems, current_focus, lesson_considerations,
            updated_at
          ) VALUES (
            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
@@ -157,6 +169,7 @@ module.exports = async (req, res) => {
            $36,$37,$38,$39,
            $40,$41,$42,$43,$44,$45,
            $46,$47,$48,$49,$50,
+           $51,$52,$53,$54,
            now()
          )
          ON CONFLICT (student_id) DO UPDATE SET
@@ -186,6 +199,10 @@ module.exports = async (req, res) => {
            goals = EXCLUDED.goals, genres = EXCLUDED.genres, repertoire = EXCLUDED.repertoire,
            articulatory = EXCLUDED.articulatory,
            structure_severity = EXCLUDED.structure_severity,
+           repertoire_songs = EXCLUDED.repertoire_songs,
+           resolved_problems = EXCLUDED.resolved_problems,
+           current_focus = EXCLUDED.current_focus,
+           lesson_considerations = EXCLUDED.lesson_considerations,
            updated_at = now()
          RETURNING *`,
         params
