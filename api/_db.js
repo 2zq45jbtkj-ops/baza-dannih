@@ -217,6 +217,28 @@ async function ensureSchema(p) {
   // в Кабинете — заполняются/правятся прямо в предпросмотре PDF.
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS current_focus TEXT;`);
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS lesson_considerations TEXT;`);
+
+  // Вкладка «Репертуар» (полная версия — список песен ученика с тёмным
+  // плеером: раздельные дорожки «Голос»/«Музыка», своя громкость на каждую,
+  // метки, текст песни, заметки). Использует ранее заведённую под дистанционный
+  // плеер таблицу player_tracks (vocal_url/instrumental_url/title/markers уже
+  // были) — просто добавляем к ней остальные поля песни. vocal_url/instrumental_url
+  // пока хранят data: URL (base64), как и остальные записи в проекте (см.
+  // referenceTakes/takes) — переход на Vercel Blob осознанно отложен, см. ПРОМТ.
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS artist TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS song_key TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'work';`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS start_date DATE;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS moises_link TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS notes TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS lyrics TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS peaks JSONB DEFAULT '[]';`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS volumes JSONB DEFAULT '{"voice":80,"music":80}';`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS voice_name TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS music_name TEXT;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS voice_duration_sec NUMERIC;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS music_duration_sec NUMERIC;`);
+  await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();`);
 }
 
 async function query(sql, params) {
