@@ -144,6 +144,7 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .score-input.high{color:var(--blue);border-color:var(--blue-light);}
 .score-input.none{color:var(--muted);}
 .score-input:focus{outline:none;border-color:var(--terracotta);}
+.score-input.nav-mode{outline:2px solid var(--blue);outline-offset:1px;}
 .wheel-compare-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap;}
 .legend-swatch{display:inline-flex;align-items:center;gap:5px;}
 .legend-line{width:16px;height:0;border-top:2px solid var(--terracotta);display:inline-block;}
@@ -637,7 +638,7 @@ const CATALOG = {
   C: [
     ["Артикуляция","Артикуляция"],["Мягкое нёбо","Мягкое нёбо"],["Язык","Язык"],
     ["Нижняя челюсть","Нижняя челюсть"],["Губы","Губы"],["Анкеровка","Анкеровка"],
-    ["Комбинирование фигур","Комб. фигур"],["Белт и безопасное громкое пение","Белт безопасный"],
+    ["Комбинирование фигур","Комб. фигур"],["Белт и безопасное громкое пение","Белт"],
     ["Стилевые особенности жанров","Стили жанров"],["Восстановление голоса после нагрузки и болезни","Восстановление голоса"]
   ],
   D: [
@@ -872,7 +873,17 @@ const state = {
   dnSaveSeq: {},
   dnPending: {}
 };
-state.activeStudentId = state.data.students[0]?.id || null;
+const LAST_STUDENT_KEY = 'bd_last_student_id';
+function setActiveStudentId(id){
+  state.activeStudentId = id;
+  try{ localStorage.setItem(LAST_STUDENT_KEY, id || ''); }catch(e){}
+}
+(function(){
+  const savedId = localStorage.getItem(LAST_STUDENT_KEY);
+  state.activeStudentId = (savedId && state.data.students.find(s=>s.id===savedId))
+    ? savedId
+    : (state.data.students[0]?.id || null);
+})();
 if(!state.data.variant) state.data.variant = 'wheel';
 if(!state.data.theme) state.data.theme = 'light';
 let _maskActive = false;
@@ -968,7 +979,7 @@ function renderStudentList(){
       if(state.activeStudentId !== el.dataset.id){
         state.kabinetOpen = { general:true, articulatory:true, anamnesis:true, evt:true, qualities:true, record:true, files:true };
       }
-      state.activeStudentId = el.dataset.id;
+      setActiveStudentId(el.dataset.id);
       state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
       render();
     };
@@ -1094,7 +1105,7 @@ async function addStudent(){
     srezDate: null, srezy: [],
     repertoire: { current:'', future:[] }
   });
-  state.activeStudentId = id;
+  setActiveStudentId(id);
   saveData(); render();
 }
 async function deleteStudent(s){
@@ -1108,7 +1119,7 @@ async function deleteStudent(s){
   }
   state.data.students = state.data.students.filter(x=>x.id!==s.id);
   if(state.activeStudentId===s.id){
-    state.activeStudentId = state.data.students[0] ? state.data.students[0].id : null;
+    setActiveStudentId(state.data.students[0] ? state.data.students[0].id : null);
   }
   saveData(); render();
 }
@@ -1141,7 +1152,7 @@ async function syncStudentsFromServer(){
     });
     state.data.students = merged;
     if(!state.activeStudentId || !merged.find(s=>s.id===state.activeStudentId)){
-      state.activeStudentId = merged[0] ? merged[0].id : null;
+      setActiveStudentId(merged[0] ? merged[0].id : null);
     }
     state.lessonCounts = {};
     saveData();
@@ -1559,17 +1570,98 @@ function attachHandlers(s, c, levelTopics){
       saveData(); renderSrezy(s);
     };
   });
+  // Ввод оценки темы одной цифрой: нажатие 0-9 сразу ставит значение и
+  // переводит фокус на следующую тему — без Enter и без риска напечатать
+  // "45" вместо "5". "10" собирается из "1"+"0" в окне ~450мс, иначе "1"
+  // фиксируется сам по себе, а следующая цифра обрабатывается уже как
+  // новый ввод (в то же или уже следующее поле).
+  const applyScoreDigit = (el, v)=>{
+    const i = parseInt(el.dataset.numI);
+    levelTopics[i].score = v;
+    saveData();
+    renderSrezy(s);
+    const next = document.querySelector(`[data-num-i="${i+1}"]`);
+    if(next) next.focus();
+  };
+  const handleDigitKey = (el, key)=>{
+    if(scorePendingOne && scorePendingOne.el===el){
+      clearTimeout(scorePendingOne.timer);
+      const wasEl = scorePendingOne.el;
+      scorePendingOne = null;
+      if(key==='0'){ applyScoreDigit(wasEl, 10); return; }
+      applyScoreDigit(wasEl, 1);
+      const nextFocused = document.activeElement;
+      if(nextFocused && nextFocused.matches('[data-num-i]')) handleDigitKey(nextFocused, key);
+      return;
+    }
+    if(key==='1'){
+      el.value = '1';
+      scorePendingOne = { el, timer: setTimeout(()=>{ scorePendingOne=null; applyScoreDigit(el, 1); }, 450) };
+      return;
+    }
+    applyScoreDigit(el, parseInt(key, 10));
+  };
   c.querySelectorAll('[data-num-i]').forEach(el=>{
-    el.onchange = ()=>{
-      const i = parseInt(el.dataset.numI);
-      let v = parseInt(el.value);
-      if(isNaN(v)) v = 0;
-      v = Math.max(0, Math.min(10, v));
-      levelTopics[i].score = v;
-      saveData(); renderSrezy(s);
+    el.onfocus = ()=>{
+      el.select();
+      // Если фокус пришёл не от навигации стрелками (а кликом/табом) —
+      // режим перехода стрелками сбрасывается.
+      if(scoreNavMode && !el.classList.contains('nav-mode')){
+        scoreNavMode = false;
+        document.querySelectorAll('.score-input.nav-mode').forEach(n=>n.classList.remove('nav-mode'));
+      }
+    };
+    el.onblur = ()=>{
+      if(scorePendingOne && scorePendingOne.el===el){
+        clearTimeout(scorePendingOne.timer);
+        const wasEl = scorePendingOne.el;
+        scorePendingOne = null;
+        applyScoreDigit(wasEl, 1);
+      }
+    };
+    el.onkeydown = (ev)=>{
+      // Enter включает/выключает режим перехода по темам стрелками ↑/↓
+      // (вместо ввода цифры) — удобно, если нужно перепрыгнуть на другую
+      // тему без ввода оценки в каждой по пути.
+      if(ev.key==='Enter'){
+        ev.preventDefault();
+        scoreNavMode = !scoreNavMode;
+        el.classList.toggle('nav-mode', scoreNavMode);
+        return;
+      }
+      if(scoreNavMode && (ev.key==='ArrowUp' || ev.key==='ArrowDown')){
+        ev.preventDefault();
+        const i = parseInt(el.dataset.numI);
+        const target = document.querySelector(`[data-num-i="${ev.key==='ArrowUp' ? i-1 : i+1}"]`);
+        if(target){
+          el.classList.remove('nav-mode');
+          target.classList.add('nav-mode');
+          target.focus();
+        }
+        return;
+      }
+      if(/^[0-9]$/.test(ev.key)){
+        ev.preventDefault();
+        scoreNavMode = false;
+        el.classList.remove('nav-mode');
+        handleDigitKey(el, ev.key);
+        return;
+      }
+      if(ev.key==='Backspace' || ev.key==='Delete'){
+        ev.preventDefault();
+        const i = parseInt(el.dataset.numI);
+        levelTopics[i].score = null;
+        saveData(); renderSrezy(s);
+        const again = document.querySelector(`[data-num-i="${i}"]`);
+        if(again) again.focus();
+        return;
+      }
+      if(ev.key!=='Tab') ev.preventDefault();
     };
   });
 }
+let scorePendingOne = null;
+let scoreNavMode = false;
 
 function scoreInput(i, score){
   const val = score===null ? '' : score;
