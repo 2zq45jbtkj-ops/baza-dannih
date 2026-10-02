@@ -3764,7 +3764,10 @@ state.kbDicts = {
   dnWorkHigh: { core: KB_NOTES.slice(), pinned: [], added: [] },
   dnNewProblem: { core: KB_COMPLAINTS.slice(), pinned: [], added: [] },
   dnTool: { core: DN_TOOL_GROUPS.reduce((acc,g)=>acc.concat(g.items),[]), pinned: [], added: [] },
-  dnHwTopic: { core: catalogNames('A'), pinned: [], added: [] }
+  dnHwTopic: { core: catalogNames('A'), pinned: [], added: [] },
+  // PDF ученика — «над чем работаем» у каждой песни в «Песни в работе»
+  // (мультивыбор, тот же компонент Справочник, см. pdfSongFocusControl).
+  songFocus: { core: ['микст в припеве','ровный переход','мягкая атака','фразировка','опора на длинных фразах','вибрато на длинных нотах','тембр в нижней зоне','дыхание','резонанс','подача текста','динамика','артикуляция'], pinned: [], added: [] }
 };
 state.kbDictsLoaded = false;
 // Один общий "открытый справочник" за раз — так же, как в исходном
@@ -4916,7 +4919,9 @@ function pdfBuildModel(s, cache){
     experienceLevel: intake.experienceLevel || '',
     priorExperience: intake.priorExperience || '',
     currentFocus: intake.currentFocus || '',
-    songs: Array.isArray(intake.repertoireSongs) ? intake.repertoireSongs.map(x=>Object.assign({},x)) : [],
+    songs: Array.isArray(intake.repertoireSongs) ? intake.repertoireSongs.map(x=>Object.assign({}, x, {
+      comment: Array.isArray(x.comment) ? x.comment.slice() : (x.comment ? [x.comment] : [])
+    })) : [],
     topics: pdfBuildTopics(lessons),
     recordings: pdfPickRecordings(lessons),
     problems: pdfBuildProblems(lessons, intake.resolvedProblems),
@@ -4976,13 +4981,80 @@ function pdfEdBlock(label, innerHtml){
   </div>`;
 }
 
+// «Над чем работаем» у каждой песни — мультивыбор, тот же компонент
+// Справочник (чипы + попап + «Добавить свой вариант»), что и везде в
+// Кабинете (см. kbSpravochnikControl). Переиспользует общие kbDictRows/
+// kbDictChipRow/kbDictAddingHtml/kbTogglePin/kbDeleteDictOption (они уже
+// универсальны — читают/пишут только state.kbDicts, без привязки к intake),
+// но с собственным открытием/закрытием попапа и выбором (пишет в
+// model.songs[i].comment, а не в intake), т.к. это поле — одно на песню,
+// а не одно на ученика.
+function pdfSongFocusControl(songIdx, values){
+  const selected = Array.isArray(values) ? values : [];
+  const dd = state.kabinetDictDD;
+  const fieldKey = 'songFocus_' + songIdx;
+  const isAdding = dd.openKey === fieldKey && dd.adding;
+  const isOpen = dd.openKey === fieldKey && !dd.adding;
+
+  const valueHtml = selected.length
+    ? `<span class="kb-multi-chips">${selected.map(v=>`<span class="kb-multi-chip-tag">${pdfEsc(v)}</span>`).join('')}</span>`
+    : `<span class="kb-multi-placeholder" style="font-size:13px;">над чем работаем</span>`;
+
+  const addingHtml = kbDictAddingHtml('songFocus', fieldKey);
+
+  const triggerHtml = `
+    <button type="button" class="kb-multi-trigger" data-pdf-focus-toggle="${fieldKey}" style="border:1px solid #E4DCD1;border-radius:7px;padding:7px 9px;background:#fff;min-height:auto;">
+      ${valueHtml}
+      <span class="kb-multi-caret">${isOpen?'▲':'▼'}</span>
+    </button>`;
+
+  const rows = kbDictRows('songFocus');
+  const dropdownHtml = `
+    <div class="kb-dict-dropdown">
+      <div class="kb-dict-chip-grid">
+        ${rows.map(r=> kbDictChipRow('songFocus', r, selected.indexOf(r.label)>=0, 'data-pdf-focus-select')).join('')}
+      </div>
+      <div class="kb-dict-divider"></div>
+      <button type="button" data-pdf-focus-start-add="${fieldKey}" style="padding:9px 10px;border:none;background:none;border-radius:9px;color:#A8452C;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;">+ Добавить свой вариант</button>
+    </div>`;
+
+  return `<div class="kb-dict-wrap">
+    ${isAdding ? addingHtml : triggerHtml}
+    ${isOpen ? dropdownHtml : ''}
+  </div>`;
+}
+
+function pdfCommitSongFocusAdd(){
+  const dd = state.kabinetDictDD;
+  const raw = (dd.draft || '').trim();
+  if(!raw){ state.kabinetDictDD = Object.assign({}, dd, {error:'Пустое значение добавить нельзя.'}); pdfRenderOverlay(); return; }
+  const d = state.kbDicts.songFocus;
+  const all = d.core.concat(d.pinned, d.added);
+  if(all.some(x=>x.toLowerCase()===raw.toLowerCase())){
+    state.kabinetDictDD = Object.assign({}, dd, {error:'Такой вариант уже есть в списке.'});
+    pdfRenderOverlay();
+    return;
+  }
+  const nextDict = { core: d.core, pinned: d.pinned, added: d.added.concat([raw]) };
+  state.kbDicts.songFocus = nextDict;
+  saveFieldDict('songFocus', nextDict);
+  const idx = Number((dd.openKey||'').split('_')[1]);
+  state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+  if(!isNaN(idx) && state.pdfPreview && state.pdfPreview.model.songs[idx]){
+    const song = state.pdfPreview.model.songs[idx];
+    const cur = song.comment || [];
+    if(cur.indexOf(raw)===-1) song.comment = cur.concat([raw]);
+  }
+  pdfRenderOverlay();
+}
+
 function pdfSongsRowsHtml(songs){
   if(!songs.length) return '<div style="color:#A09488;font-size:12.5px;margin-bottom:8px;">Пока нет песен — добавь ниже.</div>';
   return songs.map((song,i)=>`
     <div data-pdf-song-idx="${i}" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
       <input type="text" data-pdf-song-field="title" value="${pdfEsc(song.title)}" placeholder="Песня" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
       <input type="text" data-pdf-song-field="artist" value="${pdfEsc(song.artist)}" placeholder="Исполнитель" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
-      <input type="text" data-pdf-song-field="comment" value="${pdfEsc(song.comment)}" placeholder="над чем работаем" style="flex:2;min-width:160px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+      <div style="flex:2;min-width:160px;">${pdfSongFocusControl(i, song.comment)}</div>
       <input type="text" data-pdf-song-field="key" value="${pdfEsc(song.key)}" placeholder="Fm" style="width:54px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
       <select data-pdf-song-field="status" style="width:112px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
         ${PDF_SONG_STATUSES.map(st=>`<option value="${st}" ${song.status===st?'selected':''}>${st}</option>`).join('')}
@@ -5052,7 +5124,7 @@ function pdfWireOverlay(){
 
   const addSongBtn = document.getElementById('pdfAddSongBtn');
   if(addSongBtn) addSongBtn.onclick = ()=>{
-    state.pdfPreview.model.songs.push({ title:'', artist:'', comment:'', key:'', status:'новая' });
+    state.pdfPreview.model.songs.push({ title:'', artist:'', comment:[], key:'', status:'новая' });
     pdfRenderOverlay();
   };
   el.querySelectorAll('[data-pdf-song-remove]').forEach(btn=>{
@@ -5081,6 +5153,66 @@ function pdfWireOverlay(){
       }
       pdfRenderOverlay();
     };
+  });
+
+  // «Над чем работаем» у песни — мультивыбор (см. pdfSongFocusControl).
+  el.querySelectorAll('[data-pdf-focus-toggle]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const key = btn.dataset.pdfFocusToggle;
+      const dd = state.kabinetDictDD;
+      const wasOpen = dd.openKey === key && !dd.adding;
+      state.kabinetDictDD = { openKey: wasOpen ? null : key, adding:false, draft:'', error:'', confirm:null };
+      pdfRenderOverlay();
+    };
+  });
+  el.querySelectorAll('[data-pdf-focus-select]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const idx = Number((state.kabinetDictDD.openKey||'').split('_')[1]);
+      const song = !isNaN(idx) && state.pdfPreview.model.songs[idx];
+      if(!song) return;
+      const label = btn.dataset.kbValue;
+      const cur = song.comment || [];
+      const i2 = cur.indexOf(label);
+      song.comment = i2>=0 ? cur.slice(0,i2).concat(cur.slice(i2+1)) : cur.concat([label]);
+      pdfRenderOverlay();
+    };
+  });
+  el.querySelectorAll('[data-pdf-focus-start-add]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      state.kabinetDictDD = { openKey: btn.dataset.pdfFocusStartAdd, adding:true, draft:'', error:'', confirm:null };
+      pdfRenderOverlay();
+    };
+  });
+  // Закрепить/удалить вариант из общего словаря songFocus — те же общие
+  // функции, что и везде в Кабинете (читают/пишут только state.kbDicts).
+  el.querySelectorAll('[data-kb-dict-pin]').forEach(btn=>{
+    btn.onclick = (e)=>{ e.stopPropagation(); kbTogglePin(btn.dataset.kbDictPin, btn.dataset.kbValue, state.pdfPreview.s); pdfRenderOverlay(); };
+  });
+  el.querySelectorAll('[data-kb-dict-delete-ask]').forEach(btn=>{
+    btn.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm: btn.dataset.kbDictDeleteAsk+'::'+btn.dataset.kbValue}); pdfRenderOverlay(); };
+  });
+  el.querySelectorAll('[data-kb-dict-delete-cancel]').forEach(btn=>{
+    btn.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {confirm:null}); pdfRenderOverlay(); };
+  });
+  el.querySelectorAll('[data-kb-dict-delete-confirm]').forEach(btn=>{
+    btn.onclick = (e)=>{ e.stopPropagation(); kbDeleteDictOption(btn.dataset.kbDictDeleteConfirm, btn.dataset.kbValue, state.pdfPreview.s); pdfRenderOverlay(); };
+  });
+  el.querySelectorAll('[data-kb-dict-draft]').forEach(inp=>{
+    inp.onclick = (e)=> e.stopPropagation();
+    inp.oninput = ()=>{ state.kabinetDictDD = Object.assign({}, state.kabinetDictDD, {draft: inp.value, error:''}); };
+    inp.onkeydown = (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); pdfCommitSongFocusAdd(); }
+      if(e.key==='Escape'){ state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null }; pdfRenderOverlay(); }
+    };
+  });
+  el.querySelectorAll('[data-kb-dict-commit]').forEach(btn=>{
+    btn.onclick = (e)=>{ e.stopPropagation(); pdfCommitSongFocusAdd(); };
+  });
+  el.querySelectorAll('[data-kb-dict-cancel-add]').forEach(btn=>{
+    btn.onclick = (e)=>{ e.stopPropagation(); state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null }; pdfRenderOverlay(); };
   });
 }
 
@@ -5177,7 +5309,7 @@ function pdfSongsCard(songs){
     return `<div class="pdf-row" style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #F0EAE1;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:12.5px;"><span style="font-weight:700;">${pdfEsc(song.title)}</span>${song.artist?` <span style="color:#6E645A;">— ${pdfEsc(song.artist)}</span>`:''}</div>
-        ${song.comment?`<div style="font-size:10.5px;color:#8A7E74;margin-top:2px;">${pdfEsc(song.comment)}</div>`:''}
+        ${(song.comment&&song.comment.length)?`<div style="font-size:10.5px;color:#8A7E74;margin-top:2px;">${pdfEsc(song.comment.join(', '))}</div>`:''}
       </div>
       <div class="mono" style="font-size:11px;color:#6E645A;width:56px;text-align:right;">${pdfEsc(song.key||'')}</div>
       <div style="width:96px;text-align:right;">${song.status?`<span style="display:inline-block;background:${st.bg};color:${st.color};font-size:10.5px;font-weight:700;border-radius:999px;padding:4px 10px;">${pdfEsc(song.status)}</span>`:''}</div>
@@ -5366,6 +5498,7 @@ function pdfRenderPrint(model){
 document.addEventListener('click', ()=>{
   if(!state.kabinetDictDD.openKey) return;
   state.kabinetDictDD = { openKey:null, adding:false, draft:'', error:'', confirm:null };
+  if(state.pdfPreview){ pdfRenderOverlay(); return; }
   const s = state.data.students.find(x=>x.id===state.activeStudentId);
   if(!s) return;
   if(state.activeTab==='profile') paintKabinet(s);
