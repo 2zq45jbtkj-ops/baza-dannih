@@ -8,8 +8,10 @@
 // lesson_log.takes (отдельного файлового хранилища для аудио пока нет) —
 // эндпоинт находит take с нужным publicToken и отдаёт его целиком (включая
 // peaks/markers) клиенту, который сам конвертирует dataUrl в Blob-URL перед
-// тем как отдать его в <audio> — на части мобильных браузеров огромный
-// data: URI прямо в src не проигрывался.
+// тем как отдать его плееру — на части мобильных браузеров огромный data:
+// URI прямо в src не проигрывался. Плеер — <video> (без видимого видео,
+// playsinline), а не <audio>: в Safari на iOS <audio> заглушается
+// аппаратным переключателем "Звонок/Бесшумно", а <video> — нет.
 const { queryRaw } = require('./_db');
 
 function escapeHtml(s) {
@@ -135,7 +137,7 @@ module.exports = async (req, res) => {
     var rateBtns = rateVals.map(function(v){ return '<button type="button" class="vr-rate-btn'+(v===1?' on':'')+'" data-rate="'+v+'">'+v+'×</button>'; }).join('');
 
     document.getElementById('vrBox').innerHTML =
-      '<audio id="vrAudio" src="'+audioSrc+'" preload="metadata" style="display:none;"></audio>'+
+      '<video id="vrAudio" src="'+audioSrc+'" preload="metadata" playsinline webkit-playsinline style="display:none;"></video>'+
       '<div class="vr-take-top">'+
         '<button type="button" class="vr-tr-btn" id="vrPlay">▶</button>'+
         '<div class="vr-take-title">'+escapeHtml(DATA.name)+'</div>'+

@@ -2584,6 +2584,9 @@ function vrTakeMetaLine(t){
   const vis = t.visibleToStudent!==false ? 'виден ученику' : 'только педагог';
   return [dateStr, dur, sizeStr, vis].filter(Boolean).join(' · ');
 }
+// Playback element is <video> (hidden, playsinline), not <audio>: on iOS
+// Safari <audio> gets silenced by the hardware ring/silent switch, <video>
+// doesn't — same trick used by api/recording.js's public player.
 function vrTakeRowDark(recKey, t){
   const rk = recKey + '_' + t.id;
   const bars = vrDownsample(t.peaks, 90);
@@ -2594,7 +2597,7 @@ function vrTakeRowDark(recKey, t){
   const rateVals = [0.5,0.75,1,1.25,1.5,1.75,2];
   const rateBtns = rateVals.map(v=>`<button type="button" class="vr-tr-btn vr-rate-btn${v===1?' on':''}" data-vr-rate-btn="${rk}" data-rate="${v}">${v}×</button>`).join('');
   return `<div class="vr-take${t._fresh?' fresh':''}" data-vr-row="${rk}">
-    <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
+    <video data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" playsinline webkit-playsinline style="display:none;"></video>
     <div class="vr-take-top">
       <button type="button" class="vr-tr-btn vr-tr-play" data-vr-play="${rk}" style="flex-shrink:0;">▶</button>
       <div class="vr-take-title" data-vr-title="${rk}" title="Нажмите, чтобы переименовать" style="flex:1;min-width:0;">${t.name}</div>
@@ -2621,7 +2624,7 @@ function vrTakeRowLight(ownerKey, t){
   const dur = t.durationSec || 0;
   const dlName = t.fileName || t.name;
   return `<div class="vr-light-row" data-vr-row="${rk}">
-    <audio data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" style="display:none;"></audio>
+    <video data-vr-audio="${rk}" src="${t.dataUrl||''}" preload="metadata" playsinline webkit-playsinline style="display:none;"></video>
     <button type="button" class="vr-light-play" data-vr-play="${rk}">▶</button>
     <div class="vr-light-mid">
       <div class="vr-light-title">${t.name}</div>
