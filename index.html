@@ -172,12 +172,93 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .srez-scores{display:flex;flex-wrap:wrap;gap:10px;}
 .srez-score-pill{background:var(--cream);border-radius:8px;padding:5px 10px;font-size:12.5px;}
 .srez-score-pill b{color:var(--terracotta-dark);}
-.rep-block{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
-.rep-block h4{margin:0 0 8px;font-size:14px;}
-.song-list{list-style:none;padding:0;margin:0;}
-.song-list li{padding:7px 0;border-bottom:1px solid var(--line);font-size:14px;}
-.song-list li:last-child{border-bottom:none;}
-textarea.rep-input{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;min-height:60px;resize:vertical;background:var(--panel);color:var(--text);}
+/* ---------- РЕПЕРТУАР (список песен + тёмный плеер) ----------
+   Фиксированная палитра из эталона (Репертуар.dc.html), не завязана на
+   var(--bg)/--panel — как и остальные компоненты плеера на сайте. */
+.rep-grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:24px;align-items:start;}
+.rep-list{display:flex;flex-direction:column;gap:6px;}
+.rep-list-title{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#A09488;margin:0 0 6px 4px;}
+.rep-row{cursor:pointer;padding:12px 14px;border-radius:12px;border:1px solid transparent;background:transparent;display:flex;align-items:center;gap:12px;}
+.rep-row:hover{background:#fff;}
+.rep-row.sel{background:#fff;border-color:#E0D6C8;}
+.rep-row-main{flex:1;min-width:0;}
+.rep-row-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#23201D;}
+.rep-row-artist{font-size:13px;color:#8A7E74;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rep-status-wrap{flex:none;position:relative;}
+.rep-status-btn{display:flex;align-items:center;gap:4px;border:none;cursor:pointer;font-size:11.5px;font-weight:700;padding:3px 7px 3px 8px;border-radius:6px;font-family:inherit;}
+.rep-status-arrow{font-size:9px;}
+.rep-status-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:150px;background:#fff;border:1px solid #E0D6C8;border-radius:10px;box-shadow:0 6px 20px rgba(35,32,29,.12);padding:4px;display:flex;flex-direction:column;gap:2px;}
+.rep-status-opt{display:flex;align-items:center;gap:8px;border:none;background:transparent;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:13px;font-weight:700;color:#23201D;text-align:left;font-family:inherit;}
+.rep-status-opt:hover,.rep-status-opt.on{background:#F4EFE8;}
+.rep-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.rep-add-btn{margin-top:6px;border:1px dashed #C9B7A4;background:none;color:#A8452C;font-size:14px;font-weight:700;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;}
+.rep-add-btn:hover{background:#EFE7DC;}
+.rep-empty{background:#fff;border:1px solid #ECE5DB;border-radius:18px;padding:26px 28px;font-size:14.5px;color:#6E645A;}
+.rep-card{background:#fff;border:1px solid #ECE5DB;border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
+.rep-player{background:#23201D;color:#FAF7F2;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
+.rep-player-head{display:flex;gap:16px;align-items:flex-start;}
+.rep-title-input,.rep-artist-input{display:block;width:100%;border:1px solid transparent;border-radius:8px;padding:2px 6px;margin-left:-7px;background:transparent;font-family:inherit;}
+.rep-title-input{font-size:28px;font-weight:800;letter-spacing:-.02em;color:#FAF7F2;}
+.rep-artist-input{font-size:15px;font-weight:600;color:#C9BEB2;margin-top:2px;}
+.rep-title-input:hover,.rep-title-input:focus,.rep-artist-input:hover,.rep-artist-input:focus{border-color:#4A433C;outline:none;}
+.rep-key-wrap{flex:none;text-align:right;}
+.rep-key-label{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#9A8E82;}
+.rep-key-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;margin-top:2px;}
+.rep-controls{display:flex;flex-direction:column;gap:14px;}
+.rep-transport{display:flex;align-items:center;gap:14px;}
+.rep-play-btn{flex:none;width:50px;height:50px;border-radius:50%;border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.rep-wave{flex:1;min-width:0;position:relative;height:47px;display:flex;align-items:center;gap:2px;cursor:pointer;}
+.rep-bar{flex:1;min-width:0;border-radius:2px;}
+.rep-pin{position:absolute;top:0;bottom:0;width:4px;margin-left:-2px;border-radius:2px;background:#6E9A5E;pointer-events:none;}
+.rep-sub-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.rep-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#A09488;margin-right:2px;}
+.rep-speed-btn{height:27px;padding:0 10px;border-radius:7px;border:1px solid #3A342E;background:transparent;color:#D8CFC5;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;}
+.rep-speed-btn.on{border-color:#A8452C;color:#C97B62;}
+.rep-markers-row{display:flex;gap:8px;flex-wrap:wrap;}
+.rep-chip{display:flex;align-items:center;background:#2E2A25;border-radius:6px;padding:0 1px 0 10px;height:27px;}
+.rep-chip-text{border:none;background:none;padding:0;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8DB27A;}
+.rep-chip-remove{border:none;background:none;padding:3px 6px;cursor:pointer;font-size:9px;color:#9A8E82;opacity:0;}
+.rep-chip:hover .rep-chip-remove{opacity:1;}
+.rep-marker-add{height:27px;padding:0 10px;border-radius:6px;border:1px dashed #4A433C;background:transparent;color:#8DB27A;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;}
+.rep-tracks{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid #3A342E;}
+.rep-track-row{display:flex;align-items:center;gap:14px;min-width:0;background:#2C2824;border-radius:11px;padding:10px 14px;}
+.rep-track-label{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#E2A48F;width:58px;}
+.rep-track-info{flex:1;min-width:0;}
+.rep-track-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rep-track-dur{font-family:'JetBrains Mono',monospace;font-size:11px;color:#9A8E82;margin-top:1px;}
+.rep-vol{flex:none;display:flex;align-items:center;gap:10px;width:230px;}
+.rep-vol-icon{font-size:13px;color:#9A8E82;}
+.rep-vol input[type=range]{flex:1;min-width:0;accent-color:#E2A48F;cursor:pointer;}
+.rep-vol-val{width:38px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#C9BEB2;}
+.rep-track-replace{flex:none;border:none;background:none;color:#E2A48F;font-size:12px;font-weight:700;cursor:pointer;padding:2px;font-family:inherit;}
+.rep-track-remove{flex:none;border:none;background:none;color:#9A8E82;font-size:14px;cursor:pointer;padding:2px;}
+.rep-track-upload{flex:1;border:1px dashed #5A524A;border-radius:8px;background:none;color:#E2A48F;font-size:12.5px;font-weight:700;cursor:pointer;padding:8px 10px;text-align:left;font-family:inherit;}
+.rep-fields{display:grid;grid-template-columns:110px 160px minmax(0,1fr);gap:12px;}
+.rep-field-label{display:flex;flex-direction:column;gap:5px;}
+.rep-field-label>span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#A09488;}
+.rep-field-input{padding:9px 12px;border:1px solid #E0D6C8;border-radius:10px;font-size:14px;font-weight:700;color:#23201D;background:#fff;font-family:inherit;}
+.rep-field-input.date{font-weight:600;}
+.rep-link-row{display:flex;gap:8px;}
+.rep-link-input{flex:1;min-width:0;padding:9px 12px;border:1px solid #E0D6C8;border-radius:10px;font-size:14px;font-weight:600;color:#23201D;background:#fff;font-family:inherit;}
+.rep-link-badge{flex:none;display:flex;align-items:center;padding:0 10px;border-radius:10px;background:#F4EFE8;font-size:13px;font-weight:700;color:#A8452C;text-decoration:none;}
+.rep-lyrics{display:flex;flex-direction:column;gap:10px;}
+.rep-lyrics-head{display:flex;align-items:center;justify-content:space-between;}
+.rep-lyrics-title{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#A09488;}
+.rep-lyrics-edit-btn{border:1px solid #E4DCD1;background:#fff;color:#6E645A;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:9px;cursor:pointer;font-family:inherit;}
+.rep-lyrics-edit-btn:hover{background:#F4EFE8;}
+.rep-lyrics-textarea{box-sizing:border-box;width:100%;resize:vertical;padding:12px 14px;border:1px solid #E0D6C8;border-radius:12px;font-size:14px;line-height:1.55;color:#23201D;background:#fff;font-family:inherit;}
+.rep-lyrics-hint{font-size:12.5px;color:#8A7E74;}
+.rep-lyrics-box{background:#FAF7F2;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.rep-lyrics-lines{font-size:14.5px;line-height:1.6;color:#3A342E;}
+.rep-lyrics-line{min-height:10px;}
+.rep-lyrics-more{align-self:flex-start;border:none;background:none;color:#A8452C;font-size:13px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;}
+.rep-lyrics-add{border:1px dashed #C9B7A4;background:none;color:#A8452C;font-size:14px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;text-align:left;font-family:inherit;}
+.rep-notes-label{display:flex;flex-direction:column;gap:8px;}
+.rep-notes-label>span{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#A09488;}
+.rep-notes-textarea{box-sizing:border-box;width:100%;resize:vertical;padding:11px 14px;border:1px solid #E0D6C8;border-radius:12px;font-size:14px;line-height:1.5;color:#23201D;background:#fff;font-family:inherit;}
+.rep-delete-row{display:flex;justify-content:flex-end;}
+.rep-delete-btn{border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;color:#A09488;font-family:inherit;}
+.rep-delete-btn.confirm{color:#A8452C;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
 
 /* ---------- CARD TAB (anamnesis + lessons) ---------- */
@@ -886,7 +967,17 @@ const state = {
   diaryEditRec: {},
   dnSaveChain: {},
   dnSaveSeq: {},
-  dnPending: {}
+  dnPending: {},
+  repCache: {},
+  repSel: {},
+  repOpenLyrics: {},
+  repEditLyrics: {},
+  repStatusOpen: null,
+  repConfirmDelete: null,
+  repPlay: { id: null, on: false, pos: 0 },
+  repRates: {},
+  repTimerHandle: null,
+  repSaveChain: {}
 };
 const LAST_STUDENT_KEY = 'bd_last_student_id';
 function setActiveStudentId(id){
@@ -1841,33 +1932,568 @@ function renderVariantScale(s, compareList, levelTopics, isAll, autoMode){
   `;
 }
 
-/* ---------- REPERTOIRE TAB ---------- */
+/* ============================================================
+   REPERTOIRE TAB — список песен ученика с тёмным плеером
+   (раздельные дорожки «Голос»/«Музыка», метки, текст песни).
+   Собрано строго по присланному эталону (Репертуар.dc.html) и ПРОМТу.
+   Бэкенд: /api/player-tracks (Postgres, таблица player_tracks).
+   Аудио хранится как data: URL (base64), как и остальные записи в
+   проекте — переход на Vercel Blob сознательно отложен (см. ПРОМТ).
+   ============================================================ */
+const REP_STATUS = {
+  work: ['в работе', '#9A6A1F', '#F6EFE2'],
+  ready: ['готова', '#4C7A45', '#EFF5EE'],
+  hold: ['отложена', '#8A7E74', '#F0EAE1']
+};
+const REP_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+// Дорожки воспроизведения — два постоянных элемента вне цикла рендера,
+// чтобы полный перерисовка карточки (смена полей, статуса, меток) не
+// прерывала воспроизведение. <video>, а не <audio>: на iOS Safari <audio>
+// заглушается аппаратным переключателем «Звонок/Бесшумно», видео — нет
+// (тот же приём, что и vrTakeRowDark/Light в плеере записей урока).
+let repVideoVoice = null, repVideoMusic = null;
+function repVideoFor(kind){
+  if(kind==='voice'){
+    if(!repVideoVoice){
+      repVideoVoice = document.createElement('video');
+      repVideoVoice.setAttribute('playsinline',''); repVideoVoice.setAttribute('webkit-playsinline','');
+      repVideoVoice.preload = 'metadata'; repVideoVoice.style.display = 'none';
+      document.body.appendChild(repVideoVoice);
+    }
+    return repVideoVoice;
+  }
+  if(!repVideoMusic){
+    repVideoMusic = document.createElement('video');
+    repVideoMusic.setAttribute('playsinline',''); repVideoMusic.setAttribute('webkit-playsinline','');
+    repVideoMusic.preload = 'metadata'; repVideoMusic.style.display = 'none';
+    document.body.appendChild(repVideoMusic);
+  }
+  return repVideoMusic;
+}
+// Безопасно вызывать на каждый тик — не трогает src/currentTime, если
+// дорожка уже указывает на этот же файл этой же песни.
+function repSyncVideoSrc(song, kind){
+  const url = (song[kind] && song[kind].url) || '';
+  if(!url) return null;
+  const v = repVideoFor(kind);
+  const tag = song.id + '::' + url;
+  if(v.dataset.repTag !== tag){
+    v.pause();
+    v.src = url;
+    v.dataset.repTag = tag;
+  }
+  return v;
+}
+function repPauseAll(){
+  if(repVideoVoice) repVideoVoice.pause();
+  if(repVideoMusic) repVideoMusic.pause();
+}
+
+function repCache(s){ return state.repCache[s.id] || (state.repCache[s.id] = {songs: null}); }
+
 function renderRepertoire(s){
   const c = document.getElementById('tabContent');
-  c.innerHTML = `
-    <div class="rep-block">
-      <h4>Сейчас работаем над</h4>
-      <textarea class="rep-input" id="repCurrent" placeholder="Например: «Ты у меня одна», разбор дыхания и опоры на припеве">${s.repertoire.current||''}</textarea>
-    </div>
-    <div class="rep-block">
-      <h4>Хотим спеть в будущем</h4>
-      <ul class="song-list" id="futureList">
-        ${s.repertoire.future.map((song,i)=>`<li>${song} <span style="float:right;color:var(--muted);cursor:pointer;" data-remove-i="${i}">✕</span></li>`).join('') || '<li style="color:var(--muted);">Список пуст</li>'}
-      </ul>
-      <div style="margin-top:10px;display:flex;gap:8px;">
-        <input type="text" id="futureInput" placeholder="Название песни / исполнитель" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-family:inherit;font-size:14px;background:var(--panel);color:var(--text);">
-        <button id="addFutureBtn" style="padding:9px 16px;border-radius:8px;border:none;background:var(--terracotta);color:#fff;font-weight:600;cursor:pointer;">Добавить</button>
-      </div>
-    </div>
-  `;
-  document.getElementById('repCurrent').onblur = (e)=>{ s.repertoire.current = e.target.value; saveData(); };
-  document.getElementById('addFutureBtn').onclick = ()=>{
-    const input = document.getElementById('futureInput');
-    if(input.value.trim()){ s.repertoire.future.push(input.value.trim()); saveData(); renderRepertoire(s); }
-  };
-  c.querySelectorAll('[data-remove-i]').forEach(el=>{
-    el.onclick = ()=>{ s.repertoire.future.splice(parseInt(el.dataset.removeI),1); saveData(); renderRepertoire(s); };
+  const cache = repCache(s);
+  if(cache.songs){ repRenderAll(s); return; }
+  c.innerHTML = `<div class="kb-loading">Загружаю репертуар…</div>`;
+  apiGet('/api/player-tracks?studentId=' + encodeURIComponent(s.id)).then(res=>{
+    cache.songs = res.songs || [];
+    if(!state.repSel[s.id] && cache.songs.length) state.repSel[s.id] = cache.songs[0].id;
+    repRenderAll(s);
+  }).catch(err=>{
+    c.innerHTML = `<div class="card-error">Не удалось загрузить репертуар: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`;
   });
+}
+
+function repFmt(t){ t = Math.max(0, Math.round(t||0)); return Math.floor(t/60) + ':' + String(t%60).padStart(2,'0'); }
+function repMmss(t){ t = Math.max(0, Math.floor(t||0)); return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0'); }
+function repDur(song){ return Math.max(song.voice ? song.voice.durationSec||0 : 0, song.music ? song.music.durationSec||0 : 0); }
+function repPlural(n){ const a = n%10, b = n%100; return n + ' ' + (a===1 && b!==11 ? 'строка' : a>=2 && a<=4 && (b<12||b>14) ? 'строки' : 'строк'); }
+
+function repPatch(s, song, patch){
+  Object.assign(song, patch);
+  const chain = (state.repSaveChain[song.id] || Promise.resolve()).then(()=>
+    apiSend('/api/player-tracks?id=' + encodeURIComponent(song.id), 'PATCH', patch).then(res=>{
+      if(res && res.song) Object.assign(song, res.song);
+    }).catch(err=>{ alert('Не удалось сохранить: ' + (err.message||err)); })
+  );
+  state.repSaveChain[song.id] = chain.catch(()=>{});
+  return chain;
+}
+
+function repAddSong(s){
+  apiSend('/api/player-tracks', 'POST', {studentId: s.id}).then(res=>{
+    const cache = repCache(s);
+    cache.songs = (cache.songs||[]).concat([res.song]);
+    state.repSel[s.id] = res.song.id;
+    state.repConfirmDelete = null;
+    repRenderAll(s);
+  }).catch(err=> alert('Не удалось создать песню: ' + (err.message||err)));
+}
+
+function repDeleteClick(s, song){
+  if(state.repConfirmDelete !== song.id){ state.repConfirmDelete = song.id; repRenderAll(s); return; }
+  if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
+  apiSend('/api/player-tracks?id=' + encodeURIComponent(song.id), 'DELETE', {}).then(()=>{
+    const cache = repCache(s);
+    cache.songs = (cache.songs||[]).filter(x=>x.id!==song.id);
+    state.repConfirmDelete = null;
+    const first = cache.songs[0];
+    state.repSel[s.id] = first ? first.id : null;
+    repRenderAll(s);
+  }).catch(err=> alert('Не удалось удалить: ' + (err.message||err)));
+}
+
+async function repRecomputePeaks(s, song){
+  const urls = ['voice','music'].map(k=> song[k] && song[k].url).filter(Boolean);
+  let peaks = [];
+  if(urls.length){
+    try{
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const N = 90, out = new Array(N).fill(0);
+      for(const u of urls){
+        const buf = await ctx.decodeAudioData(await (await fetch(u)).arrayBuffer());
+        const ch = buf.getChannelData(0);
+        const step = Math.floor(ch.length/N) || 1;
+        for(let i=0;i<N;i++){
+          let m = 0;
+          for(let j=i*step; j<(i+1)*step && j<ch.length; j+=16) m = Math.max(m, Math.abs(ch[j]));
+          out[i] = Math.max(out[i], m);
+        }
+      }
+      ctx.close();
+      const mx = Math.max(...out) || 1;
+      peaks = out.map(v=> v/mx);
+    } catch(e){ peaks = []; }
+  }
+  await repPatch(s, song, {peaks});
+  repRenderAll(s);
+}
+
+function repUploadTrack(s, song, kind){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'audio/*';
+  inp.onchange = ()=>{
+    const f = inp.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const dataUrl = reader.result;
+      const probe = document.createElement('audio');
+      probe.preload = 'metadata';
+      probe.onloadedmetadata = ()=>{
+        const durationSec = probe.duration || 0;
+        if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
+        repPatch(s, song, {[kind]: {name: f.name, url: dataUrl, durationSec}}).then(()=>{
+          repRenderAll(s);
+          repRecomputePeaks(s, song);
+        });
+      };
+      probe.src = dataUrl;
+    };
+    reader.readAsDataURL(f);
+  };
+  inp.click();
+}
+function repRemoveTrack(s, song, kind){
+  if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
+  repPatch(s, song, {[kind]: null}).then(()=>{
+    repRenderAll(s);
+    repRecomputePeaks(s, song);
+  });
+}
+
+function repToggle(song){
+  if(!song.voice && !song.music) return;
+  const p = state.repPlay;
+  const vv = repSyncVideoSrc(song,'voice'), vm = repSyncVideoSrc(song,'music');
+  const vol = song.volumes || {voice:80, music:80};
+  const rate = state.repRates[song.id] || 1;
+  if(vv){ vv.playbackRate = rate; vv.volume = (vol.voice!=null?vol.voice:80)/100; }
+  if(vm){ vm.playbackRate = rate; vm.volume = (vol.music!=null?vol.music:80)/100; }
+  if(p.id === song.id && p.on){
+    repPauseAll();
+    state.repPlay = {...p, on:false};
+    repPaintPlayback(song);
+    return;
+  }
+  repPauseAll();
+  const pos = p.id === song.id ? p.pos : 0;
+  if(vv){ vv.currentTime = pos; vv.play().catch(()=>{}); }
+  if(vm){ vm.currentTime = pos; vm.play().catch(()=>{}); }
+  state.repPlay = {id: song.id, on:true, pos};
+  repPaintPlayback(song);
+  repStartTimer();
+}
+function repSeekTo(song, pos){
+  const vv = repSyncVideoSrc(song,'voice'), vm = repSyncVideoSrc(song,'music');
+  if(vv) vv.currentTime = pos;
+  if(vm) vm.currentTime = pos;
+  const p = state.repPlay;
+  if(p.id !== song.id && p.on) repPauseAll();
+  state.repPlay = {id: song.id, on: p.id===song.id ? p.on : false, pos};
+  repPaintPlayback(song);
+}
+function repSeekFromEvent(song, e){
+  const d = repDur(song); if(!d) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pos = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width)) * d;
+  repSeekTo(song, pos);
+}
+function repStartTimer(){
+  clearInterval(state.repTimerHandle);
+  state.repTimerHandle = setInterval(()=>{
+    const p = state.repPlay;
+    if(!p.on){ clearInterval(state.repTimerHandle); return; }
+    const s = state.data.students.find(x=>x.id===state.activeStudentId);
+    if(!s){ clearInterval(state.repTimerHandle); return; }
+    const cache = repCache(s);
+    const song = (cache.songs||[]).find(x=>x.id===p.id);
+    if(!song){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; clearInterval(state.repTimerHandle); return; }
+    const vv = song.voice ? repSyncVideoSrc(song,'voice') : null;
+    const vm = song.music ? repSyncVideoSrc(song,'music') : null;
+    const pos = vv ? vv.currentTime : (vm ? vm.currentTime : p.pos);
+    const d = repDur(song);
+    if(d && pos >= d - 0.05){
+      repPauseAll();
+      state.repPlay = {id: song.id, on:false, pos:0};
+      repPaintPlayback(song);
+      clearInterval(state.repTimerHandle);
+      return;
+    }
+    state.repPlay = {...p, pos};
+    repPaintPlayback(song);
+  }, 200);
+}
+// Точечное обновление волны/времени/кнопки play — без перерисовки всей
+// карточки, чтобы тик таймера (5 раз/сек) не дёргал DOM лишний раз.
+function repPaintPlayback(song){
+  const wave = document.getElementById('repWave');
+  if(!wave || wave.getAttribute('data-song-id') !== song.id) return;
+  const p = state.repPlay;
+  const mine = p.id === song.id;
+  const d = repDur(song);
+  const prog = d && mine ? p.pos/d : 0;
+  const peaks = (song.peaks && song.peaks.length===90) ? song.peaks : new Array(90).fill(0);
+  const bars = wave.querySelectorAll('.rep-bar');
+  bars.forEach((bar,i)=>{
+    const played = d>0 && (i+0.5)/peaks.length <= prog;
+    bar.style.background = played ? '#C97B62' : '#5E554C';
+  });
+  const timeEl = document.getElementById('repTimeText');
+  if(timeEl) timeEl.textContent = repFmt(mine?p.pos:0) + ' / ' + repMmss(d);
+  const btn = document.getElementById('repPlayBtn');
+  if(btn){
+    btn.textContent = (mine && p.on) ? '❚❚' : '▶';
+    btn.style.background = (song.voice||song.music) ? '#A8452C' : '#CFC4B8';
+  }
+}
+
+function repAddMarker(s, song){
+  const d = repDur(song); if(!d) return;
+  const mine = state.repPlay.id === song.id;
+  const t = Math.round((mine?state.repPlay.pos:0)*10)/10;
+  const markers = (song.markers||[]).concat([{t, label:'Метка ' + ((song.markers||[]).length+1)}]).sort((a,b)=>a.t-b.t);
+  repPatch(s, song, {markers}).then(()=> repRenderAll(s));
+}
+function repRemoveMarker(s, song, idx){
+  const markers = (song.markers||[]).filter((_,i)=>i!==idx);
+  repPatch(s, song, {markers}).then(()=> repRenderAll(s));
+}
+
+function repSetRate(s, song, r){
+  state.repRates[song.id] = r;
+  if(repVideoVoice && repVideoVoice.dataset.repTag && repVideoVoice.dataset.repTag.indexOf(song.id+'::')===0) repVideoVoice.playbackRate = r;
+  if(repVideoMusic && repVideoMusic.dataset.repTag && repVideoMusic.dataset.repTag.indexOf(song.id+'::')===0) repVideoMusic.playbackRate = r;
+  repRenderAll(s);
+}
+
+function repSetStatus(s, song, status){
+  repPatch(s, song, {status});
+  state.repStatusOpen = null;
+  repRenderAll(s);
+}
+
+function repListHtml(songs, selSong){
+  const rows = songs.map(song=>{
+    const st = REP_STATUS[song.status] || REP_STATUS.work;
+    const isSel = selSong && selSong.id===song.id;
+    const menuOpen = state.repStatusOpen === song.id;
+    const menu = Object.keys(REP_STATUS).map(k=>{
+      const on = song.status===k;
+      return `<button type="button" class="rep-status-opt${on?' on':''}" data-rep-status-opt="${song.id}" data-status="${k}"><span class="rep-status-dot" style="background:${REP_STATUS[k][1]};"></span>${REP_STATUS[k][0]}</button>`;
+    }).join('');
+    return `
+    <div class="rep-row${isSel?' sel':''}" data-rep-row="${song.id}">
+      <div class="rep-row-main">
+        <div class="rep-row-title">${song.title||'Без названия'}</div>
+        <div class="rep-row-artist">${song.artist||'—'}</div>
+      </div>
+      <div class="rep-status-wrap">
+        <button type="button" class="rep-status-btn" data-rep-status-btn="${song.id}" style="color:${st[1]};background:${st[2]};">${st[0]}<span class="rep-status-arrow">▾</span></button>
+        ${menuOpen ? `<div class="rep-status-menu">${menu}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="rep-list">
+      <div class="rep-list-title">Песни · ${songs.length}</div>
+      ${rows}
+      <button type="button" class="rep-add-btn" id="repAddBtn">+ Добавить песню</button>
+    </div>`;
+}
+
+function repTrackRowHtml(song, kind, label){
+  const t = song[kind];
+  if(t){
+    const vol = (song.volumes && song.volumes[kind]!=null) ? song.volumes[kind] : 80;
+    return `
+    <div class="rep-track-row">
+      <div class="rep-track-label">${label}</div>
+      <div class="rep-track-info">
+        <div class="rep-track-name">${t.name}</div>
+        <div class="rep-track-dur">${repFmt(t.durationSec)}</div>
+      </div>
+      <div class="rep-vol">
+        <span class="rep-vol-icon">🔈</span>
+        <input type="range" min="0" max="100" value="${vol}" data-rep-vol="${kind}">
+        <span class="rep-vol-val" id="repVolVal_${kind}">${vol}%</span>
+      </div>
+      <button type="button" class="rep-track-replace" data-rep-upload="${kind}">Заменить</button>
+      <button type="button" class="rep-track-remove" data-rep-remove="${kind}" title="Удалить файл">✕</button>
+    </div>`;
+  }
+  return `
+    <div class="rep-track-row">
+      <div class="rep-track-label">${label}</div>
+      <button type="button" class="rep-track-upload" data-rep-upload="${kind}">+ Загрузить файл</button>
+    </div>`;
+}
+
+function repCardHtml(song){
+  const d = repDur(song);
+  const peaks = (song.peaks && song.peaks.length===90) ? song.peaks : new Array(90).fill(0);
+  const p = state.repPlay;
+  const mine = p.id === song.id;
+  const prog = d && mine ? p.pos/d : 0;
+  const bars = peaks.map((v,i)=>{
+    const h = Math.max(8, Math.round(v*47)) + 'px';
+    const played = d>0 && (i+0.5)/peaks.length <= prog;
+    return `<div class="rep-bar" style="height:${h};background:${played?'#C97B62':'#5E554C'};"></div>`;
+  }).join('');
+  const pins = d ? (song.markers||[]).map(m=> `<div class="rep-pin" style="left:${Math.min(100,(m.t/d)*100)}%;"></div>`).join('') : '';
+  const timeText = repFmt(mine?p.pos:0) + ' / ' + repMmss(d);
+  const playIcon = (mine && p.on) ? '❚❚' : '▶';
+  const playBg = (song.voice||song.music) ? '#A8452C' : '#CFC4B8';
+  const rate = state.repRates[song.id] || 1;
+  const speedBtns = REP_SPEEDS.map(r=>{
+    const on = rate===r;
+    return `<button type="button" class="rep-speed-btn${on?' on':''}" data-rep-speed="${r}">${r}×</button>`;
+  }).join('');
+  const chips = (song.markers||[]).map((m,i)=> `
+    <div class="rep-chip">
+      <button type="button" class="rep-chip-text" data-rep-marker-seek="${i}">${repMmss(m.t)} ${m.label}</button>
+      <button type="button" class="rep-chip-remove" data-rep-marker-remove="${i}" title="Удалить метку">✕</button>
+    </div>`).join('');
+
+  const all = song.lyrics ? song.lyrics.split('\n') : [];
+  const nonEmptyCount = all.filter(l=>l.trim()).length;
+  const open = !!state.repOpenLyrics[song.id];
+  const editing = !!state.repEditLyrics[song.id];
+  const lines = (open ? all : all.slice(0,3)).map(t=> `<div class="rep-lyrics-line">${t}</div>`).join('');
+  const editLabel = editing ? 'Готово' : (nonEmptyCount ? 'Изменить текст' : 'Вставить текст');
+  const delConfirm = state.repConfirmDelete === song.id;
+
+  return `
+    <div class="rep-card">
+      <div class="rep-player">
+        <div class="rep-player-head">
+          <div style="flex:1;min-width:0;">
+            <input class="rep-title-input" id="repTitleInput" value="${song.title||''}" placeholder="Название песни">
+            <input class="rep-artist-input" id="repArtistInput" value="${song.artist||''}" placeholder="Имя артиста">
+          </div>
+          <div class="rep-key-wrap">
+            <div class="rep-key-label">Тональность</div>
+            <div class="rep-key-val">${song.key || '—'}</div>
+          </div>
+        </div>
+        <div class="rep-controls">
+          <div class="rep-transport">
+            <button type="button" class="rep-play-btn" id="repPlayBtn" style="background:${playBg};">${playIcon}</button>
+            <div class="rep-wave" id="repWave" data-song-id="${song.id}">${bars}${pins}</div>
+          </div>
+          <div class="rep-sub-row">
+            <span class="rep-time" id="repTimeText">${timeText}</span>
+            ${speedBtns}
+          </div>
+          <div class="rep-markers-row">
+            ${chips}
+            <button type="button" class="rep-marker-add" id="repMarkerAdd">+ Метка</button>
+          </div>
+        </div>
+        <div class="rep-tracks">
+          ${repTrackRowHtml(song,'voice','ГОЛОС')}
+          ${repTrackRowHtml(song,'music','МУЗЫКА')}
+        </div>
+      </div>
+
+      <div class="rep-fields">
+        <label class="rep-field-label">
+          <span>Тональность</span>
+          <input class="rep-field-input" id="repKeyInput" value="${song.key||''}" placeholder="напр. Am">
+        </label>
+        <label class="rep-field-label">
+          <span>Дата начала</span>
+          <input class="rep-field-input date" id="repStartInput" type="date" lang="ru" value="${song.startDate||''}">
+        </label>
+        <label class="rep-field-label">
+          <span>Ссылка на Moises</span>
+          <div class="rep-link-row">
+            <input class="rep-link-input" id="repLinkInput" value="${song.moisesLink||''}" placeholder="https://studio.moises.ai/…">
+            ${song.moisesLink ? `<a class="rep-link-badge" href="${song.moisesLink}" target="_blank" rel="noopener">Moises ↗</a>` : ''}
+          </div>
+        </label>
+      </div>
+
+      <div class="rep-lyrics">
+        <div class="rep-lyrics-head">
+          <div class="rep-lyrics-title">Текст песни · ${nonEmptyCount ? repPlural(nonEmptyCount) : 'пусто'}</div>
+          <button type="button" class="rep-lyrics-edit-btn" id="repLyricsEditBtn">${editLabel}</button>
+        </div>
+        ${editing ? `
+          <textarea class="rep-lyrics-textarea" id="repLyricsTextarea" rows="12" placeholder="Вставьте текст песни. Каждая строка с новой строки, куплеты разделяйте пустой строкой.">${song.lyrics||''}</textarea>
+          <div class="rep-lyrics-hint">Этот текст увидит ученик в приложении.</div>
+        ` : (nonEmptyCount ? `
+          <div class="rep-lyrics-box">
+            <div class="rep-lyrics-lines">${lines}</div>
+            ${all.length>3 ? `<button type="button" class="rep-lyrics-more" id="repLyricsMore">${open?'Свернуть':'Показать весь текст'}</button>` : ''}
+          </div>
+        ` : `<button type="button" class="rep-lyrics-add" id="repLyricsAdd">+ Вставить текст песни</button>`)}
+      </div>
+
+      <label class="rep-notes-label">
+        <span>Заметки преподавателя</span>
+        <textarea class="rep-notes-textarea" id="repNotesInput" rows="3" placeholder="Сложные места, на что обратить внимание…">${song.notes||''}</textarea>
+      </label>
+
+      <div class="rep-delete-row">
+        <button type="button" class="rep-delete-btn${delConfirm?' confirm':''}" id="repDeleteBtn">${delConfirm?'Точно удалить песню? Нажмите ещё раз':'Удалить песню'}</button>
+      </div>
+    </div>`;
+}
+
+function repRenderAll(s){
+  const c = document.getElementById('tabContent');
+  const cache = repCache(s);
+  const songs = cache.songs || [];
+  const selId = state.repSel[s.id];
+  const song = songs.find(x=>x.id===selId) || songs[0] || null;
+  if(song && state.repSel[s.id] !== song.id) state.repSel[s.id] = song.id;
+  c.innerHTML = `<div class="rep-grid">${repListHtml(songs, song)}${song ? repCardHtml(song) : '<div class="rep-empty">Песен пока нет. Нажмите «+ Добавить песню».</div>'}</div>`;
+  repWireList(s, songs);
+  if(song) repWireCard(s, song);
+}
+
+function repWireList(s, songs){
+  const c = document.getElementById('tabContent');
+  const addBtn = document.getElementById('repAddBtn');
+  if(addBtn) addBtn.onclick = ()=> repAddSong(s);
+  songs.forEach(song=>{
+    const row = c.querySelector(`[data-rep-row="${song.id}"]`);
+    if(row) row.onclick = (e)=>{
+      if(e.target.closest('.rep-status-wrap')) return;
+      state.repSel[s.id] = song.id;
+      state.repConfirmDelete = null;
+      state.repStatusOpen = null;
+      repRenderAll(s);
+    };
+    const statusBtn = c.querySelector(`[data-rep-status-btn="${song.id}"]`);
+    if(statusBtn) statusBtn.onclick = (e)=>{
+      e.stopPropagation();
+      state.repStatusOpen = state.repStatusOpen===song.id ? null : song.id;
+      repRenderAll(s);
+    };
+    c.querySelectorAll(`[data-rep-status-opt="${song.id}"]`).forEach(btn=>{
+      btn.onclick = (e)=>{ e.stopPropagation(); repSetStatus(s, song, btn.dataset.status); };
+    });
+  });
+}
+
+function repWireCard(s, song){
+  const c = document.getElementById('tabContent');
+  const titleInp = document.getElementById('repTitleInput');
+  if(titleInp) titleInp.onblur = e=>{ repPatch(s, song, {title: e.target.value}).then(()=> repRenderAll(s)); };
+  const artistInp = document.getElementById('repArtistInput');
+  if(artistInp) artistInp.onblur = e=>{ repPatch(s, song, {artist: e.target.value}).then(()=> repRenderAll(s)); };
+  const keyInp = document.getElementById('repKeyInput');
+  if(keyInp) keyInp.onblur = e=>{ repPatch(s, song, {key: e.target.value}).then(()=> repRenderAll(s)); };
+  const startInp = document.getElementById('repStartInput');
+  if(startInp) startInp.onchange = e=>{ repPatch(s, song, {startDate: e.target.value}); };
+  const linkInp = document.getElementById('repLinkInput');
+  if(linkInp) linkInp.onblur = e=>{ repPatch(s, song, {moisesLink: e.target.value}).then(()=> repRenderAll(s)); };
+  const notesInp = document.getElementById('repNotesInput');
+  if(notesInp) notesInp.onblur = e=>{ repPatch(s, song, {notes: e.target.value}); };
+
+  const playBtn = document.getElementById('repPlayBtn');
+  if(playBtn) playBtn.onclick = ()=> repToggle(song);
+  const wave = document.getElementById('repWave');
+  if(wave) wave.onclick = e=> repSeekFromEvent(song, e);
+
+  c.querySelectorAll('[data-rep-speed]').forEach(btn=>{
+    btn.onclick = ()=> repSetRate(s, song, parseFloat(btn.dataset.repSpeed));
+  });
+  const markerAdd = document.getElementById('repMarkerAdd');
+  if(markerAdd) markerAdd.onclick = ()=> repAddMarker(s, song);
+  c.querySelectorAll('[data-rep-marker-seek]').forEach(btn=>{
+    btn.onclick = ()=>{ const m = (song.markers||[])[parseInt(btn.dataset.repMarkerSeek)]; if(m) repSeekTo(song, m.t); };
+  });
+  c.querySelectorAll('[data-rep-marker-remove]').forEach(btn=>{
+    btn.onclick = ()=> repRemoveMarker(s, song, parseInt(btn.dataset.repMarkerRemove));
+  });
+
+  ['voice','music'].forEach(kind=>{
+    const uploadBtn = c.querySelector(`[data-rep-upload="${kind}"]`);
+    if(uploadBtn) uploadBtn.onclick = ()=> repUploadTrack(s, song, kind);
+    const removeBtn = c.querySelector(`[data-rep-remove="${kind}"]`);
+    if(removeBtn) removeBtn.onclick = ()=> repRemoveTrack(s, song, kind);
+    const volInp = c.querySelector(`[data-rep-vol="${kind}"]`);
+    if(volInp){
+      volInp.oninput = e=>{
+        const v = parseInt(e.target.value);
+        const video = kind==='voice' ? repVideoVoice : repVideoMusic;
+        if(video) video.volume = v/100;
+        const valEl = document.getElementById('repVolVal_'+kind);
+        if(valEl) valEl.textContent = v + '%';
+      };
+      volInp.onchange = e=>{
+        const v = parseInt(e.target.value);
+        const volumes = Object.assign({voice:80,music:80}, song.volumes, {[kind]: v});
+        repPatch(s, song, {volumes});
+      };
+    }
+  });
+
+  const lyricsEditBtn = document.getElementById('repLyricsEditBtn');
+  if(lyricsEditBtn) lyricsEditBtn.onclick = ()=>{
+    const wasEditing = !!state.repEditLyrics[song.id];
+    if(wasEditing){
+      const ta = document.getElementById('repLyricsTextarea');
+      const lyrics = ta ? ta.value : song.lyrics;
+      repPatch(s, song, {lyrics});
+    }
+    state.repEditLyrics[song.id] = !wasEditing;
+    repRenderAll(s);
+  };
+  const lyricsAdd = document.getElementById('repLyricsAdd');
+  if(lyricsAdd) lyricsAdd.onclick = ()=>{ state.repEditLyrics[song.id] = true; repRenderAll(s); };
+  const lyricsMore = document.getElementById('repLyricsMore');
+  if(lyricsMore) lyricsMore.onclick = ()=>{ state.repOpenLyrics[song.id] = !state.repOpenLyrics[song.id]; repRenderAll(s); };
+
+  const deleteBtn = document.getElementById('repDeleteBtn');
+  if(deleteBtn) deleteBtn.onclick = ()=> repDeleteClick(s, song);
+
+  repPaintPlayback(song);
 }
 
 /* ============================================================
