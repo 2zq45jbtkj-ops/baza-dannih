@@ -1603,7 +1603,6 @@ function attachHandlers(s, c, levelTopics){
   };
   c.querySelectorAll('[data-num-i]').forEach(el=>{
     el.onfocus = ()=>{
-      el.select();
       // Если фокус пришёл не от навигации стрелками (а кликом/табом) —
       // режим перехода стрелками сбрасывается.
       if(scoreNavMode && !el.classList.contains('nav-mode')){
