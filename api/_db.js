@@ -230,4 +230,21 @@ async function query(sql, params) {
   return p.query(sql, params);
 }
 
-module.exports = { query };
+// Тот же пул, но без ensureSchema() — для горячих путей, которым заведомо
+// достаточно старых, давно существующих колонок (например api/recording.js,
+// публичная страница по QR: на холодном старте функции ensureSchema гоняет
+// ~60 последовательных ALTER TABLE к Neon, и вместе с его собственным
+// пробуждением на free-tier это реально подходит к лимиту в 10с на Vercel
+// Hobby — отсюда "сервер не отвечает" при редком/первом за долгое время
+// открытии QR).
+async function queryRaw(sql, params) {
+  const p = getPool();
+  if (!p) {
+    const err = new Error('DB_NOT_CONFIGURED: в проекте не подключена база Postgres (нет POSTGRES_URL/DATABASE_URL). Подключите Storage → Postgres в настройках проекта Vercel.');
+    err.code = 'DB_NOT_CONFIGURED';
+    throw err;
+  }
+  return p.query(sql, params);
+}
+
+module.exports = { query, queryRaw };

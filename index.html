@@ -525,7 +525,7 @@ body.dark input[type="date"]{color-scheme:dark;}
 /* ── Артикуляционные особенности ── */
 .art-entry-card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
 .art-entry-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.art-entry-badge{width:36px;height:36px;border-radius:50%;background:var(--terracotta-dark);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.art-entry-badge{width:48px;height:48px;border-radius:50%;background:var(--terracotta-dark);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;line-height:1;}
 .art-block-label{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
 .art-prep-list{margin:4px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:3px;}
 .art-prep-list li{font-size:13px;line-height:1.4;}
@@ -662,8 +662,17 @@ const LEVEL_COLORS = {A:'var(--lvlA)', B:'var(--lvlB)', C:'var(--lvlC)', D:'var(
 const LEVEL_ORDER = ['A','B','C','D'];
 const COMPARE_PALETTE = ['#6C91A6','#C9A227','#7A6C9E','#3E6B3E','#B23A48','#4E7A91'];
 
+// badge = короткий код для кружка в карточке дефекта (art-entry-badge) —
+// отдельно от label (полная подпись в пилюле "Добавить дефект"), т.к. два
+// лейбла ("Озвончение"/"Смягчение") никак не влезают в кружок без переноса.
+function artBadgeFontSize(code){
+  const len = (code||'').length;
+  if(len<=1) return 22;
+  if(len<=3) return 16;
+  return 12;
+}
 const ART_KB = {
-  'Р':{ label:'Р', defectName:'Ротацизм / параротацизм',
+  'Р':{ label:'Р', badge:'Р', defectName:'Ротацизм / параротацизм',
     prep:['"Парус" — язык вверх к нёбу','"Лошадка" — щёлканье языком','"Грибок" — растяжка подъязычной связки','"Барабан" — д-д-д у альвеол'],
     types:[
       { name:'Горловой Р', note:'Вибрирует увуля (маленький язычок), а не кончик языка',
@@ -685,7 +694,7 @@ const ART_KB = {
     ],
     singNote:'Ставить Р в распевки только после чёткого изолированного звука — иначе горловой вариант закрепляется.',
   },
-  'Л':{ label:'Л', defectName:'Ламбдацизм / параламбдацизм',
+  'Л':{ label:'Л', badge:'Л', defectName:'Ламбдацизм / параламбдацизм',
     prep:['"Лопатка" — расслабленный язык на нижней губе','"Иголочка" — напряжённый острый кончик','"Качели" — кончик вверх–вниз'],
     types:[
       { name:'Замена Л → В / У', note:'Двугубный вариант — участвуют губы, язык не работает',
@@ -701,7 +710,7 @@ const ART_KB = {
     ],
     singNote:'Л в пении часто смягчается — следить за твёрдостью в словах "полёт", "волна", "слово".',
   },
-  'С/З':{ label:'С / З', defectName:'Сигматизм / парасигматизм',
+  'С/З':{ label:'С / З', badge:'С/З', defectName:'Сигматизм / парасигматизм',
     prep:['"Заборчик" — зубы сближены, улыбка','"Желобок" — сделать ложочку из языка','"Горка" — кончик к нижним зубам, спинка поднята'],
     types:[
       { name:'Межзубный С', note:'Язык между зубами — воздух рассеивается',
@@ -721,7 +730,7 @@ const ART_KB = {
     ],
     singNote:'На высоких нотах язык уходит назад и вверх — С может превращаться в Ш; контролировать в распевках.',
   },
-  'Ш/Ж':{ label:'Ш / Ж', defectName:'Шипящий сигматизм',
+  'Ш/Ж':{ label:'Ш / Ж', badge:'Ш/Ж', defectName:'Шипящий сигматизм',
     prep:['"Чашечка" — края языка подняты','"Фокус" — дуть на кончик носа через загнутый язык','"Вкусное варенье" — облизать верхнюю губу'],
     types:[
       { name:'Межзубный Ш', note:'Язык между зубами',
@@ -740,7 +749,7 @@ const ART_KB = {
     ],
     singNote:'Ш в пении "смягчается" на подъёме — слушать на слоге "ша" на разных высотах и ступенях.',
   },
-  'К/Г/Х':{ label:'К / Г / Х', defectName:'Каппацизм / гаммацизм / хитизм',
+  'К/Г/Х':{ label:'К / Г / Х', badge:'К/Г/Х', defectName:'Каппацизм / гаммацизм / хитизм',
     prep:['"Горка" высокая — задняя спинка к нёбу','Осознанное тихое покашливание — ощутить заднеязычный контакт','"Полоскание горла"'],
     types:[
       { name:'К → Т, Г → Д', note:'Передний уклад вместо заднеязычного',
@@ -751,7 +760,7 @@ const ART_KB = {
     ],
     singNote:'К/Г могут провоцировать зажим гортани — следить за свободой глотки при пении слогов "ка", "га", "ха".',
   },
-  'Озвончение':{ label:'Озвончение', defectName:'Дефект озвончения (оглушение парных)',
+  'Озвончение':{ label:'Озвончение', badge:'Б/П', defectName:'Дефект озвончения (оглушение парных)',
     prep:['Рука на горло — почувствовать вибрацию при В, З, Д','Тянуть З-З-З и переходить в С-С-С — контраст','Мычание — включение голосовых связок'],
     types:[
       { name:'Оглушение парных (Б→П, Д→Т…)', note:'Звонкие произносятся как глухие',
@@ -762,7 +771,7 @@ const ART_KB = {
     ],
     singNote:'На вокале озвончение улучшается само — связки работают постоянно. Следить в разговорной речи между занятиями.',
   },
-  'Смягчение':{ label:'Смягчение', defectName:'Дефект смягчения',
+  'Смягчение':{ label:'Смягчение', badge:'Ть', defectName:'Дефект смягчения',
     prep:['"Заборчик" с разными гласными','Слоги ТА–ТЯ, ТА–ТЯ — контраст твёрдого и мягкого','Минимальные пары: мал–мял, рад–ряд'],
     types:[
       { name:'Только твёрдые (нет мягких)', note:'Мяч → "мач", пять → "пат"',
@@ -4196,7 +4205,7 @@ function kbArticulatoryHtml(intake){
     return `
       <div class="art-entry-card" style="margin-bottom:14px;">
         <div class="art-entry-head">
-          <div class="art-entry-badge">${kb.label}</div>
+          <div class="art-entry-badge" style="font-size:${artBadgeFontSize(kb.badge)}px;">${kb.badge}</div>
           <div style="flex:1;">
             <div style="font-size:13.5px;font-weight:800;color:var(--text);">${kb.defectName}</div>
             <div style="font-size:12px;color:var(--muted);">${type.name}</div>
@@ -4934,8 +4943,26 @@ function pdfBuildModel(s, cache){
     vocalLoadJob: intake.vocalLoadJob || '',
     hydration: intake.hydration || '',
     sleep: intake.sleep || '',
+    articulatory: pdfBuildArticulatory(intake),
     _resolvedDirty: []
   };
+}
+
+// «Артикуляционные особенности» для PDF — те же данные и тот же каталог
+// ART_KB, что в Кабинете, просто компактно: без описаний методов и без
+// текстовых полей "что делали/помогло/не сработало" (это рабочая зона
+// редактирования, в карточке-передаче достаточно итога — сработало/нет).
+function pdfBuildArticulatory(intake){
+  const entries = Array.isArray(intake.articulatory) ? intake.articulatory : [];
+  return entries.map(entry=>{
+    const kb = ART_KB[entry.letter];
+    if(!kb) return null;
+    const ti = entry.typeIdx || 0;
+    const type = kb.types[ti] || kb.types[0];
+    const marks = entry.methodMarks || {};
+    const methods = type.methods.map((m,mi)=>({ name: m.name, mark: marks[ti+'_'+mi] || null }));
+    return { badge: kb.badge, defectName: kb.defectName, typeName: type.name, methods };
+  }).filter(Boolean);
 }
 
 /* ---------- Предпросмотр (редактируемый оверлей) ---------- */
@@ -5418,6 +5445,41 @@ function pdfAnamnesisSection(model){
   return `<div class="sec-title">ГОЛОСОВОЙ АНАМНЕЗ</div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${cards}</div>`;
 }
 
+function pdfArtBadgeFontSize(code){
+  const len = (code||'').length;
+  if(len<=1) return 15;
+  if(len<=3) return 11;
+  return 9;
+}
+
+function pdfArticulatoryCard(item){
+  const methods = item.methods.map(m=>{
+    const pill = m.mark==='ok'
+      ? '<span style="display:inline-block;background:#EFF5EE;color:#4C7A45;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">сработало</span>'
+      : m.mark==='fail'
+        ? '<span style="display:inline-block;background:#F1E7E3;color:#A8452C;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">не сработало</span>'
+        : '<span style="display:inline-block;background:#F4EEE6;color:#6E645A;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">в работе</span>';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0;font-size:11px;">
+      <span>${pdfEsc(m.name)}</span>
+      ${pill}
+    </div>`;
+  }).join('');
+  return `<div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start;">
+    <div style="width:34px;height:34px;border-radius:50%;background:#A8452C;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;line-height:1;font-size:${pdfArtBadgeFontSize(item.badge)}px;">${pdfEsc(item.badge)}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12.5px;font-weight:800;">${pdfEsc(item.defectName)}</div>
+      <div style="font-size:10.5px;color:#8A7E74;margin-bottom:4px;">${pdfEsc(item.typeName)}</div>
+      ${methods}
+    </div>
+  </div>`;
+}
+
+function pdfArticulatorySection(model){
+  if(!model.articulatory.length) return '';
+  const cards = model.articulatory.map(pdfArticulatoryCard).join('<div style="height:8px;"></div>');
+  return `<div class="sec-title">АРТИКУЛЯЦИОННЫЕ ОСОБЕННОСТИ</div><div style="display:flex;flex-direction:column;">${cards}</div>`;
+}
+
 function pdfFooter(model, pageLabel){
   return `<div style="position:absolute;left:56px;right:56px;bottom:40px;border-top:1px solid #E4DCD1;padding-top:10px;display:flex;justify-content:space-between;font-size:9.5px;color:#8A7E74;">
     <div>Дата печати: ${pdfEsc(model.printDate)}</div>
@@ -5468,6 +5530,7 @@ function pdfPrintPage2(model){
     ${pdfProblemsCard(model)}
     ${pdfMedicalSection(model)}
     ${pdfAnamnesisSection(model)}
+    ${pdfArticulatorySection(model)}
     ${pdfFooter(model, '2 / 2')}
   </div>`;
 }

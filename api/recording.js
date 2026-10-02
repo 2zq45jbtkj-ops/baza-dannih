@@ -10,7 +10,7 @@
 // peaks/markers) клиенту, который сам конвертирует dataUrl в Blob-URL перед
 // тем как отдать его в <audio> — на части мобильных браузеров огромный
 // data: URI прямо в src не проигрывался.
-const { query } = require('./_db');
+const { queryRaw } = require('./_db');
 
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -30,28 +30,22 @@ module.exports = async (req, res) => {
     let take = null;
     let studentName = '';
 
-    const ir = await query(
-      `SELECT si.reference_takes, s.name FROM student_intake si
-       JOIN students s ON s.id = si.student_id
-       WHERE si.reference_takes @> $1::jsonb LIMIT 1`,
+    // Один запрос (UNION ALL) вместо двух последовательных — один сетевой
+    // round-trip до Neon вместо двух, см. комментарий у queryRaw в _db.js.
+    const r = await queryRaw(
+      `SELECT si.reference_takes AS takes, s.name AS name
+         FROM student_intake si JOIN students s ON s.id = si.student_id
+        WHERE si.reference_takes @> $1::jsonb
+       UNION ALL
+       SELECT l.takes AS takes, s.name AS name
+         FROM lesson_log l JOIN students s ON s.id = l.student_id
+        WHERE l.takes @> $1::jsonb
+       LIMIT 1`,
       [needle]
     );
-    if (ir.rows.length) {
-      take = (ir.rows[0].reference_takes || []).find(t => t.publicToken === token) || null;
-      studentName = ir.rows[0].name;
-    }
-
-    if (!take) {
-      const lr = await query(
-        `SELECT l.takes, s.name FROM lesson_log l
-         JOIN students s ON s.id = l.student_id
-         WHERE l.takes @> $1::jsonb LIMIT 1`,
-        [needle]
-      );
-      if (lr.rows.length) {
-        take = (lr.rows[0].takes || []).find(t => t.publicToken === token) || null;
-        studentName = lr.rows[0].name;
-      }
+    if (r.rows.length) {
+      take = (r.rows[0].takes || []).find(t => t.publicToken === token) || null;
+      studentName = r.rows[0].name;
     }
 
     if (!take || !take.dataUrl) {
