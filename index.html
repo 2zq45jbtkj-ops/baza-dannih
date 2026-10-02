@@ -158,8 +158,8 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .bullet-prev-marker{position:absolute;top:-3px;bottom:-3px;width:3px;border-radius:2px;}
 .bullet-scale{display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);margin-top:3px;}
 .wheel-wrap{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;}
-.wheel-svg{flex-shrink:0;}
-.wheel-legend{flex:1;min-width:280px;max-height:680px;overflow-y:auto;padding-right:6px;}
+.wheel-svg{flex:1 1 360px;min-width:0;}
+.wheel-legend{flex:1 1 280px;min-width:280px;max-height:680px;overflow-y:auto;padding-right:6px;}
 .srez-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
 .srez-card.compared{border-color:var(--terracotta);box-shadow:0 0 0 2px var(--terracotta-bg);}
 .srez-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
@@ -1655,8 +1655,8 @@ function renderWheelCompare(topics, compareList, isAll){
     comparePolys += `<polygon points="${pts.map(p=>`${p.x},${p.y}`).join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="5,3"/>`;
   });
 
-  const pad = isAll ? 90 : 100;
-  return `<svg width="${size+pad}" height="${size+pad*0.7}" viewBox="-${pad/2} -${pad*0.35} ${size+pad} ${size+pad*0.7}">
+  const pad = isAll ? 320 : 100;
+  return `<svg width="100%" height="auto" style="display:block;max-width:${size+pad}px;" viewBox="-${pad/2} -${pad*0.35} ${size+pad} ${size+pad*0.7}">
     ${grid}${comparePolys}
     <polygon points="${curPoly}" fill="rgba(174,95,63,0.12)" stroke="var(--terracotta)" stroke-width="2"/>
     ${dots}${labels}
