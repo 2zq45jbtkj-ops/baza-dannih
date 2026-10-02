@@ -525,7 +525,7 @@ body.dark input[type="date"]{color-scheme:dark;}
 /* ── Артикуляционные особенности ── */
 .art-entry-card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
 .art-entry-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.art-entry-badge{width:48px;height:48px;border-radius:50%;background:var(--terracotta-dark);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;line-height:1;}
+.art-entry-badge{width:48px;height:48px;border-radius:50%;background:var(--terracotta-dark);color:#fff;font-weight:800;letter-spacing:-0.03em;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;line-height:1;}
 .art-block-label{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
 .art-prep-list{margin:4px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:3px;}
 .art-prep-list li{font-size:13px;line-height:1.4;}
@@ -4961,7 +4961,10 @@ function pdfBuildArticulatory(intake){
     const type = kb.types[ti] || kb.types[0];
     const marks = entry.methodMarks || {};
     const methods = type.methods.map((m,mi)=>({ name: m.name, mark: marks[ti+'_'+mi] || null }));
-    return { badge: kb.badge, defectName: kb.defectName, typeName: type.name, methods };
+    return {
+      badge: kb.badge, defectName: kb.defectName, typeName: type.name, typeNote: type.note || '',
+      methods, tried: entry.tried || '', helped: entry.helped || '', nowork: entry.nowork || ''
+    };
   }).filter(Boolean);
 }
 
@@ -5447,37 +5450,58 @@ function pdfAnamnesisSection(model){
 
 function pdfArtBadgeFontSize(code){
   const len = (code||'').length;
-  if(len<=1) return 15;
-  if(len<=3) return 11;
-  return 9;
+  if(len<=1) return 14;
+  if(len<=3) return 10;
+  return 8;
+}
+
+function pdfArticulatoryBox(label, value, color){
+  return `<div style="background:#F4EEE6;border-radius:7px;padding:5px 7px;flex:1;min-width:0;">
+    <div style="font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:${color};font-weight:700;margin-bottom:2px;">${label}</div>
+    <div style="font-size:10px;color:#23201D;">${pdfEsc(value || '—')}</div>
+  </div>`;
 }
 
 function pdfArticulatoryCard(item){
-  const methods = item.methods.map(m=>{
+  const methodsRows = item.methods.map(m=>{
     const pill = m.mark==='ok'
-      ? '<span style="display:inline-block;background:#EFF5EE;color:#4C7A45;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">сработало</span>'
+      ? '<span style="display:inline-block;background:#EFF5EE;color:#4C7A45;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">помогло</span>'
       : m.mark==='fail'
-        ? '<span style="display:inline-block;background:#F1E7E3;color:#A8452C;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">не сработало</span>'
-        : '<span style="display:inline-block;background:#F4EEE6;color:#6E645A;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">в работе</span>';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0;font-size:11px;">
-      <span>${pdfEsc(m.name)}</span>
+        ? '<span style="display:inline-block;background:#F1E7E3;color:#A8452C;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">не сработало</span>'
+        : '<span style="display:inline-block;background:#F6EFE2;color:#9A6A1F;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;flex-shrink:0;">в работе</span>';
+    return `<div class="pdf-row" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #F0EAE1;font-size:10.5px;">
+      <span style="font-weight:700;">${pdfEsc(m.name)}</span>
       ${pill}
     </div>`;
   }).join('');
-  return `<div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start;">
-    <div style="width:34px;height:34px;border-radius:50%;background:#A8452C;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;line-height:1;font-size:${pdfArtBadgeFontSize(item.badge)}px;">${pdfEsc(item.badge)}</div>
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:12.5px;font-weight:800;">${pdfEsc(item.defectName)}</div>
-      <div style="font-size:10.5px;color:#8A7E74;margin-bottom:4px;">${pdfEsc(item.typeName)}</div>
-      ${methods}
+
+  const noteHtml = item.typeNote ? `<div style="background:#F4EEE6;border-left:2px solid #A8452C;border-radius:0 6px 6px 0;padding:5px 8px;font-size:10.5px;">${pdfEsc(item.typeNote)}</div>` : '';
+
+  return `<div style="background:#FFFFFF;border:1px solid #ECE5DB;border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:5px;">
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div style="width:30px;height:30px;border-radius:50%;background:#8E3324;color:#fff;font-weight:800;letter-spacing:-0.03em;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;line-height:1;font-size:${pdfArtBadgeFontSize(item.badge)}px;">${pdfEsc(item.badge)}</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px;font-weight:800;">${pdfEsc(item.defectName)}</div>
+        <div style="font-size:10px;color:#8A7E74;">${pdfEsc(item.typeName)}</div>
+      </div>
+    </div>
+    ${noteHtml}
+    <div>
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#A09488;font-weight:700;margin-bottom:2px;">МЕТОДЫ ПОСТАНОВКИ</div>
+      <div class="pdf-art-methods">${methodsRows}</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      ${pdfArticulatoryBox('ЧТО ДЕЛАЛИ', item.tried, '#A09488')}
+      ${pdfArticulatoryBox('ЧТО ПОМОГЛО', item.helped, '#4C7A45')}
+      ${pdfArticulatoryBox('ЧТО НЕ СРАБОТАЛО', item.nowork, '#A8452C')}
     </div>
   </div>`;
 }
 
 function pdfArticulatorySection(model){
   if(!model.articulatory.length) return '';
-  const cards = model.articulatory.map(pdfArticulatoryCard).join('<div style="height:8px;"></div>');
-  return `<div class="sec-title">АРТИКУЛЯЦИОННЫЕ ОСОБЕННОСТИ</div><div style="display:flex;flex-direction:column;">${cards}</div>`;
+  const cards = model.articulatory.map(pdfArticulatoryCard).join('');
+  return `<div class="sec-title" style="margin-top:14px;margin-bottom:8px;">АРТИКУЛЯЦИОННЫЕ ОСОБЕННОСТИ</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:start;">${cards}</div>`;
 }
 
 function pdfFooter(model, pageLabel){
@@ -5528,9 +5552,9 @@ function pdfPrintPage2(model){
   return `<div class="pdf-page">
     ${pdfRecordingsCard(model)}
     ${pdfProblemsCard(model)}
+    ${pdfArticulatorySection(model)}
     ${pdfMedicalSection(model)}
     ${pdfAnamnesisSection(model)}
-    ${pdfArticulatorySection(model)}
     ${pdfFooter(model, '2 / 2')}
   </div>`;
 }
