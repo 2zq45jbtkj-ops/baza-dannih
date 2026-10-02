@@ -1714,13 +1714,33 @@ function renderWheelCompare(topics, compareList, isAll){
     const r = (ring/maxScore)*maxR;
     grid += `<circle cx="${center}" cy="${center}" r="${r}" fill="none" stroke="var(--line)" stroke-width="1"/>`;
   }
-  topics.forEach((t,i)=>{
+  // Считаем позиции подписей заранее и разводим их по вертикали внутри
+  // каждой стороны (лево/право/верх/низ), чтобы при плотной раскладке
+  // (много тем) соседние подписи не наезжали друг на друга текстом —
+  // чистая радиальная расстановка на это не рассчитана.
+  const labelPos = topics.map((t,i)=>{
     const angle = -Math.PI/2 + i*angleStep;
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    const anchor = cosA > 0.2 ? 'start' : (cosA < -0.2 ? 'end' : 'middle');
+    const r2 = maxR + 20;
+    return { t, i, angle, anchor, sinA, lx: center + r2*Math.cos(angle), ly: center + r2*Math.sin(angle) };
+  });
+  if(isAll){
+    const minGap = 12;
+    const declutter = (group)=>{
+      group.sort((a,b)=>a.ly-b.ly);
+      for(let k=1;k<group.length;k++){
+        if(group[k].ly - group[k-1].ly < minGap) group[k].ly = group[k-1].ly + minGap;
+      }
+    };
+    declutter(labelPos.filter(p=>p.anchor==='start'));
+    declutter(labelPos.filter(p=>p.anchor==='end'));
+    declutter(labelPos.filter(p=>p.anchor==='middle' && p.sinA<0));
+    declutter(labelPos.filter(p=>p.anchor==='middle' && p.sinA>=0));
+  }
+  labelPos.forEach(({t,i,angle,anchor,lx,ly})=>{
     const ex = center + maxR*Math.cos(angle), ey = center + maxR*Math.sin(angle);
     grid += `<line x1="${center}" y1="${center}" x2="${ex}" y2="${ey}" stroke="var(--line)" stroke-width="1"/>`;
-    const lx = center + (maxR+20)*Math.cos(angle), ly = center + (maxR+20)*Math.sin(angle);
-    const cosA = Math.cos(angle);
-    const anchor = cosA > 0.2 ? 'start' : (cosA < -0.2 ? 'end' : 'middle');
     const shortName = shortLabelFor(t);
     labels += `<text x="${lx}" y="${ly}" font-size="9" fill="${isAll?LEVEL_COLORS[t.level]:'var(--muted)'}" font-weight="${isAll?'700':'500'}" text-anchor="${anchor}" dominant-baseline="middle">${shortName}</text>`;
   });
