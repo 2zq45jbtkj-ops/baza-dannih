@@ -1756,6 +1756,19 @@ function renderWheelCompare(topics, compareList, isAll){
     declutter(labelPos.filter(p=>p.anchor==='middle' && p.sinA<0));
     declutter(labelPos.filter(p=>p.anchor==='middle' && p.sinA>=0));
   }
+  // Декluttер двигает подписи только по вертикали и может затолкать их
+  // обратно к центру — подстраховка: ни одна подпись не должна оказаться
+  // ближе к центру, чем кольцо колеса (иначе текст залезает на диаграмму).
+  const minLabelR = maxR + 14;
+  labelPos.forEach(p=>{
+    const dx = p.lx - center, dy = p.ly - center;
+    const dist = Math.hypot(dx, dy);
+    if(dist > 0 && dist < minLabelR){
+      const scale = minLabelR / dist;
+      p.lx = center + dx*scale;
+      p.ly = center + dy*scale;
+    }
+  });
   labelPos.forEach(({t,i,angle,anchor,lx,ly})=>{
     const ex = center + maxR*Math.cos(angle), ey = center + maxR*Math.sin(angle);
     grid += `<line x1="${center}" y1="${center}" x2="${ex}" y2="${ey}" stroke="var(--line)" stroke-width="1"/>`;
