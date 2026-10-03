@@ -1102,7 +1102,28 @@ function setActiveStudentId(id){
 if(!state.data.variant) state.data.variant = 'wheel';
 if(!state.data.theme) state.data.theme = 'light';
 let _maskActive = false;
+let _maskTimer = null;
+let _maskCountdown = 0;
+function _maskTick(){
+  _maskCountdown--;
+  if(_maskCountdown <= 0){
+    clearInterval(_maskTimer); _maskTimer = null; _maskCountdown = 0;
+    _maskActive = true;
+    const btn = document.getElementById('maskToggle');
+    if(btn){ btn.textContent = '🔒'; btn.classList.add('active'); }
+    renderStudentList();
+  }
+}
+function scheduleAutoMask(){
+  clearInterval(_maskTimer);
+  _maskCountdown = 6;
+  _maskActive = false;
+  const btn = document.getElementById('maskToggle');
+  if(btn){ btn.textContent = '⏱'; btn.classList.add('active'); }
+  _maskTimer = setInterval(_maskTick, 1000);
+}
 function toggleMask(){
+  clearInterval(_maskTimer); _maskTimer = null; _maskCountdown = 0;
   _maskActive = !_maskActive;
   const btn = document.getElementById('maskToggle');
   if(btn){
@@ -1196,6 +1217,7 @@ function renderStudentList(){
       }
       setActiveStudentId(el.dataset.id);
       state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
+      scheduleAutoMask();
       render();
     };
   });
@@ -1246,7 +1268,7 @@ function render(){
     <div class="sidebar" id="sidebarEl" style="width:${state.sidebarWidth}px">
       <div class="sidebar-search">
         <input type="text" id="studentSearch" placeholder="Поиск ученика…" value="${(state.search||'').replace(/"/g,'&quot;')}">
-        <button class="mask-toggle${_maskActive?' active':''}" id="maskToggle" title="Скрыть имена / показать">${_maskActive?'🔒':'⏱'}</button>
+        <button class="mask-toggle${(_maskActive||_maskCountdown>0)?' active':''}" id="maskToggle" title="Скрыть имена / показать">${_maskActive?'🔒':'⏱'}</button>
         <button class="theme-toggle" id="themeToggle" title="Тёмная/светлая тема">${state.data.theme==='dark'?'☀️':'🌙'}</button>
       </div>
       <div class="search-meta" id="searchMeta"></div>
