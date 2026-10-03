@@ -261,6 +261,24 @@ async function ensureSchema(p) {
 
   // Дневник занятий: какие распевки из общей библиотеки использовались на уроке
   await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS warmup_ids TEXT[] DEFAULT '{}';`);
+
+  // Загрузка аудио распевки большими файлами упиралась в лимит размера
+  // тела запроса serverless-функций (~4.5 МБ, HTTP 413) — подключить
+  // Vercel Blob для обхода не получилось (создание store требует ручного
+  // шага в дашборде, см. api/warmups-chunk.js). Вместо этого файл режется
+  // на небольшие куски на клиенте и складывается сюда построчно; на
+  // последнем шаге сервер сам одним SQL-запросом склеивает их и
+  // дописывает в audios нужной распевки — большая строка после сборки
+  // никогда повторно не идёт через тело запроса.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS warmup_upload_chunks (
+      upload_id TEXT NOT NULL,
+      chunk_index INTEGER NOT NULL,
+      chunk_data TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      PRIMARY KEY (upload_id, chunk_index)
+    );
+  `);
 }
 
 async function query(sql, params) {

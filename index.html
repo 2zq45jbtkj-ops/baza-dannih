@@ -2777,20 +2777,17 @@ function wuRemoveTopic(ex, topic){
   wuPatch(ex, {topics}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 
-// Загрузка аудио (с микрофона или файлом) теперь идёт напрямую в Vercel
-// Blob из браузера (см. wuUploadToBlob) — в audios/в Postgres попадает
-// только короткая ссылка на файл, а не base64 всего аудио целиком.
-// Раньше весь файл летел внутри PATCH-запроса — на файлах покрупнее
-// (или на вступлении в силу 413 Vercel-лимита тела запроса ~4.5 МБ)
-// сохранение падало, а код всё равно считал его успешным и пытался
-// сохранить ещё и волну поверх несохранённой записи — отсюда двойной
-// alert и распевка, слетающая после перезагрузки.
-function wuAddAudioToEx(ex, data){
-  const au = { id: wuUid(), name: data.name || ('Запись '+((ex.audios||[]).length+1)), dataUrl: data.dataUrl, durationSec: data.durationSec||0, bpm:90, key:'C', starred:false, peaks:[] };
-  const audios = (ex.audios||[]).concat([au]);
-  wuPatch(ex, {audios}).then(()=>{ paintWarmupsActive(); wuRecomputePeaks(ex.id, au.id); }).catch(()=>{});
-}
-
+// Загрузка аудио (с микрофона или файлом): раньше весь файл летел base64
+// внутри одного PATCH-запроса — на файлах покрупнее упирался в лимит
+// размера тела serverless-функции (~4.5 МБ, HTTP 413), сохранение
+// падало, а код всё равно считал его успешным и пытался сохранить ещё и
+// волну поверх несохранённой записи (отсюда двойной alert и распевка,
+// слетающая после перезагрузки). Подключить Vercel Blob не вышло — его
+// создание требует ручного шага в дашборде Vercel, доступа к которому у
+// агента нет. Вместо этого файл режется на куски по ~2 МБ (см.
+// wuUploadChunked/api/warmups-chunk.js) — каждый кусок летит отдельным
+// лёгким запросом в Postgres, а на последнем шаге сервер сам одним
+// SQL-запросом склеивает их и дописывает готовую запись в audios.
 async function wuRecomputePeaks(exId, auId){
   const found = wuFindAudio(auId); if(!found) return;
   const au = found.au;
@@ -2815,33 +2812,61 @@ async function wuRecomputePeaks(exId, auId){
   wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 
-// Клиентская загрузка в Vercel Blob в обход лимита размера тела запроса
-// serverless-функций: /api/warmups-upload выдаёт одноразовый токен,
-// сам файл летит браузером напрямую в Blob-хранилище. Библиотека
-// подгружается динамически (в проекте принципиально нет сборки и
-// внешних <script> — грузим её только когда она реально понадобилась).
-let _wuBlobUploadFn = null;
-function wuBlobUpload(){
-  if(!_wuBlobUploadFn) _wuBlobUploadFn = import('https://esm.sh/@vercel/blob@0.27.1/client').then(m=>m.upload);
-  return _wuBlobUploadFn;
-}
-async function wuUploadToBlob(fileOrBlob, filename){
-  const upload = await wuBlobUpload();
-  const result = await upload(filename, fileOrBlob, {
-    access: 'public',
-    handleUploadUrl: '/api/warmups-upload',
+// Куски по ~2 МБ base64-текста — с большим запасом ниже лимита тела
+// запроса (~4.5 МБ), даже с учётом JSON-обвязки.
+const WU_CHUNK_SIZE = 2 * 1000 * 1000;
+const WU_MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 МБ сырого файла — разумный потолок для распевки
+
+function wuFileToBase64(fileOrBlob){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const result = reader.result || '';
+      const comma = result.indexOf(',');
+      resolve(comma>=0 ? result.slice(comma+1) : result);
+    };
+    reader.onerror = ()=> reject(reader.error || new Error('Не удалось прочитать файл'));
+    reader.readAsDataURL(fileOrBlob);
   });
-  return result.url;
+}
+
+async function wuUploadChunked(ex, fileOrBlob, mime, name, durationSec, onProgress){
+  if(fileOrBlob.size > WU_MAX_UPLOAD_BYTES){
+    throw new Error('файл больше ' + Math.round(WU_MAX_UPLOAD_BYTES/1024/1024) + ' МБ — возьмите файл поменьше');
+  }
+  const base64 = await wuFileToBase64(fileOrBlob);
+  const uploadId = wuUid();
+  const totalChunks = Math.max(1, Math.ceil(base64.length / WU_CHUNK_SIZE));
+  try{
+    for(let i=0;i<totalChunks;i++){
+      const chunkData = base64.slice(i*WU_CHUNK_SIZE, (i+1)*WU_CHUNK_SIZE);
+      await apiSend('/api/warmups-chunk', 'POST', { action:'chunk', uploadId, chunkIndex:i, totalChunks, data: chunkData });
+      if(onProgress) onProgress(i+1, totalChunks);
+    }
+    const res = await apiSend('/api/warmups-chunk', 'POST', { action:'finalize', uploadId, totalChunks, warmupId: ex.id, mimeType: mime, name, durationSec });
+    return res.warmup;
+  } catch(err){
+    apiSend('/api/warmups-chunk', 'POST', { action:'abort', uploadId }).catch(()=>{});
+    throw err;
+  }
 }
 
 async function wuUploadAudioFile(ex, file, name, durationSec){
   state.warmUploading = state.warmUploading || {};
-  state.warmUploading[ex.id] = true;
+  state.warmUploading[ex.id] = {done:0, total:1};
   paintWarmupsActive();
   try{
-    const url = await wuUploadToBlob(file, 'warmups/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_'));
+    const warmup = await wuUploadChunked(ex, file, file.type || 'audio/mpeg', name, durationSec, (done,total)=>{
+      state.warmUploading[ex.id] = {done, total};
+      const btn = document.querySelector('[data-wu-add-toggle="'+ex.id+'"]');
+      if(btn) btn.textContent = 'Загружаю… ' + done + '/' + total;
+    });
+    Object.assign(ex, warmup);
     delete state.warmUploading[ex.id];
-    wuAddAudioToEx(ex, {dataUrl: url, durationSec, name});
+    wuClearError(ex.id);
+    paintWarmupsActive();
+    const added = (ex.audios||[])[(ex.audios||[]).length-1];
+    if(added) wuRecomputePeaks(ex.id, added.id);
   } catch(err){
     delete state.warmUploading[ex.id];
     wuShowError(ex.id, 'Не удалось загрузить файл: ' + (err.message||err));
@@ -2907,18 +2932,7 @@ function wuStopRec(){
     if(rec.stream) rec.stream.getTracks().forEach(t=>t.stop());
     state.warmRec = null;
     if(!(ex && blob)){ paintWarmupsActive(); return; }
-    state.warmUploading = state.warmUploading || {};
-    state.warmUploading[ex.id] = true;
-    paintWarmupsActive();
-    try{
-      const url = await wuUploadToBlob(blob, 'warmups/' + Date.now() + '-rec.webm');
-      delete state.warmUploading[ex.id];
-      wuAddAudioToEx(ex, {dataUrl: url, durationSec: Math.max(1, Math.round(rec.seconds)), name: 'Запись'});
-    } catch(err){
-      delete state.warmUploading[ex.id];
-      wuShowError(ex.id, 'Не удалось сохранить запись: ' + (err.message||err));
-      paintWarmupsActive();
-    }
+    await wuUploadAudioFile(ex, blob, 'Запись', Math.max(1, Math.round(rec.seconds)));
   };
   if(rec.mediaRecorder && rec.mediaRecorder.state!=='inactive'){
     rec.mediaRecorder.onstop = ()=>{
@@ -2946,7 +2960,7 @@ function wuRemoveAudio(ex, au){
 function wuDownloadAudio(au){
   if(!au.dataUrl) return;
   const a = document.createElement('a');
-  a.href = au.dataUrl; a.download = (au.name||'audio') + (au.dataUrl.startsWith('data:')?'.webm':''); a.target = '_blank'; a.click();
+  a.href = au.dataUrl; a.download = (au.name||'audio') + '.webm'; a.click();
 }
 function wuSetBaseBpm(ex, au, v){
   v = Math.max(20, Math.min(300, Math.round(v)||90));
@@ -3318,7 +3332,7 @@ function wuExerciseHtml(ex){
         </div>
       ` : ''}
       <div class="wu-add-audio-wrap">
-        <button type="button" class="wu-add-audio-btn" data-wu-add-toggle="${ex.id}" ${uploading?'disabled':''}>${uploading?'Загружаю…':'+ добавить аудио'}</button>
+        <button type="button" class="wu-add-audio-btn" data-wu-add-toggle="${ex.id}" ${uploading?'disabled':''}>${uploading?('Загружаю… '+uploading.done+'/'+uploading.total):'+ добавить аудио'}</button>
         ${addMenuOpen ? `
           <div class="wu-popover" style="min-width:210px;">
             <button type="button" class="wu-popover-item wu-add-audio-menu-item" data-wu-rec-start="${ex.id}"><span class="wu-rec-dot-sm"></span>Записать с микрофона</button>
