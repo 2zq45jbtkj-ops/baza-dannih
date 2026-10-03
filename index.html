@@ -698,7 +698,8 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 .wu-gear-base{font-size:12px;color:#8A7E74;}
 .wu-gear-base-input{width:40px;height:22px;border:1px solid #3A342E;border-radius:6px;background:none;color:#E8E1D8;font-size:11px;text-align:center;font-family:'JetBrains Mono',monospace;}
 .wu-gear-base-select{height:22px;border:1px solid #3A342E;border-radius:6px;background:#2A2622;color:#E8E1D8;font-size:11px;font-family:inherit;}
-.wu-reset-btn{height:22px;padding:0 8px;border:1px solid #3A342E;border-radius:6px;background:none;color:#B8ADA1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-reset-btn{height:22px;padding:0 8px;border:1px solid #C97B62;border-radius:6px;background:none;color:#C97B62;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex:none;}
+.wu-reset-btn:hover{background:rgba(201,123,98,0.18);}
 .wu-gear-row{display:flex;align-items:center;gap:10px;}
 .wu-mini-btn{width:28px;height:28px;border:1px solid #3A342E;border-radius:7px;background:none;color:#E8E1D8;font-size:14px;font-weight:800;cursor:pointer;}
 .wu-mini-btn:hover{background:#332E29;}
@@ -2868,6 +2869,7 @@ function wuRenameAudio(ex, auId, name){
 function wuRemoveAudio(ex, au){
   if(state.warmPlay.id===au.id){ wuPauseAll(); state.warmPlay={id:null,on:false,pos:0}; }
   if(state.warmGear===au.id) state.warmGear = null;
+  if(au._shiftCache) Object.values(au._shiftCache).forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
   const audios = (ex.audios||[]).filter(a=>a.id!==au.id);
   wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
 }
@@ -2887,24 +2889,147 @@ function wuSetBaseKey(ex, au, key){
   wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
 }
 
+/* ---- пикап-шифтер тональности: гранулярный time-domain pitch-shift
+   на сырых сэмплах (constant-overlap-add с окном Ханна, 50% оверлап на
+   стороне вывода — так сумма окон держится около 1 без доп. нормировки).
+   Без внешних библиотек (проект принципиально без зависимостей/сборки);
+   при большом сдвиге возможна лёгкая "гранулярность" звука — плата за
+   простоту алгоритма. Результат кэшируется на объекте аудио по сдвигу
+   в полутонах, чтобы не пересчитывать при повторном прослушивании. ---- */
+function wuGetAudioCtx(){
+  if(!window._wuAudioCtx){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    window._wuAudioCtx = new Ctx();
+  }
+  if(window._wuAudioCtx.state === 'suspended') window._wuAudioCtx.resume().catch(()=>{});
+  return window._wuAudioCtx;
+}
+async function wuGetRawBuffer(au){
+  if(au._rawBuffer) return au._rawBuffer;
+  if(au._rawBufferPromise) return au._rawBufferPromise;
+  au._rawBufferPromise = (async ()=>{
+    const ctx = wuGetAudioCtx();
+    const arr = await (await fetch(au.dataUrl)).arrayBuffer();
+    const buf = await ctx.decodeAudioData(arr);
+    au._rawBuffer = buf;
+    au._rawBufferPromise = null;
+    return buf;
+  })();
+  return au._rawBufferPromise;
+}
+function wuHannWindow(size){
+  const w = new Float32Array(size);
+  for(let i=0;i<size;i++) w[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/(size-1));
+  return w;
+}
+// Линейная передискретизация в заданную длину (без фильтра — для
+// гранулярного питч-шифтера этого достаточно).
+function wuResampleChannel(input, outLen){
+  const out = new Float32Array(outLen);
+  if(outLen<=1 || input.length<=1){ out.fill(input[0]||0); return out; }
+  const ratio = (input.length-1) / (outLen-1);
+  for(let i=0;i<outLen;i++){
+    const pos = i*ratio;
+    const i0 = Math.floor(pos), i1 = Math.min(input.length-1, i0+1);
+    const frac = pos-i0;
+    out[i] = input[i0]*(1-frac) + input[i1]*frac;
+  }
+  return out;
+}
+// Гранулярный time-stretch: растягивает/сжимает input до outLen (частота
+// внутри каждой гранулы не меняется — поэтому высота тона сохраняется).
+function wuTimeStretchChannel(input, outLen, grainSize, win){
+  const output = new Float32Array(outLen);
+  if(input.length<grainSize || outLen<grainSize) return output;
+  const hopOut = Math.floor(grainSize/2);
+  const hopIn = (hopOut * (input.length-grainSize)) / Math.max(1,(outLen-grainSize));
+  let inPos = 0, outPos = 0;
+  while(outPos+grainSize<=outLen){
+    const ip = Math.min(input.length-grainSize, Math.round(inPos));
+    for(let i=0;i<grainSize;i++) output[outPos+i] += input[ip+i]*win[i];
+    outPos += hopOut;
+    inPos += hopIn;
+  }
+  return output;
+}
+// Питч-шифт = сначала передискретизация (меняет и высоту, и длину),
+// потом time-stretch обратно до исходной длины (возвращает длительность,
+// высота тона остаётся уже изменённой передискретизацией).
+function wuPitchShiftChannel(input, pitchRatio, grainSize, win){
+  const resampledLen = Math.max(grainSize, Math.round(input.length / pitchRatio));
+  const resampled = wuResampleChannel(input, resampledLen);
+  return wuTimeStretchChannel(resampled, input.length, grainSize, win);
+}
+function wuPitchShiftBuffer(buffer, semitones){
+  const ctx = wuGetAudioCtx();
+  const ratio = Math.pow(2, semitones/12);
+  const grainSize = Math.min(8192, Math.max(1024, Math.round(buffer.sampleRate*0.08)));
+  const win = wuHannWindow(grainSize);
+  const out = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  for(let ch=0; ch<buffer.numberOfChannels; ch++){
+    out.getChannelData(ch).set(wuPitchShiftChannel(buffer.getChannelData(ch), ratio, grainSize, win));
+  }
+  return out;
+}
+function wuBufferToWavBlob(buffer){
+  const numCh = buffer.numberOfChannels, len = buffer.length, sr = buffer.sampleRate;
+  const blockAlign = numCh*2, dataSize = len*blockAlign;
+  const ab = new ArrayBuffer(44+dataSize), view = new DataView(ab);
+  const writeStr = (off,str)=>{ for(let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); };
+  writeStr(0,'RIFF'); view.setUint32(4, 36+dataSize, true); writeStr(8,'WAVE');
+  writeStr(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numCh,true); view.setUint32(24,sr,true);
+  view.setUint32(28, sr*blockAlign, true); view.setUint16(32, blockAlign, true); view.setUint16(34,16,true);
+  writeStr(36,'data'); view.setUint32(40,dataSize,true);
+  const chans = []; for(let ch=0; ch<numCh; ch++) chans.push(buffer.getChannelData(ch));
+  let off=44;
+  for(let i=0;i<len;i++){
+    for(let ch=0; ch<numCh; ch++){
+      const s = Math.max(-1, Math.min(1, chans[ch][i]));
+      view.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true);
+      off += 2;
+    }
+  }
+  return new Blob([ab], {type:'audio/wav'});
+}
+async function wuGetShiftedUrl(au, semitones){
+  if(!semitones) return au.dataUrl;
+  au._shiftCache = au._shiftCache || {};
+  if(au._shiftCache[semitones]) return au._shiftCache[semitones];
+  const raw = await wuGetRawBuffer(au);
+  const shifted = wuPitchShiftBuffer(raw, semitones);
+  const url = URL.createObjectURL(wuBufferToWavBlob(shifted));
+  au._shiftCache[semitones] = url;
+  return url;
+}
+
 /* ---- воспроизведение: одно общее <video> на строку аудио (как и
    остальные плееры в проекте — <video> вместо <audio>, чтобы играть
    даже при включённом безмолвном переключателе на iOS) ---- */
 function wuVideoFor(auId){ return document.querySelector('[data-wu-video="'+auId+'"]'); }
 function wuPauseAll(){ document.querySelectorAll('[data-wu-video]').forEach(v=>{ if(!v.paused) v.pause(); }); }
 function wuRateOf(au){ const bpm = state.warmBpm[au.id] || au.bpm || 90; return bpm/(au.bpm||90); }
+function wuTagFor(au){ return au.id + '::' + (state.warmShift[au.id] || 0); }
 
-function wuToggle(au){
+async function wuToggle(au){
   if(!au.dataUrl) return;
   const p = state.warmPlay;
   const v = wuVideoFor(au.id);
   if(!v) return;
-  if(v.dataset.wuTag !== au.id){ v.src = au.dataUrl; v.dataset.wuTag = au.id; }
   if(p.id===au.id && p.on){
     v.pause();
     state.warmPlay = Object.assign({}, p, {on:false});
     wuPaintPlayback(au);
     return;
+  }
+  const sh = state.warmShift[au.id] || 0;
+  const tag = wuTagFor(au);
+  if(v.dataset.wuTag !== tag){
+    let url;
+    try{ url = await wuGetShiftedUrl(au, sh); } catch(e){ url = au.dataUrl; }
+    if((state.warmShift[au.id]||0) !== sh) return wuToggle(au); // сдвиг поменяли, пока ждали обработку
+    v.src = url;
+    v.dataset.wuTag = tag;
   }
   wuPauseAll();
   const pos = p.id===au.id ? p.pos : 0;
@@ -2916,12 +3041,34 @@ function wuToggle(au){
   wuPaintPlayback(au);
   wuStartTimer();
 }
+// Пересчитать аудио под новый сдвиг тональности и, если играет именно
+// оно — незаметно подменить источник и продолжить с той же позиции.
+async function wuApplyShift(au){
+  const sh = state.warmShift[au.id] || 0;
+  const v = wuVideoFor(au.id);
+  if(!v) return;
+  const tag = wuTagFor(au);
+  if(v.dataset.wuTag === tag) return;
+  const wasPlaying = state.warmPlay.id===au.id && state.warmPlay.on;
+  const pos = state.warmPlay.id===au.id ? (v.currentTime||state.warmPlay.pos) : 0;
+  let url;
+  try{ url = await wuGetShiftedUrl(au, sh); } catch(e){ return; }
+  if((state.warmShift[au.id]||0) !== sh) return; // успели подвинуть ползунок ещё раз
+  v.src = url;
+  v.dataset.wuTag = tag;
+  v.currentTime = pos;
+  if(wasPlaying){
+    try{ v.preservesPitch = true; v.webkitPreservesPitch = true; v.mozPreservesPitch = true; }catch(e){}
+    v.playbackRate = wuRateOf(au);
+    v.play().catch(()=>{});
+  }
+}
 function wuSeekFromEvent(au, e){
   const d = au.durationSec||0; if(!d) return;
   const rect = e.currentTarget.getBoundingClientRect();
   const pos = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width)) * d;
   const v = wuVideoFor(au.id);
-  if(v && v.dataset.wuTag===au.id) v.currentTime = pos;
+  if(v && v.dataset.wuTag===wuTagFor(au)) v.currentTime = pos;
   const p = state.warmPlay;
   if(p.id!==au.id && p.on) wuPauseAll();
   state.warmPlay = {id:au.id, on: p.id===au.id?p.on:false, pos};
@@ -2992,7 +3139,7 @@ function wuSetBpm(au, v){
   wuPaintGearVals(au.id);
 }
 function wuSetShift(au, v){
-  v = Math.max(-6, Math.min(6, v));
+  v = Math.max(-7, Math.min(7, v));
   state.warmShift[au.id] = v;
   wuPaintGearVals(au.id);
 }
@@ -3137,8 +3284,8 @@ function wuAudioHtml(ex, au){
           <div class="wu-gear-col">
             <div class="wu-gear-head">
               <div class="wu-gear-label">Темп</div>
-              <div style="flex:1;"></div>
               <div class="wu-gear-base">исходный <input type="number" class="wu-gear-base-input" value="${au.bpm||90}" data-wu-base-bpm="${ex.id}:${au.id}" /></div>
+              <div style="flex:1;"></div>
               <button type="button" class="wu-reset-btn" data-wu-reset-bpm="${au.id}">сброс</button>
             </div>
             <div class="wu-gear-row">
@@ -3151,22 +3298,22 @@ function wuAudioHtml(ex, au){
           <div class="wu-gear-col">
             <div class="wu-gear-head">
               <div class="wu-gear-label">Тональность</div>
-              <div style="flex:1;"></div>
               <div class="wu-gear-base">исходная
                 <select class="wu-gear-base-select" data-wu-base-key="${ex.id}:${au.id}">
                   ${WU_KEYS.map(k=>`<option value="${k}" ${k===(au.key||'C')?'selected':''}>${k}</option>`).join('')}
                 </select>
               </div>
+              <div style="flex:1;"></div>
               <button type="button" class="wu-reset-btn" data-wu-reset-shift="${au.id}">сброс</button>
             </div>
             <div class="wu-gear-row">
               <button type="button" class="wu-mini-btn" data-wu-shift-step="${au.id}:-1">−</button>
-              <input type="range" min="-6" max="6" step="1" value="${sh}" data-wu-shift-set="${au.id}" style="flex:1;min-width:0;" />
+              <input type="range" min="-7" max="7" step="1" value="${sh}" data-wu-shift-set="${au.id}" style="flex:1;min-width:0;" />
               <button type="button" class="wu-mini-btn" data-wu-shift-step="${au.id}:1">+</button>
               <div class="wu-gear-val">${curKey} ${shiftLabel}</div>
             </div>
           </div>
-          <div class="wu-gear-hint">Темп реально меняет скорость воспроизведения без изменения высоты тона. Тональность пока только подсказывает ноту — сам звук ей не меняется.</div>
+          <div class="wu-gear-hint">Темп меняет скорость воспроизведения без изменения высоты тона. Тональность реально меняет высоту звука (упрощённый питч-шифтер — на большом сдвиге возможна лёгкая «гранулярность» звука).</div>
           <div class="wu-gear-actions">
             <button type="button" class="wu-gear-action-btn" data-wu-download="${au.id}">Скачать</button>
             <button type="button" class="wu-gear-action-btn danger" data-wu-remove-audio="${ex.id}:${au.id}">Удалить аудио</button>
@@ -3256,13 +3403,14 @@ function wireWarmupsHandlers(s){
     el.oninput = ()=>{ const found = wuFindAudio(el.dataset.wuBpmSet); if(found) wuSetBpm(found.au, Number(el.value)); };
   });
   c.querySelectorAll('[data-wu-reset-shift]').forEach(el=>{
-    el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuResetShift); if(!found) return; delete state.warmShift[found.au.id]; wuPaintGearVals(found.au.id); };
+    el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuResetShift); if(!found) return; delete state.warmShift[found.au.id]; wuPaintGearVals(found.au.id); wuApplyShift(found.au); };
   });
   c.querySelectorAll('[data-wu-shift-step]').forEach(el=>{
-    el.onclick = ()=>{ const [id,d] = el.dataset.wuShiftStep.split(':'); const found = wuFindAudio(id); if(!found) return; const cur = state.warmShift[id] || 0; wuSetShift(found.au, cur + Number(d)); };
+    el.onclick = ()=>{ const [id,d] = el.dataset.wuShiftStep.split(':'); const found = wuFindAudio(id); if(!found) return; const cur = state.warmShift[id] || 0; wuSetShift(found.au, cur + Number(d)); wuApplyShift(found.au); };
   });
   c.querySelectorAll('[data-wu-shift-set]').forEach(el=>{
     el.oninput = ()=>{ const found = wuFindAudio(el.dataset.wuShiftSet); if(found) wuSetShift(found.au, Number(el.value)); };
+    el.onchange = ()=>{ const found = wuFindAudio(el.dataset.wuShiftSet); if(found) wuApplyShift(found.au); };
   });
   c.querySelectorAll('[data-wu-download]').forEach(el=>{
     el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuDownload); if(found) wuDownloadAudio(found.au); };
