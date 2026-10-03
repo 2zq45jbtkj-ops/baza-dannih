@@ -3,7 +3,15 @@
 // GET    → весь список (все уровни), отсортирован по level, sort_order
 // POST   { level }                → создать пустую «Новую распевку» в конце уровня
 // PATCH  ?id=xxx  { title?, topics?, audios?, sortOrder? } → частично обновить
-// DELETE ?id=xxx                  → удалить
+//   (audios — полная замена массива: используется только для операций,
+//   которые САМИ не содержат больших data: URL, например переупорядочивание)
+// PATCH  ?id=xxx  { audioPatch: {id, set} } → точечно обновить одно аудио
+//   внутри audios (имя/пики/темп/тональность/избранное) SQL-джойном,
+//   не пересылая через тело запроса остальные (или это же) аудио —
+//   иначе лёгкое действие вроде пересчёта волны после загрузки упиралось
+//   бы в тот же лимит размера тела запроса, что и сама загрузка файла.
+// PATCH  ?id=xxx  { removeAudioId: id } → удалить одно аудио тем же приёмом
+// DELETE ?id=xxx                  → удалить распевку
 const { query } = require('./_db');
 const { randomUUID } = require('crypto');
 
@@ -58,6 +66,39 @@ module.exports = async (req, res) => {
       }
       const b = body || {};
       const has = k => Object.prototype.hasOwnProperty.call(b, k);
+
+      if (has('audioPatch') && b.audioPatch && b.audioPatch.id && b.audioPatch.set && typeof b.audioPatch.set === 'object') {
+        const r2 = await query(
+          `UPDATE warmups SET audios = (
+             SELECT COALESCE(jsonb_agg(
+               CASE WHEN elem->>'id' = $1 THEN elem || $2::jsonb ELSE elem END
+             ), '[]'::jsonb)
+             FROM jsonb_array_elements(COALESCE(audios, '[]'::jsonb)) elem
+           ), updated_at = now()
+           WHERE id = $3
+           RETURNING *`,
+          [b.audioPatch.id, JSON.stringify(b.audioPatch.set), id]
+        );
+        if (!r2.rows.length) { res.status(404).json({ error: 'not found' }); return; }
+        res.status(200).json({ warmup: rowToJson(r2.rows[0]) });
+        return;
+      }
+
+      if (has('removeAudioId')) {
+        const r2 = await query(
+          `UPDATE warmups SET audios = (
+             SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+             FROM jsonb_array_elements(COALESCE(audios, '[]'::jsonb)) elem
+             WHERE elem->>'id' != $1
+           ), updated_at = now()
+           WHERE id = $2
+           RETURNING *`,
+          [b.removeAudioId, id]
+        );
+        if (!r2.rows.length) { res.status(404).json({ error: 'not found' }); return; }
+        res.status(200).json({ warmup: rowToJson(r2.rows[0]) });
+        return;
+      }
 
       const cols = [];
       const vals = [];

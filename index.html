@@ -2717,10 +2717,9 @@ function wuShowError(exId, msg){
 function wuClearError(exId){
   if(state.warmError) delete state.warmError[exId];
 }
-function wuPatch(ex, patch){
-  Object.assign(ex, patch);
+function wuRunSaveChain(ex, requestBody){
   const attempt = (state.warmSaveChain[ex.id] || Promise.resolve()).then(()=>
-    apiSend('/api/warmups?id=' + encodeURIComponent(ex.id), 'PATCH', patch).then(res=>{
+    apiSend('/api/warmups?id=' + encodeURIComponent(ex.id), 'PATCH', requestBody).then(res=>{
       if(res && res.warmup) Object.assign(ex, res.warmup);
       wuClearError(ex.id);
     })
@@ -2734,6 +2733,24 @@ function wuPatch(ex, patch){
     paintWarmupsActive();
     throw err;
   });
+}
+function wuPatch(ex, patch){
+  Object.assign(ex, patch);
+  return wuRunSaveChain(ex, patch);
+}
+// Точечно обновить одно аудио внутри распевки (имя/пики/темп/тональность/
+// избранное) — сервер мержит поля SQL-джойном (см. api/warmups.js,
+// audioPatch), а не заменой всего массива. Иначе любое мелкое действие
+// (например автоматический пересчёт волны сразу после загрузки) снова
+// пересылало бы все аудио распевки целиком и падало с тем же 413, с
+// которого мы ушли, когда перевели саму загрузку на куски.
+function wuPatchAudio(ex, au, setFields){
+  Object.assign(au, setFields);
+  return wuRunSaveChain(ex, {audioPatch: {id: au.id, set: setFields}});
+}
+function wuRemoveAudioRemote(ex, auId){
+  ex.audios = (ex.audios||[]).filter(a=>a.id!==auId);
+  return wuRunSaveChain(ex, {removeAudioId: auId});
 }
 
 function wuAddExercise(level){
@@ -2808,8 +2825,7 @@ async function wuRecomputePeaks(exId, auId){
     peaks = out.map(v=> v/mx);
   } catch(e){ peaks = []; }
   const ex = wuFindEx(exId); if(!ex) return;
-  const audios = (ex.audios||[]).map(a=> a.id===auId ? Object.assign({}, a, {peaks}) : a);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
+  wuPatchAudio(ex, found.au, {peaks}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 
 // Куски по ~2 МБ base64-текста — с большим запасом ниже лимита тела
@@ -2943,19 +2959,17 @@ function wuStopRec(){
 }
 
 function wuToggleStar(ex, au){
-  const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {starred: !a.starred}) : a);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
+  wuPatchAudio(ex, au, {starred: !au.starred}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuRenameAudio(ex, auId, name){
-  const audios = (ex.audios||[]).map(a=> a.id===auId ? Object.assign({}, a, {name}) : a);
-  wuPatch(ex, {audios}).catch(()=>{});
+  const au = (ex.audios||[]).find(a=>a.id===auId); if(!au) return;
+  wuPatchAudio(ex, au, {name}).catch(()=>{});
 }
 function wuRemoveAudio(ex, au){
   if(state.warmPlay.id===au.id){ wuPauseAll(); state.warmPlay={id:null,on:false,pos:0}; }
   if(state.warmGear===au.id) state.warmGear = null;
   if(au._shiftCache) Object.values(au._shiftCache).forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
-  const audios = (ex.audios||[]).filter(a=>a.id!==au.id);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
+  wuRemoveAudioRemote(ex, au.id).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuDownloadAudio(au){
   if(!au.dataUrl) return;
@@ -2964,13 +2978,11 @@ function wuDownloadAudio(au){
 }
 function wuSetBaseBpm(ex, au, v){
   v = Math.max(20, Math.min(300, Math.round(v)||90));
-  const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {bpm:v}) : a);
   delete state.warmBpm[au.id];
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
+  wuPatchAudio(ex, au, {bpm:v}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuSetBaseKey(ex, au, key){
-  const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {key}) : a);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
+  wuPatchAudio(ex, au, {key}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 
 /* ---- пикап-шифтер тональности: гранулярный time-domain pitch-shift
