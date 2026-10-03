@@ -639,6 +639,103 @@ body.dark .art-mark-btn.fail.active{background:#3A2018;border-color:#5A3020;colo
 .lock-btn{width:100%;margin-top:20px;padding:14px;border-radius:14px;border:none;background:#AE5F3F;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
 .lock-btn:hover{background:#8A3324;}
 .lock-btn:disabled{background:#C7CDD1;cursor:default;}
+
+/* ---------- Распевки ---------- */
+.wu-filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.wu-filter-label{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-right:6px;}
+.wu-filter-chip{height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--panel);color:var(--muted);}
+.wu-filter-chip.on{border-color:#23201D;background:#23201D;color:#FAF7F2;}
+body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#23201D;}
+.wu-total{font-size:13px;color:var(--muted);margin:0 0 18px;}
+.wu-levels{display:flex;flex-direction:column;gap:14px;}
+.wu-level-card{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:16px 18px;}
+.wu-level-head{display:flex;align-items:center;gap:12px;cursor:pointer;}
+.wu-level-badge{width:30px;height:30px;border-radius:9px;color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;}
+.wu-level-name{font-size:17px;font-weight:800;}
+.wu-level-hint{font-size:13.5px;color:var(--muted);}
+.wu-level-count{font-size:12.5px;font-weight:700;color:var(--muted);}
+.wu-level-caret{font-size:12px;color:var(--muted);width:16px;text-align:center;}
+.wu-level-body{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+.wu-ex-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;}
+.wu-ex-top{display:flex;align-items:center;gap:8px;}
+.wu-arrow-btn{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;}
+.wu-arrow-btn:hover{background:var(--bg);}
+.wu-arrow-btn:disabled{opacity:.35;cursor:default;}
+.wu-ex-title{flex:1;min-width:0;height:34px;border:1px solid transparent;border-radius:8px;background:none;padding:0 8px;font-size:15.5px;font-weight:700;color:var(--text);font-family:inherit;}
+.wu-ex-title:hover,.wu-ex-title:focus{border-color:var(--line);outline:none;}
+.wu-ex-audio-count{font-size:12.5px;color:var(--muted);white-space:nowrap;}
+.wu-ex-del-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:#A8452C;font-size:14px;cursor:pointer;}
+.wu-ex-del-btn:hover{background:var(--terracotta-bg);border-color:#D9A392;}
+.wu-del-confirm{display:flex;align-items:center;gap:10px;background:var(--terracotta-bg);border:1px solid #E8C4B6;border-radius:10px;padding:8px 12px;}
+.wu-del-confirm-text{flex:1;font-size:13px;font-weight:600;color:#7E3220;}
+.wu-del-confirm-btn{height:30px;padding:0 12px;border:none;border-radius:8px;background:#A8452C;color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;}
+.wu-del-cancel-btn{height:30px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;}
+.wu-topics-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:68px;position:relative;}
+.wu-topic-chip{display:flex;align-items:center;gap:2px;height:26px;padding:0 4px 0 10px;border-radius:13px;background:var(--bg);font-size:12.5px;font-weight:700;color:var(--muted);}
+.wu-topic-remove{border:none;background:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0 5px;}
+.wu-topic-remove:hover{color:#A8452C;}
+.wu-topic-add{height:26px;padding:0 10px;border:1px dashed var(--line);border-radius:13px;background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-topic-add:hover{background:var(--bg);}
+.wu-popover{position:absolute;left:0;top:calc(100% + 4px);z-index:25;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(35,32,29,0.14);padding:4px;display:flex;flex-direction:column;gap:2px;}
+.wu-popover-item{border:none;background:none;border-radius:7px;padding:7px 10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);text-align:left;white-space:nowrap;font-family:inherit;}
+.wu-popover-item:hover{background:var(--bg);}
+.wu-audio{background:#2A2622;border-radius:12px;padding:8px 10px 8px 8px;display:flex;flex-direction:column;gap:8px;}
+.wu-audio-top{display:flex;align-items:center;gap:8px;}
+.wu-play-btn{width:34px;height:34px;flex:none;border-radius:50%;border:none;background:#C97B62;color:#fff;font-size:12px;cursor:pointer;}
+.wu-audio-name{width:150px;flex:none;height:26px;border:1px solid transparent;border-radius:6px;background:none;padding:0 6px;font-size:12.5px;font-weight:700;color:#E8B9A6;font-family:inherit;}
+.wu-audio-name:hover,.wu-audio-name:focus{border-color:#3A342E;outline:none;}
+.wu-wave{flex:1;min-width:0;height:30px;display:flex;align-items:center;gap:1px;cursor:pointer;overflow:hidden;}
+.wu-bar{flex:1;min-width:1px;background:#5A524B;border-radius:1px;}
+.wu-bar.played{background:#C97B62;}
+.wu-audio-time{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#B8ADA1;white-space:nowrap;}
+.wu-star-btn{width:26px;height:26px;flex:none;border:none;background:none;color:#D9A520;font-size:16px;cursor:pointer;}
+.wu-gear-btn{height:26px;width:32px;flex:none;border-radius:7px;border:1px solid #3A342E;background:none;color:#E8E1D8;font-size:14px;cursor:pointer;}
+.wu-gear-btn.on{background:#3A342E;}
+.wu-gear-panel{border-top:1px solid #3A342E;padding:10px 4px 2px 6px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 28px;}
+.wu-gear-col{display:flex;flex-direction:column;gap:8px;}
+.wu-gear-head{display:flex;align-items:center;gap:8px;}
+.wu-gear-label{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#B8ADA1;}
+.wu-gear-base{font-size:12px;color:#8A7E74;}
+.wu-gear-base-input{width:40px;height:22px;border:1px solid #3A342E;border-radius:6px;background:none;color:#E8E1D8;font-size:11px;text-align:center;font-family:'JetBrains Mono',monospace;}
+.wu-gear-base-select{height:22px;border:1px solid #3A342E;border-radius:6px;background:#2A2622;color:#E8E1D8;font-size:11px;font-family:inherit;}
+.wu-reset-btn{height:22px;padding:0 8px;border:1px solid #3A342E;border-radius:6px;background:none;color:#B8ADA1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-gear-row{display:flex;align-items:center;gap:10px;}
+.wu-mini-btn{width:28px;height:28px;border:1px solid #3A342E;border-radius:7px;background:none;color:#E8E1D8;font-size:14px;font-weight:800;cursor:pointer;}
+.wu-mini-btn:hover{background:#332E29;}
+.wu-gear-val{min-width:66px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#E8E1D8;white-space:nowrap;}
+.wu-gear-hint{grid-column:1 / -1;font-size:11px;color:#8A7E74;margin-top:-4px;}
+.wu-gear-actions{grid-column:1 / -1;display:flex;gap:6px;}
+.wu-gear-action-btn{height:26px;padding:0 10px;border:1px solid #3A342E;border-radius:7px;background:none;color:#E8E1D8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-gear-action-btn:hover{background:#332E29;}
+.wu-gear-action-btn.danger{color:#E8A08A;}
+.wu-rec-row{background:#2A2622;border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:12px;}
+.wu-rec-dot{width:10px;height:10px;border-radius:50%;background:#E0563A;margin-left:6px;flex:none;animation:wuRecPulse 1.1s infinite;}
+@keyframes wuRecPulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.wu-rec-label{font-size:13px;font-weight:700;color:#E8E1D8;}
+.wu-rec-time{font-family:'JetBrains Mono',monospace;font-size:12px;color:#B8ADA1;}
+.wu-rec-stop{height:30px;padding:0 12px;border:none;border-radius:8px;background:#C97B62;color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+.wu-rec-cancel{height:30px;padding:0 12px;border:1px solid #3A342E;border-radius:8px;background:none;color:#E8E1D8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-add-audio-wrap{position:relative;align-self:flex-start;}
+.wu-add-audio-btn{height:30px;padding:0 12px;border:1px dashed var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-add-audio-btn:hover{background:var(--bg);}
+.wu-add-audio-menu-item{display:flex;align-items:center;gap:8px;}
+.wu-rec-dot-sm{width:8px;height:8px;border-radius:50%;background:#E0563A;flex:none;}
+.wu-add-ex-btn{align-self:flex-start;height:34px;padding:0 14px;border:1px dashed var(--line);border-radius:10px;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-add-ex-btn:hover{background:var(--panel);}
+.wu-empty-filtered{font-size:13px;color:var(--muted);padding:4px 2px;}
+.wu-pick-box{min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:5px 6px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;position:relative;}
+.wu-pick-chip{display:flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;border-radius:8px;background:var(--bg);font-size:13px;font-weight:700;color:var(--text);}
+.wu-pick-chip-lvl{font-size:11px;font-weight:800;color:#fff;border-radius:5px;padding:1px 5px;}
+.wu-pick-chip-remove{border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0 4px;}
+.wu-pick-chip-remove:hover{color:#A8452C;}
+.wu-pick-add{height:30px;padding:0 10px;border:none;border-radius:8px;background:none;color:#A8452C;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wu-pick-add:hover{background:var(--terracotta-bg);}
+.wu-pick-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:30;min-width:150px;width:100%;max-height:300px;overflow-y:auto;scrollbar-gutter:stable;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(35,32,29,0.14);padding:10px 12px;display:flex;flex-direction:column;gap:10px;}
+.wu-pick-group-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.wu-pick-items{display:flex;flex-wrap:wrap;gap:6px;}
+.wu-pick-item{height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.wu-pick-item.taken{background:var(--bg);color:var(--muted);cursor:default;}
+.wu-pick-empty{font-size:12px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -977,7 +1074,19 @@ const state = {
   repPlay: { id: null, on: false, pos: 0 },
   repRates: {},
   repTimerHandle: null,
-  repSaveChain: {}
+  repSaveChain: {},
+  warmupsLib: null,
+  warmFilter: [],
+  warmClosed: {},
+  warmPlay: { id: null, on: false, pos: 0 },
+  warmBpm: {},
+  warmShift: {},
+  warmGear: null,
+  warmAddMenu: null,
+  warmTopicMenu: null,
+  warmDelConfirm: null,
+  warmRec: null,
+  warmSaveChain: {}
 };
 const LAST_STUDENT_KEY = 'bd_last_student_id';
 function setActiveStudentId(id){
@@ -1323,6 +1432,7 @@ function renderMain(s){
         <div class="tab ${state.activeTab==='card'?'active':''}" data-tab="card">Дневник занятий</div>
         <div class="tab ${state.activeTab==='srezy'?'active':''}" data-tab="srezy">Колесо баланса и срезы</div>
         <div class="tab ${state.activeTab==='rep'?'active':''}" data-tab="rep">Репертуар</div>
+        <div class="tab ${state.activeTab==='warm'?'active':''}" data-tab="warm">Распевки</div>
       </div>
       ${state.activeTab==='profile' ? `<button class="collapse-toggle-btn" id="collapseToggleBtn">${kbAnyOpen()?'Свернуть':'Развернуть'}</button>` : ''}
     </div>
@@ -1405,7 +1515,8 @@ function renderMain(s){
   if(state.activeTab==='profile') renderKabinet(s);
   else if(state.activeTab==='card') renderDiary(s);
   else if(state.activeTab==='srezy') renderSrezy(s);
-  else renderRepertoire(s);
+  else if(state.activeTab==='rep') renderRepertoire(s);
+  else renderWarmups(s);
 }
 
 function kbAnyOpen(){ return Object.keys(state.kabinetOpen).some(k=>state.kabinetOpen[k]); }
@@ -2513,6 +2624,675 @@ async function apiSend(url, method, body){
 }
 
 /* ============================================================
+   РАСПЕВКИ — вкладка «Распевки»: общая библиотека разогревочных
+   упражнений, ОДНА ДЛЯ ВСЕХ учеников (не привязана к studentId).
+   Реальный бэкенд: /api/warmups. Аудио хранится как data: URL —
+   тот же приём, что и везде в проекте (takes/player_tracks), пики
+   волны считаются один раз при добавлении аудио через
+   AudioContext.decodeAudioData (как в Репертуаре).
+   Темп меняется реально (playbackRate + preservesPitch — скорость
+   без изменения высоты тона). Тональность (семитоны) пока только
+   показывает ноту в UI и не трогает сам звук — независимый
+   pitch-shift без смены темпа требует отдельного DSP (фазовый
+   вокодер), осознанно не реализован в этой итерации.
+   ============================================================ */
+
+const WU_LEVELS = [
+  { k:'A', name:'Уровень A', hint:'База: дыхание, разогрев, ретракция', color:'var(--lvlA)' },
+  { k:'B', name:'Уровень B', hint:'Контроль: опора, переходы, твэнг', color:'var(--lvlB)' },
+  { k:'C', name:'Уровень C', hint:'Сцена: микст, динамика, стаккато', color:'var(--lvlC)' },
+  { k:'D', name:'Уровень D', hint:'Репертуар: текст, подача, запись', color:'var(--lvlD)' }
+];
+const WU_TOPICS = ['Дыхание','Разогрев','Ретракция','Опора','Переходы','Твэнг','Микст','Динамика','Стаккато','Подача'];
+const WU_KEYS = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+
+function wuFmt(sec){ sec = Math.max(0, Math.floor(sec||0)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+function wuPlural(n, a, b, c){ const m10=n%10, m100=n%100; return m10===1 && m100!==11 ? a : (m10>=2&&m10<=4&&(m100<10||m100>=20)) ? b : c; }
+function wuUid(){ return 'wa'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function wuEsc(str){ return (str||'').replace(/"/g,'&quot;'); }
+
+function loadWarmupsLib(){
+  if(state.warmupsLib) return Promise.resolve(state.warmupsLib);
+  if(state._warmupsLoading) return state._warmupsLoading;
+  state._warmupsLoading = apiGet('/api/warmups').then(res=>{
+    state.warmupsLib = res.warmups || [];
+    state._warmupsLoading = null;
+    return state.warmupsLib;
+  }).catch(err=>{ state._warmupsLoading = null; throw err; });
+  return state._warmupsLoading;
+}
+
+function renderWarmups(s){
+  const c = document.getElementById('tabContent');
+  if(state.warmupsLib){ paintWarmups(s); return; }
+  c.innerHTML = `<div class="kb-loading">Загружаю распевки…</div>`;
+  loadWarmupsLib().then(()=> paintWarmups(s)).catch(err=>{
+    c.innerHTML = `<div class="card-error">Не удалось загрузить распевки: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`;
+  });
+}
+function paintWarmupsActive(){
+  const s = state.data.students.find(x=>x.id===state.activeStudentId);
+  if(s && state.activeTab==='warm') paintWarmups(s);
+}
+
+function wuByLevel(k){ return (state.warmupsLib||[]).filter(w=>w.level===k).sort((a,b)=> (a.sortOrder-b.sortOrder) || String(a.id).localeCompare(String(b.id))); }
+function wuFindEx(id){ return (state.warmupsLib||[]).find(w=>w.id===id) || null; }
+function wuFindAudio(id){ for(const ex of (state.warmupsLib||[])) for(const a of (ex.audios||[])) if(a.id===id) return {ex, au:a}; return null; }
+
+function wuPatch(ex, patch){
+  Object.assign(ex, patch);
+  const chain = (state.warmSaveChain[ex.id] || Promise.resolve()).then(()=>
+    apiSend('/api/warmups?id=' + encodeURIComponent(ex.id), 'PATCH', patch).then(res=>{
+      if(res && res.warmup) Object.assign(ex, res.warmup);
+    }).catch(err=>{ alert('Не удалось сохранить распевку: ' + (err.message||err)); })
+  );
+  state.warmSaveChain[ex.id] = chain.catch(()=>{});
+  return chain;
+}
+
+function wuAddExercise(level){
+  apiSend('/api/warmups', 'POST', {level, topics: state.warmFilter.slice()}).then(res=>{
+    state.warmupsLib = (state.warmupsLib||[]).concat([res.warmup]);
+    state.warmClosed[level] = false;
+    paintWarmupsActive();
+  }).catch(err=> alert('Не удалось создать распевку: ' + (err.message||err)));
+}
+
+function wuDeleteExercise(ex){
+  if((ex.audios||[]).some(a=>a.id===state.warmPlay.id)){ wuPauseAll(); state.warmPlay = {id:null, on:false, pos:0}; }
+  apiSend('/api/warmups?id=' + encodeURIComponent(ex.id), 'DELETE', {}).then(()=>{
+    state.warmupsLib = (state.warmupsLib||[]).filter(w=>w.id!==ex.id);
+    state.warmDelConfirm = null;
+    paintWarmupsActive();
+  }).catch(err=> alert('Не удалось удалить распевку: ' + (err.message||err)));
+}
+
+function wuMove(ex, dir){
+  const list = wuByLevel(ex.level);
+  const i = list.findIndex(x=>x.id===ex.id);
+  const j = i + dir;
+  if(i<0 || j<0 || j>=list.length) return;
+  const a = list[i], b = list[j];
+  const ao = a.sortOrder, bo = b.sortOrder;
+  wuPatch(a, {sortOrder: bo});
+  wuPatch(b, {sortOrder: ao});
+  paintWarmupsActive();
+}
+
+function wuRenameEx(ex, title){ wuPatch(ex, {title}); }
+function wuAddTopic(ex, topic){
+  if((ex.topics||[]).includes(topic)){ state.warmTopicMenu=null; paintWarmupsActive(); return; }
+  const topics = (ex.topics||[]).concat([topic]);
+  state.warmTopicMenu = null;
+  wuPatch(ex, {topics}).then(()=> paintWarmupsActive());
+}
+function wuRemoveTopic(ex, topic){
+  const topics = (ex.topics||[]).filter(t=>t!==topic);
+  wuPatch(ex, {topics}).then(()=> paintWarmupsActive());
+}
+
+function wuAddAudioToEx(ex, data){
+  const au = { id: wuUid(), name: data.name || ('Запись '+((ex.audios||[]).length+1)), dataUrl: data.dataUrl, durationSec: data.durationSec||0, bpm:90, key:'C', starred:false, peaks:[] };
+  const audios = (ex.audios||[]).concat([au]);
+  wuPatch(ex, {audios}).then(()=>{ paintWarmupsActive(); wuRecomputePeaks(ex.id, au.id); });
+}
+
+async function wuRecomputePeaks(exId, auId){
+  const found = wuFindAudio(auId); if(!found) return;
+  const au = found.au;
+  let peaks = [];
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const buf = await ctx.decodeAudioData(await (await fetch(au.dataUrl)).arrayBuffer());
+    const ch = buf.getChannelData(0);
+    const N = 60, out = new Array(N).fill(0);
+    const step = Math.floor(ch.length/N) || 1;
+    for(let i=0;i<N;i++){
+      let m=0; for(let j=i*step;j<(i+1)*step && j<ch.length;j+=16) m = Math.max(m, Math.abs(ch[j]));
+      out[i]=m;
+    }
+    ctx.close();
+    const mx = Math.max(...out)||1;
+    peaks = out.map(v=> v/mx);
+  } catch(e){ peaks = []; }
+  const ex = wuFindEx(exId); if(!ex) return;
+  const audios = (ex.audios||[]).map(a=> a.id===auId ? Object.assign({}, a, {peaks}) : a);
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+}
+
+function wuUploadAudio(ex){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'audio/*';
+  inp.onchange = ()=>{
+    const f = inp.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const dataUrl = reader.result;
+      const probe = document.createElement('audio');
+      probe.preload = 'metadata';
+      probe.onloadedmetadata = ()=>{ wuAddAudioToEx(ex, {dataUrl, durationSec: Math.max(1, Math.round(probe.duration||30)), name: f.name.replace(/\.[^.]+$/,'')}); };
+      probe.onerror = ()=>{ wuAddAudioToEx(ex, {dataUrl, durationSec: 30, name: f.name.replace(/\.[^.]+$/,'')}); };
+      probe.src = dataUrl;
+    };
+    reader.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+async function wuStartRec(ex){
+  if(state.warmRec) return;
+  state.warmAddMenu = null;
+  const rec = { exId: ex.id, seconds:0, mediaRecorder:null, stream:null, chunks:[], timer:null };
+  state.warmRec = rec;
+  paintWarmupsActive();
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    alert('Браузер не поддерживает запись звука. Откройте страницу в Chrome или Safari.');
+    state.warmRec = null; paintWarmupsActive(); return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    if(state.warmRec !== rec){ stream.getTracks().forEach(t=>t.stop()); return; }
+    rec.stream = stream;
+    const mr = new MediaRecorder(stream);
+    rec.mediaRecorder = mr;
+    mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
+    mr.start();
+    rec.timer = setInterval(()=>{ if(state.warmRec===rec){ rec.seconds += 0.25; const el = document.querySelector('[data-wu-rec-time]'); if(el) el.textContent = wuFmt(rec.seconds); } }, 250);
+  } catch(err){
+    alert('Не удалось получить доступ к микрофону: ' + (err.message||err));
+    state.warmRec = null;
+    paintWarmupsActive();
+  }
+}
+function wuCancelRec(){
+  const rec = state.warmRec; if(!rec) return;
+  if(rec.timer) clearInterval(rec.timer);
+  if(rec.mediaRecorder && rec.mediaRecorder.state!=='inactive') rec.mediaRecorder.stop();
+  if(rec.stream) rec.stream.getTracks().forEach(t=>t.stop());
+  state.warmRec = null;
+  paintWarmupsActive();
+}
+function wuStopRec(){
+  const rec = state.warmRec; if(!rec) return;
+  const ex = wuFindEx(rec.exId);
+  if(rec.timer) clearInterval(rec.timer);
+  const finish = (dataUrl)=>{
+    if(rec.stream) rec.stream.getTracks().forEach(t=>t.stop());
+    state.warmRec = null;
+    if(ex && dataUrl) wuAddAudioToEx(ex, {dataUrl, durationSec: Math.max(1, Math.round(rec.seconds)), name: 'Запись'});
+    else paintWarmupsActive();
+  };
+  if(rec.mediaRecorder && rec.mediaRecorder.state!=='inactive'){
+    rec.mediaRecorder.onstop = ()=>{
+      if(!rec.chunks.length){ finish(null); return; }
+      const blob = new Blob(rec.chunks, {type:'audio/webm'});
+      const reader = new FileReader();
+      reader.onload = ()=> finish(reader.result);
+      reader.readAsDataURL(blob);
+    };
+    rec.mediaRecorder.stop();
+  } else finish(null);
+}
+
+function wuToggleStar(ex, au){
+  const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {starred: !a.starred}) : a);
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+}
+function wuRenameAudio(ex, auId, name){
+  const audios = (ex.audios||[]).map(a=> a.id===auId ? Object.assign({}, a, {name}) : a);
+  wuPatch(ex, {audios});
+}
+function wuRemoveAudio(ex, au){
+  if(state.warmPlay.id===au.id){ wuPauseAll(); state.warmPlay={id:null,on:false,pos:0}; }
+  if(state.warmGear===au.id) state.warmGear = null;
+  const audios = (ex.audios||[]).filter(a=>a.id!==au.id);
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+}
+function wuDownloadAudio(au){
+  if(!au.dataUrl) return;
+  const a = document.createElement('a');
+  a.href = au.dataUrl; a.download = (au.name||'audio') + '.webm'; a.click();
+}
+function wuSetBaseBpm(ex, au, v){
+  v = Math.max(20, Math.min(300, Math.round(v)||90));
+  const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {bpm:v}) : a);
+  delete state.warmBpm[au.id];
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+}
+function wuSetBaseKey(ex, au, key){
+  const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {key}) : a);
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+}
+
+/* ---- воспроизведение: одно общее <video> на строку аудио (как и
+   остальные плееры в проекте — <video> вместо <audio>, чтобы играть
+   даже при включённом безмолвном переключателе на iOS) ---- */
+function wuVideoFor(auId){ return document.querySelector('[data-wu-video="'+auId+'"]'); }
+function wuPauseAll(){ document.querySelectorAll('[data-wu-video]').forEach(v=>{ if(!v.paused) v.pause(); }); }
+function wuRateOf(au){ const bpm = state.warmBpm[au.id] || au.bpm || 90; return bpm/(au.bpm||90); }
+
+function wuToggle(au){
+  if(!au.dataUrl) return;
+  const p = state.warmPlay;
+  const v = wuVideoFor(au.id);
+  if(!v) return;
+  if(v.dataset.wuTag !== au.id){ v.src = au.dataUrl; v.dataset.wuTag = au.id; }
+  if(p.id===au.id && p.on){
+    v.pause();
+    state.warmPlay = Object.assign({}, p, {on:false});
+    wuPaintPlayback(au);
+    return;
+  }
+  wuPauseAll();
+  const pos = p.id===au.id ? p.pos : 0;
+  try{ v.preservesPitch = true; v.webkitPreservesPitch = true; v.mozPreservesPitch = true; }catch(e){}
+  v.playbackRate = wuRateOf(au);
+  v.currentTime = pos;
+  v.play().catch(()=>{});
+  state.warmPlay = {id:au.id, on:true, pos};
+  wuPaintPlayback(au);
+  wuStartTimer();
+}
+function wuSeekFromEvent(au, e){
+  const d = au.durationSec||0; if(!d) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pos = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width)) * d;
+  const v = wuVideoFor(au.id);
+  if(v && v.dataset.wuTag===au.id) v.currentTime = pos;
+  const p = state.warmPlay;
+  if(p.id!==au.id && p.on) wuPauseAll();
+  state.warmPlay = {id:au.id, on: p.id===au.id?p.on:false, pos};
+  wuPaintPlayback(au);
+}
+function wuStartTimer(){
+  clearInterval(state.warmTimerHandle);
+  state.warmTimerHandle = setInterval(()=>{
+    const p = state.warmPlay;
+    if(!p.on){ clearInterval(state.warmTimerHandle); return; }
+    const found = wuFindAudio(p.id);
+    if(!found){ wuPauseAll(); state.warmPlay={id:null,on:false,pos:0}; clearInterval(state.warmTimerHandle); return; }
+    const au = found.au;
+    const v = wuVideoFor(au.id);
+    const pos = v ? v.currentTime : p.pos;
+    const d = au.durationSec||0;
+    if(d && pos >= d-0.05){
+      wuPauseAll();
+      state.warmPlay = {id:au.id, on:false, pos:0};
+      wuPaintPlayback(au);
+      clearInterval(state.warmTimerHandle);
+      return;
+    }
+    state.warmPlay = Object.assign({}, p, {pos});
+    wuPaintPlayback(au);
+  }, 200);
+}
+// Точечное обновление волны/времени/кнопки play — без перерисовки всей
+// вкладки, чтобы тик таймера (5 раз/сек) не дёргал DOM лишний раз.
+function wuPaintPlayback(au){
+  const row = document.querySelector('[data-wu-row="'+au.id+'"]');
+  if(!row) return;
+  const p = state.warmPlay;
+  const mine = p.id === au.id;
+  const d = au.durationSec||0;
+  const prog = d && mine ? p.pos/d : 0;
+  const peaks = (au.peaks && au.peaks.length) ? au.peaks : new Array(60).fill(0.3);
+  row.querySelectorAll('.wu-bar').forEach((bar,i)=>{
+    bar.classList.toggle('played', d>0 && (i+0.5)/peaks.length <= prog);
+  });
+  const timeEl = row.querySelector('.wu-audio-time');
+  if(timeEl) timeEl.textContent = (mine && (p.on||p.pos>0)) ? wuFmt(p.pos) : wuFmt(d);
+  const btn = row.querySelector('.wu-play-btn');
+  if(btn) btn.textContent = (mine && p.on) ? '❚❚' : '▶';
+}
+// То же самое для слайдеров темпа/тональности — тянуть ползунок не
+// должно перерисовывать всю вкладку (сбивало бы фокус и дёргало DOM).
+function wuPaintGearVals(auId){
+  const found = wuFindAudio(auId); if(!found) return;
+  const au = found.au;
+  const row = document.querySelector('[data-wu-row="'+auId+'"]'); if(!row) return;
+  const bpm = state.warmBpm[auId] || au.bpm || 90;
+  const sh = state.warmShift[auId] || 0;
+  const ki = WU_KEYS.indexOf(au.key||'C');
+  const curKey = ki<0 ? (au.key||'C') : WU_KEYS[((ki+sh)%12+12)%12];
+  const shiftLabel = sh===0 ? '0 пт' : (sh>0?'+':'−')+Math.abs(sh)+' пт';
+  const vals = row.querySelectorAll('.wu-gear-val');
+  if(vals[0]) vals[0].textContent = bpm + ' BPM';
+  if(vals[1]) vals[1].textContent = curKey + ' ' + shiftLabel;
+  const bpmRange = row.querySelector('[data-wu-bpm-set]'); if(bpmRange && document.activeElement!==bpmRange) bpmRange.value = bpm;
+  const shiftRange = row.querySelector('[data-wu-shift-set]'); if(shiftRange && document.activeElement!==shiftRange) shiftRange.value = sh;
+}
+function wuSetBpm(au, v){
+  const base = au.bpm||90;
+  v = Math.round(Math.min(base*2, Math.max(Math.round(base/2), v)));
+  state.warmBpm[au.id] = v;
+  if(state.warmPlay.id===au.id && state.warmPlay.on){ const vid = wuVideoFor(au.id); if(vid) vid.playbackRate = v/base; }
+  wuPaintGearVals(au.id);
+}
+function wuSetShift(au, v){
+  v = Math.max(-6, Math.min(6, v));
+  state.warmShift[au.id] = v;
+  wuPaintGearVals(au.id);
+}
+
+function paintWarmups(s){
+  const c = document.getElementById('tabContent');
+  c.innerHTML = wuHtml();
+  wireWarmupsHandlers(s);
+}
+
+function wuHtml(){
+  const filt = state.warmFilter;
+  const match = ex => !filt.length || (ex.topics||[]).some(t=>filt.includes(t));
+  const total = (state.warmupsLib||[]).length;
+  let shown = 0;
+  const levelsHtml = WU_LEVELS.map(m=>{
+    const list = wuByLevel(m.k);
+    const vis = list.filter(match);
+    shown += vis.length;
+    const open = !state.warmClosed[m.k];
+    const countLabel = filt.length ? (vis.length+' из '+list.length) : (list.length ? list.length+' '+wuPlural(list.length,'распевка','распевки','распевок') : 'пусто');
+    return `
+      <div class="wu-level-card">
+        <div class="wu-level-head" data-wu-level-toggle="${m.k}">
+          <div class="wu-level-badge" style="background:${m.color};">${m.k}</div>
+          <div class="wu-level-name">${m.name}</div>
+          <div class="wu-level-hint">${m.hint}</div>
+          <div style="flex:1;"></div>
+          <div class="wu-level-count">${countLabel}</div>
+          <div class="wu-level-caret">${open?'▾':'▸'}</div>
+        </div>
+        ${open ? `
+          <div class="wu-level-body">
+            ${vis.map(ex=> wuExerciseHtml(ex)).join('')}
+            ${(filt.length && !vis.length && list.length) ? `<div class="wu-empty-filtered">Нет распевок по выбранным темам</div>` : ''}
+            <button type="button" class="wu-add-ex-btn" data-wu-add-ex="${m.k}">+ Новая распевка</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+  const totalLabel = filt.length ? ('показано '+shown+' из '+total) : (total+' '+wuPlural(total,'распевка','распевки','распевок'));
+  return `
+    <div class="kb-wrap">
+      <section style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 24px;">
+        <div class="wu-filter-row">
+          <span class="wu-filter-label">Темы уроков</span>
+          <button type="button" class="wu-filter-chip ${!filt.length?'on':''}" data-wu-filter-clear="1">Все</button>
+          ${WU_TOPICS.map(t=>`<button type="button" class="wu-filter-chip ${filt.includes(t)?'on':''}" data-wu-filter-toggle="${t}">${t}</button>`).join('')}
+        </div>
+        <div class="wu-total">Общая библиотека для всех учеников · ${totalLabel}</div>
+        <div class="wu-levels">${levelsHtml}</div>
+      </section>
+    </div>
+  `;
+}
+
+function wuExerciseHtml(ex){
+  const list = wuByLevel(ex.level);
+  const i = list.findIndex(x=>x.id===ex.id);
+  const audios = ex.audios||[];
+  const confirming = state.warmDelConfirm===ex.id;
+  const topicMenuOpen = state.warmTopicMenu===ex.id;
+  const addMenuOpen = state.warmAddMenu===ex.id;
+  const recording = state.warmRec && state.warmRec.exId===ex.id;
+  const availTopics = WU_TOPICS.filter(t=>!(ex.topics||[]).includes(t));
+  return `
+    <div class="wu-ex-card" data-wu-ex="${ex.id}">
+      <div class="wu-ex-top">
+        <div style="display:flex;gap:4px;">
+          <button type="button" class="wu-arrow-btn" data-wu-move="${ex.id}:-1" ${i===0?'disabled':''} title="Выше">↑</button>
+          <button type="button" class="wu-arrow-btn" data-wu-move="${ex.id}:1" ${i===list.length-1?'disabled':''} title="Ниже">↓</button>
+        </div>
+        <input type="text" class="wu-ex-title" value="${wuEsc(ex.title)}" data-wu-rename-ex="${ex.id}" placeholder="Название распевки" />
+        <div class="wu-ex-audio-count">${audios.length ? audios.length+' аудио' : 'без аудио'}</div>
+        <button type="button" class="wu-ex-del-btn" data-wu-ask-del="${ex.id}" title="Удалить распевку">✕</button>
+      </div>
+      ${confirming ? `
+        <div class="wu-del-confirm">
+          <div class="wu-del-confirm-text">Удалить распевку вместе со всеми аудио?</div>
+          <button type="button" class="wu-del-confirm-btn" data-wu-do-del="${ex.id}">Удалить</button>
+          <button type="button" class="wu-del-cancel-btn" data-wu-cancel-del="${ex.id}">Отмена</button>
+        </div>
+      ` : ''}
+      <div class="wu-topics-row">
+        ${(ex.topics||[]).map(t=>`<span class="wu-topic-chip">${t}<button type="button" class="wu-topic-remove" data-wu-remove-topic="${ex.id}:${encodeURIComponent(t)}">✕</button></span>`).join('')}
+        <button type="button" class="wu-topic-add" data-wu-topic-toggle="${ex.id}">+ тема</button>
+        ${topicMenuOpen ? `
+          <div class="wu-popover">
+            ${availTopics.length ? availTopics.map(t=>`<button type="button" class="wu-popover-item" data-wu-topic-pick="${ex.id}:${encodeURIComponent(t)}">${t}</button>`).join('') : `<div class="wu-pick-empty" style="padding:6px 10px;">Все темы уже добавлены</div>`}
+          </div>
+        ` : ''}
+      </div>
+      ${audios.map(au=> wuAudioHtml(ex, au)).join('')}
+      ${recording ? `
+        <div class="wu-rec-row">
+          <span class="wu-rec-dot"></span>
+          <div class="wu-rec-label">Идёт запись</div>
+          <div class="wu-rec-time" data-wu-rec-time="1">${wuFmt(state.warmRec.seconds)}</div>
+          <div style="flex:1;"></div>
+          <button type="button" class="wu-rec-stop" data-wu-rec-stop="1">Стоп и сохранить</button>
+          <button type="button" class="wu-rec-cancel" data-wu-rec-cancel="1">Отмена</button>
+        </div>
+      ` : ''}
+      <div class="wu-add-audio-wrap">
+        <button type="button" class="wu-add-audio-btn" data-wu-add-toggle="${ex.id}">+ добавить аудио</button>
+        ${addMenuOpen ? `
+          <div class="wu-popover" style="min-width:210px;">
+            <button type="button" class="wu-popover-item wu-add-audio-menu-item" data-wu-rec-start="${ex.id}"><span class="wu-rec-dot-sm"></span>Записать с микрофона</button>
+            <button type="button" class="wu-popover-item wu-add-audio-menu-item" data-wu-upload="${ex.id}"><span style="font-size:12px;color:var(--muted);">↑</span>Загрузить файл</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function wuAudioHtml(ex, au){
+  const gearOpen = state.warmGear===au.id;
+  const bpm = state.warmBpm[au.id] || au.bpm || 90;
+  const sh = state.warmShift[au.id] || 0;
+  const ki = WU_KEYS.indexOf(au.key||'C');
+  const curKey = ki<0 ? (au.key||'C') : WU_KEYS[((ki+sh)%12+12)%12];
+  const shiftLabel = sh===0 ? '0 пт' : (sh>0?'+':'−')+Math.abs(sh)+' пт';
+  const peaks = (au.peaks && au.peaks.length) ? au.peaks : new Array(60).fill(0.3);
+  const playing = state.warmPlay.id===au.id && state.warmPlay.on;
+  return `
+    <div class="wu-audio" data-wu-row="${au.id}">
+      <video data-wu-video="${au.id}" playsinline style="display:none"></video>
+      <div class="wu-audio-top">
+        <button type="button" class="wu-play-btn" data-wu-play="${au.id}">${playing?'❚❚':'▶'}</button>
+        <input type="text" class="wu-audio-name" value="${wuEsc(au.name)}" data-wu-rename-audio="${ex.id}:${au.id}" placeholder="Название" />
+        <div class="wu-wave" data-wu-seek="${au.id}">
+          ${peaks.map(v=>`<span class="wu-bar" style="height:${Math.max(12,Math.round(v*100))}%"></span>`).join('')}
+        </div>
+        <div class="wu-audio-time">${wuFmt(au.durationSec||0)}</div>
+        <button type="button" class="wu-star-btn" data-wu-star="${ex.id}:${au.id}" title="Избранное">${au.starred?'★':'☆'}</button>
+        <button type="button" class="wu-gear-btn ${gearOpen?'on':''}" data-wu-gear-toggle="${au.id}" title="Темп и тональность">⚙</button>
+      </div>
+      ${gearOpen ? `
+        <div class="wu-gear-panel">
+          <div class="wu-gear-col">
+            <div class="wu-gear-head">
+              <div class="wu-gear-label">Темп</div>
+              <div style="flex:1;"></div>
+              <div class="wu-gear-base">исходный <input type="number" class="wu-gear-base-input" value="${au.bpm||90}" data-wu-base-bpm="${ex.id}:${au.id}" /></div>
+              <button type="button" class="wu-reset-btn" data-wu-reset-bpm="${au.id}">сброс</button>
+            </div>
+            <div class="wu-gear-row">
+              <button type="button" class="wu-mini-btn" data-wu-bpm-step="${au.id}:-1">−</button>
+              <input type="range" min="${Math.round((au.bpm||90)/2)}" max="${(au.bpm||90)*2}" step="1" value="${bpm}" data-wu-bpm-set="${au.id}" style="flex:1;min-width:0;" />
+              <button type="button" class="wu-mini-btn" data-wu-bpm-step="${au.id}:1">+</button>
+              <div class="wu-gear-val">${bpm} BPM</div>
+            </div>
+          </div>
+          <div class="wu-gear-col">
+            <div class="wu-gear-head">
+              <div class="wu-gear-label">Тональность</div>
+              <div style="flex:1;"></div>
+              <div class="wu-gear-base">исходная
+                <select class="wu-gear-base-select" data-wu-base-key="${ex.id}:${au.id}">
+                  ${WU_KEYS.map(k=>`<option value="${k}" ${k===(au.key||'C')?'selected':''}>${k}</option>`).join('')}
+                </select>
+              </div>
+              <button type="button" class="wu-reset-btn" data-wu-reset-shift="${au.id}">сброс</button>
+            </div>
+            <div class="wu-gear-row">
+              <button type="button" class="wu-mini-btn" data-wu-shift-step="${au.id}:-1">−</button>
+              <input type="range" min="-6" max="6" step="1" value="${sh}" data-wu-shift-set="${au.id}" style="flex:1;min-width:0;" />
+              <button type="button" class="wu-mini-btn" data-wu-shift-step="${au.id}:1">+</button>
+              <div class="wu-gear-val">${curKey} ${shiftLabel}</div>
+            </div>
+          </div>
+          <div class="wu-gear-hint">Темп реально меняет скорость воспроизведения без изменения высоты тона. Тональность пока только подсказывает ноту — сам звук ей не меняется.</div>
+          <div class="wu-gear-actions">
+            <button type="button" class="wu-gear-action-btn" data-wu-download="${au.id}">Скачать</button>
+            <button type="button" class="wu-gear-action-btn danger" data-wu-remove-audio="${ex.id}:${au.id}">Удалить аудио</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function wireWarmupsHandlers(s){
+  const c = document.getElementById('tabContent');
+
+  c.querySelectorAll('[data-wu-filter-clear]').forEach(el=>{ el.onclick = ()=>{ state.warmFilter=[]; paintWarmups(s); }; });
+  c.querySelectorAll('[data-wu-filter-toggle]').forEach(el=>{
+    el.onclick = ()=>{
+      const t = el.dataset.wuFilterToggle;
+      const i = state.warmFilter.indexOf(t);
+      state.warmFilter = i>=0 ? state.warmFilter.filter(x=>x!==t) : state.warmFilter.concat([t]);
+      paintWarmups(s);
+    };
+  });
+  c.querySelectorAll('[data-wu-level-toggle]').forEach(el=>{
+    el.onclick = ()=>{ const k = el.dataset.wuLevelToggle; state.warmClosed[k] = !state.warmClosed[k]; paintWarmups(s); };
+  });
+  c.querySelectorAll('[data-wu-add-ex]').forEach(el=>{ el.onclick = ()=> wuAddExercise(el.dataset.wuAddEx); });
+  c.querySelectorAll('[data-wu-move]').forEach(el=>{
+    el.onclick = ()=>{ const [id,dir] = el.dataset.wuMove.split(':'); const ex = wuFindEx(id); if(ex) wuMove(ex, Number(dir)); };
+  });
+  c.querySelectorAll('[data-wu-rename-ex]').forEach(el=>{
+    el.onchange = ()=>{ const ex = wuFindEx(el.dataset.wuRenameEx); if(ex) wuRenameEx(ex, el.value.trim()||'Новая распевка'); };
+  });
+  c.querySelectorAll('[data-wu-ask-del]').forEach(el=>{ el.onclick = ()=>{ state.warmDelConfirm = el.dataset.wuAskDel; paintWarmups(s); }; });
+  c.querySelectorAll('[data-wu-cancel-del]').forEach(el=>{ el.onclick = ()=>{ state.warmDelConfirm = null; paintWarmups(s); }; });
+  c.querySelectorAll('[data-wu-do-del]').forEach(el=>{
+    el.onclick = ()=>{ const ex = wuFindEx(el.dataset.wuDoDel); if(ex) wuDeleteExercise(ex); };
+  });
+  c.querySelectorAll('[data-wu-topic-toggle]').forEach(el=>{
+    el.onclick = ()=>{ const id = el.dataset.wuTopicToggle; state.warmTopicMenu = state.warmTopicMenu===id ? null : id; state.warmAddMenu=null; paintWarmups(s); };
+  });
+  c.querySelectorAll('[data-wu-topic-pick]').forEach(el=>{
+    el.onclick = ()=>{ const [exId,topicEnc] = el.dataset.wuTopicPick.split(':'); const ex = wuFindEx(exId); if(ex) wuAddTopic(ex, decodeURIComponent(topicEnc)); };
+  });
+  c.querySelectorAll('[data-wu-remove-topic]').forEach(el=>{
+    el.onclick = ()=>{ const [exId,topicEnc] = el.dataset.wuRemoveTopic.split(':'); const ex = wuFindEx(exId); if(ex) wuRemoveTopic(ex, decodeURIComponent(topicEnc)); };
+  });
+  c.querySelectorAll('[data-wu-add-toggle]').forEach(el=>{
+    el.onclick = ()=>{ const id = el.dataset.wuAddToggle; state.warmAddMenu = state.warmAddMenu===id ? null : id; state.warmTopicMenu=null; paintWarmups(s); };
+  });
+  c.querySelectorAll('[data-wu-rec-start]').forEach(el=>{
+    el.onclick = ()=>{ const ex = wuFindEx(el.dataset.wuRecStart); if(ex) wuStartRec(ex); };
+  });
+  c.querySelectorAll('[data-wu-upload]').forEach(el=>{
+    el.onclick = ()=>{ const ex = wuFindEx(el.dataset.wuUpload); state.warmAddMenu=null; paintWarmups(s); if(ex) wuUploadAudio(ex); };
+  });
+  c.querySelectorAll('[data-wu-rec-stop]').forEach(el=>{ el.onclick = ()=> wuStopRec(); });
+  c.querySelectorAll('[data-wu-rec-cancel]').forEach(el=>{ el.onclick = ()=> wuCancelRec(); });
+
+  c.querySelectorAll('[data-wu-play]').forEach(el=>{
+    el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuPlay); if(found) wuToggle(found.au); };
+  });
+  c.querySelectorAll('[data-wu-seek]').forEach(el=>{
+    el.onclick = (e)=>{ const found = wuFindAudio(el.dataset.wuSeek); if(found) wuSeekFromEvent(found.au, e); };
+  });
+  c.querySelectorAll('[data-wu-rename-audio]').forEach(el=>{
+    el.onchange = ()=>{ const [exId,auId] = el.dataset.wuRenameAudio.split(':'); const ex = wuFindEx(exId); if(ex) wuRenameAudio(ex, auId, el.value.trim()||'Без названия'); };
+  });
+  c.querySelectorAll('[data-wu-star]').forEach(el=>{
+    el.onclick = ()=>{ const [exId,auId] = el.dataset.wuStar.split(':'); const ex = wuFindEx(exId); const au = ex && (ex.audios||[]).find(a=>a.id===auId); if(ex&&au) wuToggleStar(ex, au); };
+  });
+  c.querySelectorAll('[data-wu-gear-toggle]').forEach(el=>{
+    el.onclick = ()=>{ const id = el.dataset.wuGearToggle; state.warmGear = state.warmGear===id ? null : id; paintWarmups(s); };
+  });
+  c.querySelectorAll('[data-wu-base-bpm]').forEach(el=>{
+    el.onchange = ()=>{ const [exId,auId] = el.dataset.wuBaseBpm.split(':'); const ex = wuFindEx(exId); const au = ex && (ex.audios||[]).find(a=>a.id===auId); if(ex&&au) wuSetBaseBpm(ex, au, Number(el.value)); };
+  });
+  c.querySelectorAll('[data-wu-base-key]').forEach(el=>{
+    el.onchange = ()=>{ const [exId,auId] = el.dataset.wuBaseKey.split(':'); const ex = wuFindEx(exId); const au = ex && (ex.audios||[]).find(a=>a.id===auId); if(ex&&au) wuSetBaseKey(ex, au, el.value); };
+  });
+  c.querySelectorAll('[data-wu-reset-bpm]').forEach(el=>{
+    el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuResetBpm); if(!found) return; delete state.warmBpm[found.au.id]; const v = wuVideoFor(found.au.id); if(v && state.warmPlay.id===found.au.id && state.warmPlay.on) v.playbackRate = 1; wuPaintGearVals(found.au.id); };
+  });
+  c.querySelectorAll('[data-wu-bpm-step]').forEach(el=>{
+    el.onclick = ()=>{ const [id,d] = el.dataset.wuBpmStep.split(':'); const found = wuFindAudio(id); if(!found) return; const cur = state.warmBpm[id] || found.au.bpm || 90; wuSetBpm(found.au, cur + Number(d)); };
+  });
+  c.querySelectorAll('[data-wu-bpm-set]').forEach(el=>{
+    el.oninput = ()=>{ const found = wuFindAudio(el.dataset.wuBpmSet); if(found) wuSetBpm(found.au, Number(el.value)); };
+  });
+  c.querySelectorAll('[data-wu-reset-shift]').forEach(el=>{
+    el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuResetShift); if(!found) return; delete state.warmShift[found.au.id]; wuPaintGearVals(found.au.id); };
+  });
+  c.querySelectorAll('[data-wu-shift-step]').forEach(el=>{
+    el.onclick = ()=>{ const [id,d] = el.dataset.wuShiftStep.split(':'); const found = wuFindAudio(id); if(!found) return; const cur = state.warmShift[id] || 0; wuSetShift(found.au, cur + Number(d)); };
+  });
+  c.querySelectorAll('[data-wu-shift-set]').forEach(el=>{
+    el.oninput = ()=>{ const found = wuFindAudio(el.dataset.wuShiftSet); if(found) wuSetShift(found.au, Number(el.value)); };
+  });
+  c.querySelectorAll('[data-wu-download]').forEach(el=>{
+    el.onclick = ()=>{ const found = wuFindAudio(el.dataset.wuDownload); if(found) wuDownloadAudio(found.au); };
+  });
+  c.querySelectorAll('[data-wu-remove-audio]').forEach(el=>{
+    el.onclick = ()=>{ const [exId,auId] = el.dataset.wuRemoveAudio.split(':'); const ex = wuFindEx(exId); const au = ex && (ex.audios||[]).find(a=>a.id===auId); if(ex&&au) wuRemoveAudio(ex, au); };
+  });
+}
+
+/* ---- пикер «Распевка из библиотеки» для формы «Новая запись» в
+   Дневнике (см. dnFormHtml/wireDiaryHandlers ниже) ---- */
+function wuPickGroupsHtml(attachedIds){
+  return WU_LEVELS.filter(m=> wuByLevel(m.k).length).map(m=>{
+    const items = wuByLevel(m.k);
+    return `
+      <div>
+        <div class="wu-pick-group-label" style="color:${m.color};">${m.name}</div>
+        <div class="wu-pick-items">
+          ${items.map(ex=>{
+            const taken = attachedIds.includes(ex.id);
+            return `<button type="button" class="wu-pick-item ${taken?'taken':''}" ${taken?'disabled':''} data-wu-pick-attach="${ex.id}">${wuEsc(ex.title)}</button>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function dnWarmupPickerHtml(draft){
+  const ids = draft.warmupIds || [];
+  const lib = state.warmupsLib || [];
+  const attached = ids.map(id=> lib.find(w=>w.id===id)).filter(Boolean);
+  return `
+    <label style="display:block;margin-top:14px;">
+      <span style="${dnLabelStyle()}">Распевка из библиотеки</span>
+      <div class="wu-pick-box">
+        ${attached.map(ex=>{
+          const m = WU_LEVELS.find(x=>x.k===ex.level) || WU_LEVELS[0];
+          return `<span class="wu-pick-chip"><span class="wu-pick-chip-lvl" style="background:${m.color};">${ex.level}</span>${wuEsc(ex.title)}<button type="button" class="wu-pick-chip-remove" data-dn-warmup-remove="${ex.id}">✕</button></span>`;
+        }).join('')}
+        <button type="button" class="wu-pick-add" data-dn-warmup-toggle="1">+ выбрать</button>
+        ${draft.warmupPickerOpen ? `
+          <div class="wu-pick-menu">
+            ${lib.length ? wuPickGroupsHtml(ids) : `<div class="wu-pick-empty">Библиотека пуста — добавьте распевки во вкладке «Распевки».</div>`}
+            <div class="wu-pick-empty">Новые распевки добавляются во вкладке «Распевки».</div>
+          </div>
+        ` : ''}
+      </div>
+    </label>
+  `;
+}
+
+/* ============================================================
    ДНЕВНИК ЗАНЯТИЙ (session diary) — вкладка «Дневник занятий»
    Собрано строго по верстке из «Кабинет ученика EVT.dc.html»:
    форма «Новая запись», «Тренд по срезам», «Записи занятий».
@@ -2585,7 +3365,8 @@ function dnBlankDraft(seed){
           steps: [], newTool: DN_TOOL_GROUPS[0].items[0], stepPicks: [], stepListOpen: false, stepAdding: false, stepAddDraft: '', stepAddError: '', hard: null, tone: null,
           probs: [], problemPicks: [], problemListOpen: false, ownProblem: '',
           level: DN_LEVEL_DATA[0].code, hwPick: '', hwDue: '', dueWarn: false,
-          assigned: [], sent: false
+          assigned: [], sent: false,
+          warmupIds: [], warmupPickerOpen: false
     };
 }
 function dnProfileRange(s){ const intake = (state.kabinetCache[s.id] && state.kabinetCache[s.id].intake) || {}; return { workLow: intake.rangeLow || '', workHigh: intake.rangeHigh || '' }; } function dnDraft(s){ if(!state.diaryDrafts[s.id]) state.diaryDrafts[s.id] = dnBlankDraft(dnProfileRange(s)); return state.diaryDrafts[s.id]; }
@@ -2602,7 +3383,7 @@ function dnEditDraft(lessonId){
   return state.diaryEditDrafts[lessonId] || (state.diaryEditDrafts[lessonId] = {});
 }
 
-function renderDiary(s){ const c = document.getElementById('tabContent'); const needDicts = !state.kbDictsLoaded; state.kabinetIntakeLoaded = state.kabinetIntakeLoaded || {}; const needIntake = !state.kabinetIntakeLoaded[s.id]; if(state.diaryCache[s.id] && !needDicts && !needIntake){ paintDiary(s); return; } c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`; const cached = state.diaryCache[s.id]; const tasks = [ (cached && cached.lessons) ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id)), needIntake ? apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)) : Promise.resolve(null) ]; if(needDicts) tasks.push(apiGet('/api/dicts')); Promise.all(tasks).then(([lessonsRes, intakeRes, dictsRes])=>{ state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] }; if(needIntake){ state.kabinetCache[s.id] = Object.assign({}, state.kabinetCache[s.id], { intake: (intakeRes && intakeRes.intake) || {} }); state.kabinetIntakeLoaded[s.id] = true; } if(needDicts){ const server = (dictsRes && dictsRes.dicts) || {}; Object.keys(state.kbDicts).forEach(k=>{ const row = server[k]; if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]}); }); state.kbDictsLoaded = true; } paintDiary(s); }).catch(err=>{ c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`; }); }
+function renderDiary(s){ const c = document.getElementById('tabContent'); const needDicts = !state.kbDictsLoaded; state.kabinetIntakeLoaded = state.kabinetIntakeLoaded || {}; const needIntake = !state.kabinetIntakeLoaded[s.id]; const needWarmups = !state.warmupsLib; if(state.diaryCache[s.id] && !needDicts && !needIntake && !needWarmups){ paintDiary(s); return; } c.innerHTML = `<div class="kb-loading">Загружаю дневник занятий…</div>`; const cached = state.diaryCache[s.id]; const tasks = [ (cached && cached.lessons) ? Promise.resolve({lessons: cached.lessons}) : apiGet('/api/lessons?studentId=' + encodeURIComponent(s.id)), needIntake ? apiGet('/api/intake?studentId=' + encodeURIComponent(s.id)) : Promise.resolve(null) ]; if(needDicts) tasks.push(apiGet('/api/dicts')); if(needWarmups) tasks.push(loadWarmupsLib().catch(()=>null)); Promise.all(tasks).then(([lessonsRes, intakeRes, dictsRes])=>{ state.diaryCache[s.id] = { lessons: (lessonsRes && lessonsRes.lessons) || [] }; if(needIntake){ state.kabinetCache[s.id] = Object.assign({}, state.kabinetCache[s.id], { intake: (intakeRes && intakeRes.intake) || {} }); state.kabinetIntakeLoaded[s.id] = true; } if(needDicts){ const server = (dictsRes && dictsRes.dicts) || {}; Object.keys(state.kbDicts).forEach(k=>{ const row = server[k]; if(row) state.kbDicts[k] = Object.assign({}, state.kbDicts[k], {pinned: row.pinned||[], added: row.added||[]}); }); state.kbDictsLoaded = true; } paintDiary(s); }).catch(err=>{ c.innerHTML = `<div class="card-error">Не удалось загрузить дневник занятий: ${String(err.message||err)}. Проверьте подключение базы Postgres в настройках Vercel.</div>`; }); }
 
 function paintDiary(s){
   const c = document.getElementById('tabContent');
@@ -2673,6 +3454,7 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                   <span style="${dnLabelStyle()}">Цель урока</span>
                                                                                                                                                                                                                         <input type="text" placeholder="какую задачу закрываем" data-dn-field="goal" data-dn-ctx="${ctx}" value="${draft.goal||''}" style="${dnFieldInputStyle()}" />
                                                                                                                                                                                                                             </label>
+                              ${dnWarmupPickerHtml(draft)}
                                                                                                                                                                                                                                 <div style="margin-top: 22px; border-top: 1px solid #F0EAE1; padding-top: 18px;">
                                                                                                                                                                                                                                       <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                                                                                                                                                                                                                                               <div style="${dnLabelStyle()}">Задачи урока шаг за шагом</div>
@@ -3024,7 +3806,8 @@ function dnDraftToPayload(s, draft){
           newProblems: draft.probs || [],
           hwItems: draft.assigned || [],
           hwSent: !!draft.sent,
-          takes: draft.takes || []
+          takes: draft.takes || [],
+          warmupIds: draft.warmupIds || []
     };
 }
 function dnEnsureDraftRow(s){
@@ -3974,6 +4757,30 @@ function dnRecorderWire(s, recKey, rec, ctx, getTakesArr, setTakesArr, syncAfter
 }
 function wireDiaryHandlers(s){
   const c = document.getElementById('tabContent');
+
+  // Распевка из библиотеки (общая для всех учеников, см. renderWarmups выше)
+  c.querySelectorAll('[data-dn-warmup-toggle]').forEach(el=>{
+    el.onclick = ()=>{ const draft = dnDraft(s); draft.warmupPickerOpen = !draft.warmupPickerOpen; paintDiary(s); };
+  });
+  c.querySelectorAll('[data-dn-warmup-remove]').forEach(el=>{
+    el.onclick = ()=>{
+      const draft = dnDraft(s);
+      const ids = (draft.warmupIds||[]).filter(id=>id!==el.dataset.dnWarmupRemove);
+      dnAutosave(s, {warmupIds: ids});
+      paintDiary(s);
+    };
+  });
+  c.querySelectorAll('[data-wu-pick-attach]').forEach(el=>{
+    el.onclick = ()=>{
+      const draft = dnDraft(s);
+      const id = el.dataset.wuPickAttach;
+      if((draft.warmupIds||[]).includes(id)) return;
+      const ids = (draft.warmupIds||[]).concat([id]);
+      draft.warmupPickerOpen = false;
+      dnAutosave(s, {warmupIds: ids});
+      paintDiary(s);
+    };
+  });
 
   // Справочник (Диапазон в работе / Новые проблемы): та же общая логика
   // открытия/выбора/pin/delete/add-своё, что и в Кабинете — общее состояние

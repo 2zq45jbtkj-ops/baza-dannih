@@ -239,6 +239,28 @@ async function ensureSchema(p) {
   await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS voice_duration_sec NUMERIC;`);
   await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS music_duration_sec NUMERIC;`);
   await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();`);
+
+  // Вкладка «Распевки» — общая библиотека разогревочных упражнений для ВСЕХ
+  // учеников (не привязана к student_id), сгруппированная по уровням A–D,
+  // как «Домашнее задание» в Дневнике. Аудио (запись с микрофона или
+  // загруженный файл) хранится как data: URL прямо в JSONB-поле audios —
+  // тот же приём, что и везде в проекте (reference_takes/takes/player_tracks).
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS warmups (
+      id TEXT PRIMARY KEY,
+      level TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT 'Новая распевка',
+      topics TEXT[] DEFAULT '{}',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      audios JSONB DEFAULT '[]',
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_warmups_level ON warmups(level, sort_order);`);
+
+  // Дневник занятий: какие распевки из общей библиотеки использовались на уроке
+  await p.query(`ALTER TABLE lesson_log ADD COLUMN IF NOT EXISTS warmup_ids TEXT[] DEFAULT '{}';`);
 }
 
 async function query(sql, params) {
