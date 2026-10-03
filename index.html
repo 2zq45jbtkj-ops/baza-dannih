@@ -667,6 +667,7 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 .wu-ex-del-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:#A8452C;font-size:14px;cursor:pointer;}
 .wu-ex-del-btn:hover{background:var(--terracotta-bg);border-color:#D9A392;}
 .wu-del-confirm{display:flex;align-items:center;gap:10px;background:var(--terracotta-bg);border:1px solid #E8C4B6;border-radius:10px;padding:8px 12px;}
+.wu-error-banner{background:var(--terracotta-bg);border:1px solid #E8C4B6;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;color:#7E3220;}
 .wu-del-confirm-text{flex:1;font-size:13px;font-weight:600;color:#7E3220;}
 .wu-del-confirm-btn{height:30px;padding:0 12px;border:none;border-radius:8px;background:#A8452C;color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;}
 .wu-del-cancel-btn{height:30px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;}
@@ -1087,7 +1088,9 @@ const state = {
   warmTopicMenu: null,
   warmDelConfirm: null,
   warmRec: null,
-  warmSaveChain: {}
+  warmSaveChain: {},
+  warmUploading: {},
+  warmError: {}
 };
 const LAST_STUDENT_KEY = 'bd_last_student_id';
 function setActiveStudentId(id){
@@ -2702,15 +2705,35 @@ function wuByLevel(k){ return (state.warmupsLib||[]).filter(w=>w.level===k).sort
 function wuFindEx(id){ return (state.warmupsLib||[]).find(w=>w.id===id) || null; }
 function wuFindAudio(id){ for(const ex of (state.warmupsLib||[])) for(const a of (ex.audios||[])) if(a.id===id) return {ex, au:a}; return null; }
 
+// Тихий баннер в карточке распевки вместо alert() — и, что важнее,
+// проваленное сохранение больше не маскируется под успешное: раньше
+// wuPatch сама глотала ошибку, и .then() у вызывающего кода срабатывал
+// как ни в чём не бывало (отсюда — повторная попытка сохранить волну
+// поверх уже упавшей записи и второй алерт).
+function wuShowError(exId, msg){
+  state.warmError = state.warmError || {};
+  state.warmError[exId] = msg;
+}
+function wuClearError(exId){
+  if(state.warmError) delete state.warmError[exId];
+}
 function wuPatch(ex, patch){
   Object.assign(ex, patch);
-  const chain = (state.warmSaveChain[ex.id] || Promise.resolve()).then(()=>
+  const attempt = (state.warmSaveChain[ex.id] || Promise.resolve()).then(()=>
     apiSend('/api/warmups?id=' + encodeURIComponent(ex.id), 'PATCH', patch).then(res=>{
       if(res && res.warmup) Object.assign(ex, res.warmup);
-    }).catch(err=>{ alert('Не удалось сохранить распевку: ' + (err.message||err)); })
+      wuClearError(ex.id);
+    })
   );
-  state.warmSaveChain[ex.id] = chain.catch(()=>{});
-  return chain;
+  // В saveChain держим версию, которая никогда не падает — иначе одна
+  // неудачная правка заблокирует очередь всех последующих сохранений.
+  state.warmSaveChain[ex.id] = attempt.catch(()=>{});
+  return attempt.catch(err=>{
+    const msg = String((err && err.message) || err);
+    wuShowError(ex.id, /413|too large|entity too large/i.test(msg) ? 'Не удалось сохранить: файл слишком большой.' : 'Не удалось сохранить: ' + msg);
+    paintWarmupsActive();
+    throw err;
+  });
 }
 
 function wuAddExercise(level){
@@ -2737,27 +2760,35 @@ function wuMove(ex, dir){
   if(i<0 || j<0 || j>=list.length) return;
   const a = list[i], b = list[j];
   const ao = a.sortOrder, bo = b.sortOrder;
-  wuPatch(a, {sortOrder: bo});
-  wuPatch(b, {sortOrder: ao});
+  wuPatch(a, {sortOrder: bo}).catch(()=>{});
+  wuPatch(b, {sortOrder: ao}).catch(()=>{});
   paintWarmupsActive();
 }
 
-function wuRenameEx(ex, title){ wuPatch(ex, {title}); }
+function wuRenameEx(ex, title){ wuPatch(ex, {title}).catch(()=>{}); }
 function wuAddTopic(ex, topic){
   if((ex.topics||[]).includes(topic)){ state.warmTopicMenu=null; paintWarmupsActive(); return; }
   const topics = (ex.topics||[]).concat([topic]);
   state.warmTopicMenu = null;
-  wuPatch(ex, {topics}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {topics}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuRemoveTopic(ex, topic){
   const topics = (ex.topics||[]).filter(t=>t!==topic);
-  wuPatch(ex, {topics}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {topics}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 
+// Загрузка аудио (с микрофона или файлом) теперь идёт напрямую в Vercel
+// Blob из браузера (см. wuUploadToBlob) — в audios/в Postgres попадает
+// только короткая ссылка на файл, а не base64 всего аудио целиком.
+// Раньше весь файл летел внутри PATCH-запроса — на файлах покрупнее
+// (или на вступлении в силу 413 Vercel-лимита тела запроса ~4.5 МБ)
+// сохранение падало, а код всё равно считал его успешным и пытался
+// сохранить ещё и волну поверх несохранённой записи — отсюда двойной
+// alert и распевка, слетающая после перезагрузки.
 function wuAddAudioToEx(ex, data){
   const au = { id: wuUid(), name: data.name || ('Запись '+((ex.audios||[]).length+1)), dataUrl: data.dataUrl, durationSec: data.durationSec||0, bpm:90, key:'C', starred:false, peaks:[] };
   const audios = (ex.audios||[]).concat([au]);
-  wuPatch(ex, {audios}).then(()=>{ paintWarmupsActive(); wuRecomputePeaks(ex.id, au.id); });
+  wuPatch(ex, {audios}).then(()=>{ paintWarmupsActive(); wuRecomputePeaks(ex.id, au.id); }).catch(()=>{});
 }
 
 async function wuRecomputePeaks(exId, auId){
@@ -2781,7 +2812,41 @@ async function wuRecomputePeaks(exId, auId){
   } catch(e){ peaks = []; }
   const ex = wuFindEx(exId); if(!ex) return;
   const audios = (ex.audios||[]).map(a=> a.id===auId ? Object.assign({}, a, {peaks}) : a);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
+}
+
+// Клиентская загрузка в Vercel Blob в обход лимита размера тела запроса
+// serverless-функций: /api/warmups-upload выдаёт одноразовый токен,
+// сам файл летит браузером напрямую в Blob-хранилище. Библиотека
+// подгружается динамически (в проекте принципиально нет сборки и
+// внешних <script> — грузим её только когда она реально понадобилась).
+let _wuBlobUploadFn = null;
+function wuBlobUpload(){
+  if(!_wuBlobUploadFn) _wuBlobUploadFn = import('https://esm.sh/@vercel/blob@0.27.1/client').then(m=>m.upload);
+  return _wuBlobUploadFn;
+}
+async function wuUploadToBlob(fileOrBlob, filename){
+  const upload = await wuBlobUpload();
+  const result = await upload(filename, fileOrBlob, {
+    access: 'public',
+    handleUploadUrl: '/api/warmups-upload',
+  });
+  return result.url;
+}
+
+async function wuUploadAudioFile(ex, file, name, durationSec){
+  state.warmUploading = state.warmUploading || {};
+  state.warmUploading[ex.id] = true;
+  paintWarmupsActive();
+  try{
+    const url = await wuUploadToBlob(file, 'warmups/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_'));
+    delete state.warmUploading[ex.id];
+    wuAddAudioToEx(ex, {dataUrl: url, durationSec, name});
+  } catch(err){
+    delete state.warmUploading[ex.id];
+    wuShowError(ex.id, 'Не удалось загрузить файл: ' + (err.message||err));
+    paintWarmupsActive();
+  }
 }
 
 function wuUploadAudio(ex){
@@ -2789,16 +2854,14 @@ function wuUploadAudio(ex){
   inp.type = 'file'; inp.accept = 'audio/*';
   inp.onchange = ()=>{
     const f = inp.files[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      const dataUrl = reader.result;
-      const probe = document.createElement('audio');
-      probe.preload = 'metadata';
-      probe.onloadedmetadata = ()=>{ wuAddAudioToEx(ex, {dataUrl, durationSec: Math.max(1, Math.round(probe.duration||30)), name: f.name.replace(/\.[^.]+$/,'')}); };
-      probe.onerror = ()=>{ wuAddAudioToEx(ex, {dataUrl, durationSec: 30, name: f.name.replace(/\.[^.]+$/,'')}); };
-      probe.src = dataUrl;
-    };
-    reader.readAsDataURL(f);
+    const localUrl = URL.createObjectURL(f);
+    const probe = document.createElement('audio');
+    probe.preload = 'metadata';
+    const name = f.name.replace(/\.[^.]+$/,'');
+    const finish = (durationSec)=>{ URL.revokeObjectURL(localUrl); wuUploadAudioFile(ex, f, name, durationSec); };
+    probe.onloadedmetadata = ()=> finish(Math.max(1, Math.round(probe.duration||30)));
+    probe.onerror = ()=> finish(30);
+    probe.src = localUrl;
   };
   inp.click();
 }
@@ -2840,19 +2903,26 @@ function wuStopRec(){
   const rec = state.warmRec; if(!rec) return;
   const ex = wuFindEx(rec.exId);
   if(rec.timer) clearInterval(rec.timer);
-  const finish = (dataUrl)=>{
+  const finish = async (blob)=>{
     if(rec.stream) rec.stream.getTracks().forEach(t=>t.stop());
     state.warmRec = null;
-    if(ex && dataUrl) wuAddAudioToEx(ex, {dataUrl, durationSec: Math.max(1, Math.round(rec.seconds)), name: 'Запись'});
-    else paintWarmupsActive();
+    if(!(ex && blob)){ paintWarmupsActive(); return; }
+    state.warmUploading = state.warmUploading || {};
+    state.warmUploading[ex.id] = true;
+    paintWarmupsActive();
+    try{
+      const url = await wuUploadToBlob(blob, 'warmups/' + Date.now() + '-rec.webm');
+      delete state.warmUploading[ex.id];
+      wuAddAudioToEx(ex, {dataUrl: url, durationSec: Math.max(1, Math.round(rec.seconds)), name: 'Запись'});
+    } catch(err){
+      delete state.warmUploading[ex.id];
+      wuShowError(ex.id, 'Не удалось сохранить запись: ' + (err.message||err));
+      paintWarmupsActive();
+    }
   };
   if(rec.mediaRecorder && rec.mediaRecorder.state!=='inactive'){
     rec.mediaRecorder.onstop = ()=>{
-      if(!rec.chunks.length){ finish(null); return; }
-      const blob = new Blob(rec.chunks, {type:'audio/webm'});
-      const reader = new FileReader();
-      reader.onload = ()=> finish(reader.result);
-      reader.readAsDataURL(blob);
+      finish(rec.chunks.length ? new Blob(rec.chunks, {type:'audio/webm'}) : null);
     };
     rec.mediaRecorder.stop();
   } else finish(null);
@@ -2860,33 +2930,33 @@ function wuStopRec(){
 
 function wuToggleStar(ex, au){
   const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {starred: !a.starred}) : a);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuRenameAudio(ex, auId, name){
   const audios = (ex.audios||[]).map(a=> a.id===auId ? Object.assign({}, a, {name}) : a);
-  wuPatch(ex, {audios});
+  wuPatch(ex, {audios}).catch(()=>{});
 }
 function wuRemoveAudio(ex, au){
   if(state.warmPlay.id===au.id){ wuPauseAll(); state.warmPlay={id:null,on:false,pos:0}; }
   if(state.warmGear===au.id) state.warmGear = null;
   if(au._shiftCache) Object.values(au._shiftCache).forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
   const audios = (ex.audios||[]).filter(a=>a.id!==au.id);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuDownloadAudio(au){
   if(!au.dataUrl) return;
   const a = document.createElement('a');
-  a.href = au.dataUrl; a.download = (au.name||'audio') + '.webm'; a.click();
+  a.href = au.dataUrl; a.download = (au.name||'audio') + (au.dataUrl.startsWith('data:')?'.webm':''); a.target = '_blank'; a.click();
 }
 function wuSetBaseBpm(ex, au, v){
   v = Math.max(20, Math.min(300, Math.round(v)||90));
   const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {bpm:v}) : a);
   delete state.warmBpm[au.id];
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 function wuSetBaseKey(ex, au, key){
   const audios = (ex.audios||[]).map(a=> a.id===au.id ? Object.assign({}, a, {key}) : a);
-  wuPatch(ex, {audios}).then(()=> paintWarmupsActive());
+  wuPatch(ex, {audios}).then(()=> paintWarmupsActive()).catch(()=>{});
 }
 
 /* ---- пикап-шифтер тональности: гранулярный time-domain pitch-shift
@@ -3205,6 +3275,8 @@ function wuExerciseHtml(ex){
   const topicMenuOpen = state.warmTopicMenu===ex.id;
   const addMenuOpen = state.warmAddMenu===ex.id;
   const recording = state.warmRec && state.warmRec.exId===ex.id;
+  const uploading = state.warmUploading && state.warmUploading[ex.id];
+  const errorMsg = state.warmError && state.warmError[ex.id];
   const availTopics = WU_TOPICS.filter(t=>!(ex.topics||[]).includes(t));
   return `
     <div class="wu-ex-card" data-wu-ex="${ex.id}">
@@ -3217,6 +3289,7 @@ function wuExerciseHtml(ex){
         <div class="wu-ex-audio-count">${audios.length ? audios.length+' аудио' : 'без аудио'}</div>
         <button type="button" class="wu-ex-del-btn" data-wu-ask-del="${ex.id}" title="Удалить распевку">✕</button>
       </div>
+      ${errorMsg ? `<div class="wu-error-banner">${wuEsc(errorMsg)}</div>` : ''}
       ${confirming ? `
         <div class="wu-del-confirm">
           <div class="wu-del-confirm-text">Удалить распевку вместе со всеми аудио?</div>
@@ -3245,7 +3318,7 @@ function wuExerciseHtml(ex){
         </div>
       ` : ''}
       <div class="wu-add-audio-wrap">
-        <button type="button" class="wu-add-audio-btn" data-wu-add-toggle="${ex.id}">+ добавить аудио</button>
+        <button type="button" class="wu-add-audio-btn" data-wu-add-toggle="${ex.id}" ${uploading?'disabled':''}>${uploading?'Загружаю…':'+ добавить аудио'}</button>
         ${addMenuOpen ? `
           <div class="wu-popover" style="min-width:210px;">
             <button type="button" class="wu-popover-item wu-add-audio-menu-item" data-wu-rec-start="${ex.id}"><span class="wu-rec-dot-sm"></span>Записать с микрофона</button>
