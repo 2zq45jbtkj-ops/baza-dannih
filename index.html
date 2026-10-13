@@ -516,19 +516,28 @@ input[type="range"].kb-metal::-moz-range-thumb{width:14px;height:14px;border-rad
 @media (pointer: coarse) {
   input, select, textarea { font-size: 16px !important; }
 }
-/* Native <input type="date"> (Dnevnik zanyatiy "Дата" field) ships its own
-   OS/browser-level control chrome that ignores our height/padding on some
-   mobile browsers (mobile Safari especially), so it can render taller/
-   differently-proportioned than the plain text inputs sitting next to it
-   in the same grid row even though both share the exact same inline style.
-   Resetting -webkit-appearance/appearance to none strips that native sizing
-   without touching the calendar-picker-indicator icon or the native picker
-   dropdown itself, which stay fully functional. */
-input[type="date"] {
-  -webkit-appearance: none;
-  -moz-appearance: textfield;
-  appearance: none;
-}
+/* Нативный <input type="date"> больше нигде не используется — заменён
+   кастомным календарём (bdDateFieldHtml/bdOpenPicker), потому что Safari
+   игнорирует lang="ru" для попапа и значения, всегда показывая системную
+   локаль (mm/dd/yyyy, английские месяцы) независимо от атрибутов страницы.
+   .bd-date-input — видимый readonly-текст (дд.мм.гггг), сам поповер
+   .bd-date-pop рисуется поверх document.body, см. блок CSS ниже рядом. */
+.bd-date-input{cursor:pointer;caret-color:transparent;}
+.bd-date-input::selection{background:transparent;}
+.bd-date-pop{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(35,32,29,0.18);padding:12px;width:280px;box-sizing:border-box;font-family:inherit;}
+.bd-date-pop-head{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+.bd-date-pop-title{flex:1;text-align:center;font-size:14px;font-weight:800;color:var(--text);}
+.bd-date-nav{width:28px;height:28px;flex:none;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;}
+.bd-date-nav:hover{background:var(--panel);color:var(--text);}
+.bd-date-today-dot{width:24px;height:24px;flex:none;border:none;background:none;color:var(--terracotta);font-size:10px;cursor:pointer;}
+.bd-date-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;}
+.bd-date-weekdays span{text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;}
+.bd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.bd-date-day{height:32px;border:none;border-radius:8px;background:none;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.bd-date-day:hover{background:var(--bg);}
+.bd-date-day.other{color:var(--muted);opacity:.5;}
+.bd-date-day.today{box-shadow:inset 0 0 0 1.5px var(--terracotta);}
+.bd-date-day.selected{background:var(--terracotta);color:#fff;}
 /* ── Diary card helpers (replaces inline #fff/border) ── */
 .dn-card{background:#fff;border:1px solid #ECE5DB;border-radius:16px;padding:16px 19px;}
 body.dark .dn-card{background:var(--panel);border-color:var(--line);}
@@ -603,9 +612,6 @@ body.dark .vr-mk-chip{background:#46392C;color:#8FBF8A;}
 body.dark .vr-mk-input{background:#241B14;color:#F0E6DA;border-color:#5A4A3A;}
 body.dark [data-dn-level]{background:var(--panel)!important;border-color:var(--line)!important;color:var(--muted)!important;}
 body.dark [data-dn-level].dn-level-active{background:var(--terracotta-dark)!important;border-color:var(--terracotta-dark)!important;color:#fff!important;}
-body.dark input[data-dn-hw-due]{background:var(--bg)!important;border-color:var(--line)!important;color:var(--text)!important;color-scheme:dark;}
-body.dark input[data-dn-hw-due].due-warn{border-color:#A8452C!important;}
-body.dark input[type="date"]{color-scheme:dark;}
 /* ── Артикуляционные особенности ── */
 .art-entry-card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
 .art-entry-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -844,6 +850,131 @@ const LEVEL_LABELS = {A:'Уровень A', B:'Уровень B', C:'Урове�
 const LEVEL_COLORS = {A:'var(--lvlA)', B:'var(--lvlB)', C:'var(--lvlC)', D:'var(--lvlD)'};
 const LEVEL_ORDER = ['A','B','C','D'];
 const COMPARE_PALETTE = ['#6C91A6','#C9A227','#7A6C9E','#3E6B3E','#B23A48','#4E7A91'];
+
+/* ============================================================
+   ОБЩИЙ КАСТОМНЫЙ КАЛЕНДАРЬ — замена нативного <input type="date">.
+   lang="ru" на нативном инпуте управляет форматом только в части
+   браузеров (Chrome), а Safari на macOS/iOS всегда берёт системную
+   локаль для попапа календаря и самого текстового значения независимо
+   от lang/html lang — это ограничение платформы, CSS/JS его не обойти.
+   Единственный способ гарантировать дд.мм.гггг и русские подписи везде
+   и всегда — не использовать нативный календарь вообще. Компонент
+   рисует два инпута: скрытый (id, value = ISO yyyy-mm-dd — ровно то,
+   что весь остальной код уже ожидает в .value/e.target.value) и видимый
+   readonly-текст рядом (id+'__disp', показывает дд.мм.гггг). Поповер —
+   отдельный элемент, подвешенный на document.body (а не внутри своего
+   контейнера), чтобы не обрезался overflow:hidden у аккордеонов/карточек.
+   ============================================================ */
+const BD_MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const BD_WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+function bdPad2(n){ return String(n).padStart(2,'0'); }
+function bdIso(y,m,d){ return y+'-'+bdPad2(m+1)+'-'+bdPad2(d); }
+function bdFmtRu(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[3]+'.'+m[2]+'.'+m[1] : '';
+}
+function bdDateFieldHtml(id, iso, visibleStyle, extraClass, extraAttrs){
+  return `<input type="hidden" id="${id}" ${extraAttrs||''} value="${iso||''}" />`
+    + `<input type="text" class="bd-date-input${extraClass?' '+extraClass:''}" id="${id}__disp" readonly autocomplete="off" placeholder="дд.мм.гггг" value="${bdFmtRu(iso)}" style="${visibleStyle||''}cursor:pointer;" />`;
+}
+
+let _bdPickerEl = null;
+function bdClosePicker(){
+  if(_bdPickerEl){ _bdPickerEl.remove(); _bdPickerEl = null; }
+  document.removeEventListener('mousedown', bdOutsideClick, true);
+  document.removeEventListener('keydown', bdEscClose, true);
+  window.removeEventListener('scroll', bdClosePicker, true);
+}
+function bdOutsideClick(e){
+  if(_bdPickerEl && !_bdPickerEl.contains(e.target) && e.target.id !== _bdPickerEl.dataset.forDisp){
+    bdClosePicker();
+  }
+}
+function bdEscClose(e){ if(e.key==='Escape') bdClosePicker(); }
+
+function bdOpenPicker(id){
+  const hidden = document.getElementById(id);
+  const disp = document.getElementById(id+'__disp');
+  if(!hidden || !disp) return;
+  if(_bdPickerEl && _bdPickerEl.dataset.forDisp === disp.id){ bdClosePicker(); return; }
+  bdClosePicker();
+
+  const iso = hidden.value || '';
+  const today = new Date();
+  let vy, vm;
+  const m = iso.match(/^(\d{4})-(\d{2})-\d{2}/);
+  if(m){ vy = +m[1]; vm = +m[2]-1; } else { vy = today.getFullYear(); vm = today.getMonth(); }
+
+  const pop = document.createElement('div');
+  pop.className = 'bd-date-pop';
+  pop.dataset.forDisp = disp.id;
+  document.body.appendChild(pop);
+  _bdPickerEl = pop;
+
+  function pick(pickedIso){
+    hidden.value = pickedIso;
+    disp.value = bdFmtRu(pickedIso);
+    bdClosePicker();
+    hidden.dispatchEvent(new Event('change', {bubbles:true}));
+  }
+  function paint(){
+    const todayIso = bdIso(today.getFullYear(), today.getMonth(), today.getDate());
+    const first = new Date(vy, vm, 1);
+    const startOffset = (first.getDay()+6)%7; // неделя с понедельника
+    const daysInMonth = new Date(vy, vm+1, 0).getDate();
+    const daysInPrev = new Date(vy, vm, 0).getDate();
+    const cells = [];
+    for(let i=startOffset-1;i>=0;i--){
+      const d = daysInPrev-i;
+      const pm = vm-1<0?11:vm-1, py = vm-1<0?vy-1:vy;
+      cells.push({d, iso: bdIso(py,pm,d), other:true});
+    }
+    for(let d=1; d<=daysInMonth; d++) cells.push({d, iso: bdIso(vy,vm,d), other:false});
+    const nm = vm+1>11?0:vm+1, ny = vm+1>11?vy+1:vy;
+    for(let d=1; cells.length<42; d++) cells.push({d, iso: bdIso(ny,nm,d), other:true});
+
+    pop.innerHTML = `
+      <div class="bd-date-pop-head">
+        <button type="button" data-bd-prev class="bd-date-nav">◂</button>
+        <div class="bd-date-pop-title">${BD_MONTHS[vm]} ${vy}</div>
+        <button type="button" data-bd-today class="bd-date-today-dot" title="Сегодня">●</button>
+        <button type="button" data-bd-next class="bd-date-nav">▸</button>
+      </div>
+      <div class="bd-date-weekdays">${BD_WEEKDAYS.map(w=>`<span>${w}</span>`).join('')}</div>
+      <div class="bd-date-grid">
+        ${cells.map(c=>`<button type="button" class="bd-date-day${c.other?' other':''}${c.iso===todayIso?' today':''}${c.iso===iso?' selected':''}" data-bd-day="${c.iso}">${c.d}</button>`).join('')}
+      </div>
+    `;
+    pop.querySelector('[data-bd-prev]').onclick = ()=>{ vm--; if(vm<0){vm=11;vy--;} paint(); };
+    pop.querySelector('[data-bd-next]').onclick = ()=>{ vm++; if(vm>11){vm=0;vy++;} paint(); };
+    pop.querySelector('[data-bd-today]').onclick = ()=>{ const t=new Date(); vy=t.getFullYear(); vm=t.getMonth(); paint(); };
+    pop.querySelectorAll('[data-bd-day]').forEach(cell=>{ cell.onclick = ()=> pick(cell.dataset.bdDay); });
+  }
+  paint();
+
+  const r = disp.getBoundingClientRect();
+  const popWidth = 280;
+  let left = Math.round(r.left);
+  if(left + popWidth > window.innerWidth - 8) left = Math.max(8, window.innerWidth - popWidth - 8);
+  let top = Math.round(r.bottom + 4);
+  pop.style.position = 'fixed';
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+  pop.style.zIndex = '10000';
+  const popH = pop.getBoundingClientRect().height;
+  if(top + popH > window.innerHeight - 8) pop.style.top = Math.max(8, Math.round(r.top - popH - 4)) + 'px';
+
+  setTimeout(()=>{
+    document.addEventListener('mousedown', bdOutsideClick, true);
+    document.addEventListener('keydown', bdEscClose, true);
+    window.addEventListener('scroll', bdClosePicker, true);
+  }, 0);
+}
+function bdAttachDatePicker(id){
+  const disp = document.getElementById(id+'__disp');
+  if(disp) disp.onclick = ()=> bdOpenPicker(id);
+}
 
 // badge = короткий код для кружка в карточке дефекта (art-entry-badge) —
 // отдельно от label (полная подпись в пилюле "Добавить дефект"), т.к. два
@@ -2522,7 +2653,7 @@ function repCardHtml(song){
         </label>
         <label class="rep-field-label">
           <span>Дата начала</span>
-          <input class="rep-field-input date" id="repStartInput" type="date" lang="ru" value="${song.startDate||''}">
+          ${bdDateFieldHtml('repStartInput', song.startDate, '', 'rep-field-input date')}
         </label>
         <label class="rep-field-label">
           <span>Ссылка на Moises</span>
@@ -2607,6 +2738,7 @@ function repWireCard(s, song){
   if(keyInp) keyInp.onblur = e=>{ repPatch(s, song, {key: e.target.value}).then(()=> repRenderAll(s)); };
   const startInp = document.getElementById('repStartInput');
   if(startInp) startInp.onchange = e=>{ repPatch(s, song, {startDate: e.target.value}); };
+  bdAttachDatePicker('repStartInput');
   const linkInp = document.getElementById('repLinkInput');
   if(linkInp) linkInp.onblur = e=>{ repPatch(s, song, {moisesLink: e.target.value}).then(()=> repRenderAll(s)); };
   const notesInp = document.getElementById('repNotesInput');
@@ -3744,7 +3876,7 @@ function dnFormHtml(s, draft){
                               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
                                     <label style="display: block;">
                                             <span style="${dnLabelStyle()}">Дата</span>
-                                                    <input type="date" lang="ru" data-dn-field="date" data-dn-ctx="${ctx}" value="${draft.date||''}" style="${dnFieldInputStyle()}" />
+                                                    ${bdDateFieldHtml('dnDateNew', draft.date, dnFieldInputStyle(), '', 'data-dn-field="date" data-dn-ctx="'+ctx+'"')}
                                                           </label>
                                                                 <label style="display: block;">
                                                                         <span style="${dnLabelStyle()}">Тема урока</span>
@@ -3869,7 +4001,7 @@ function dnFormHtml(s, draft){
                                                                                                                                                                                                                                                                                                                                                     <div style="font-size: 12px; color: var(--muted); margin-top: 8px;">${level.hint} · темы совпадают с Колесом баланса и срезами</div>
                                                                                                                                                                                                                                                                                                                                                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                                                                                                                                                                                                                                                                                                                                                       <div data-dn-ctx="new" class="dn-field-box" style="flex: 2; min-width: 230px; height: 44px; padding: 0 12px;">${kbSpravochnikSingleControl('dnHwTopic', draft.hwPick)}</div>
-                                                                                                                                                                                                                                                                                                                                                                                                                  <input type="date" lang="ru" data-dn-hw-due="1" value="${draft.hwDue||''}" style="flex: 1; min-width: 150px; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 11px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--bg); border: 1px solid ${draft.dueWarn?'#A8452C':'var(--line)'};" ${draft.dueWarn?'class="due-warn"':''} />
+                                                                                                                                                                                                                                                                                                                                                                                                                  ${bdDateFieldHtml('dnHwDue', draft.hwDue, 'flex: 1; min-width: 150px; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 11px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--bg); border: 1px solid '+(draft.dueWarn?'#A8452C':'var(--line)')+';', draft.dueWarn?'due-warn':'', 'data-dn-hw-due="1"')}
                                                                                                                                                                                                                                                                                                                                                                                                                             <button type="button" data-dn-add-hw="1" style="height: 44px; padding: 0 16px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;">Добавить задание</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                     </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                             ${draft.dueWarn ? `<div style="margin-top: 8px; font-size: 12.5px; font-weight: 700; color: #A8452C;">Поставьте дедлайн — без него задание не уйдёт ученику.</div>` : ''}
@@ -3996,7 +4128,7 @@ function dnEditCardHtml(l){
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px;">
       <label style="display: block;">
         <span style="${dnLabelStyle()}">Дата</span>
-        <input type="date" lang="ru" data-dn-field="date" data-dn-ctx="${ctx}" value="${ed.date||''}" style="${dnFieldInputStyle()}" />
+        ${bdDateFieldHtml('dnDateEdit_'+l.id, ed.date||'', dnFieldInputStyle(), '', 'data-dn-field="date" data-dn-ctx="'+ctx+'"')}
       </label>
       <label style="display: block;">
         <span style="${dnLabelStyle()}">Тема / модуль</span>
@@ -5153,6 +5285,7 @@ function wireDiaryHandlers(s){
       if(ctx==='new'){ dnAutosave(s, {[key]: val}); }
       else if(ctx && ctx.indexOf('edit:')===0){ dnEditDraft(ctx.slice(5))[key] = val; }
     };
+    if(el.dataset.dnField==='date') bdAttachDatePicker(el.id);
   });
 
   // toggle-кнопки: структуры / моды CVT / анкеровка (множественный выбор)
@@ -5334,6 +5467,7 @@ function wireDiaryHandlers(s){
           paintDiary(s);
     };
     const hwDueEl = c.querySelector('[data-dn-hw-due]');
+    bdAttachDatePicker('dnHwDue');
     if(hwDueEl) hwDueEl.onchange = ()=>{
           const draft = dnDraft(s);
           draft.hwDue = hwDueEl.value;
@@ -6868,7 +7002,7 @@ function pdfEditableHtml(model){
           <input type="number" min="1" id="pdfPackageSize" value="${model.packageSize||''}" style="width:90px;margin-top:4px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
         </label>
         <label style="font-size:12.5px;color:#6E645A;">Абонемент действует с<br>
-          <input type="date" lang="ru" id="pdfPackageStart" value="${model.packageStartDate||''}" style="margin-top:4px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;">
+          ${bdDateFieldHtml('pdfPackageStart', model.packageStartDate, 'margin-top:4px;padding:7px 9px;border:1px solid #E4DCD1;border-radius:7px;font-family:inherit;font-size:13px;')}
         </label>
         <span style="font-size:12px;color:#8A7E74;align-self:flex-end;">${model.packageLeft!=null ? 'Осталось: ' + model.packageLeft + ' из ' + model.packageSize : 'Заполни один раз — дальше считается само'}</span>
       </div>`)}
@@ -6909,6 +7043,7 @@ function pdfWireOverlay(){
   const closeBtn = document.getElementById('pdfCloseBtn'); if(closeBtn) closeBtn.onclick = pdfCloseOverlay;
   const cancelBtn = document.getElementById('pdfCancelBtn'); if(cancelBtn) cancelBtn.onclick = pdfCloseOverlay;
   const confirmBtn = document.getElementById('pdfConfirmBtn'); if(confirmBtn) confirmBtn.onclick = pdfConfirm;
+  bdAttachDatePicker('pdfPackageStart');
 
   const addSongBtn = document.getElementById('pdfAddSongBtn');
   if(addSongBtn) addSongBtn.onclick = ()=>{
