@@ -7,6 +7,8 @@ function rowToJson(row) {
     name: row.name,
     status: row.status,
     schedule: row.schedule,
+    scheduleFormat: row.schedule_format,
+    trialNote: row.trial_note,
     packageSize: row.package_size,
     packageStartDate: row.package_start_date,
     telegramToken: row.telegram_token || null,
@@ -58,6 +60,8 @@ module.exports = async (req, res) => {
       if (b.name !== undefined && String(b.name).trim()) { sets.push(`name = $${i++}`); values.push(String(b.name).trim()); }
       if (b.status !== undefined) { sets.push(`status = $${i++}`); values.push(b.status); }
       if (b.schedule !== undefined) { sets.push(`schedule = $${i++}`); values.push(b.schedule); }
+      if (b.scheduleFormat !== undefined) { sets.push(`schedule_format = $${i++}`); values.push(b.scheduleFormat || null); }
+      if (b.trialNote !== undefined) { sets.push(`trial_note = $${i++}`); values.push(b.trialNote || null); }
       if (b.packageSize !== undefined) { sets.push(`package_size = $${i++}`); values.push(b.packageSize === null || b.packageSize === '' ? null : Number(b.packageSize)); }
       if (b.packageStartDate !== undefined) { sets.push(`package_start_date = $${i++}`); values.push(b.packageStartDate || null); }
       // regenerateToken: true → выдаём новый UUID (старый перестаёт работать в боте)

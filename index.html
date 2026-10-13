@@ -79,6 +79,9 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .status-pill-paused{background:#EFEAE3;color:#8A8078;}
 .schedule-pill{background:var(--panel);border:1px solid var(--line);color:var(--text);}
 .schedule-pill .pill-select{font-weight:600;}
+.trial-note-pill{flex:1;min-width:260px;}
+.pill-text-input{width:100%;box-sizing:border-box;border:none;border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:600;font-family:inherit;color:inherit;background:transparent;}
+.pill-text-input::placeholder{color:var(--muted);font-weight:500;}
 .save-fab{width:37px;height:37px;border-radius:50%;border:none;background:#A8452C;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0;transition:background .15s;}
 .save-fab:hover{background:#8E3721;}
 .save-fab.saved{background:#4E7047;}
@@ -568,36 +571,36 @@ body.dark .vr-light-menu-btn{background:var(--bg);border-color:var(--line);color
 body.dark .vr-light-menu{background:var(--panel);border-color:var(--line);box-shadow:0 8px 20px rgba(0,0,0,.4);}
 body.dark .vr-light-menu button,body.dark .vr-light-menu a{color:var(--text);}
 body.dark .vr-light-menu button:hover,body.dark .vr-light-menu a:hover{background:#332C26;}
-body.dark .vr-box{background:#F2ECE7;}
-body.dark .vr-takes-wrap{background:#E8DDD5!important;}
-body.dark .vr-caption{color:#8A8078;}
-body.dark .vr-caption.saved{color:#4E7047;}
-body.dark .vr-timer{color:#8A8078;}
-body.dark .vr-timer.live{color:#23201D;}
-body.dark .vr-timer.warn{color:#A8452C;}
-body.dark .vr-select{border-color:#D4C4B8;background:#fff;color:#5A504A;}
-body.dark .vr-check-label{color:#6E645A;}
-body.dark .vr-ctl-btn{border-color:#D4C4B8;color:#6E645A;}
-body.dark .vr-ctl-btn:hover{background:#E8DDD5;}
-body.dark .vr-ctl-btn.danger:hover{color:#A8452C;border-color:#E0553A;}
-body.dark .vr-marker-chip{background:#E8DDD5;color:#5A504A;}
-body.dark .vr-discard-link{color:#6E645A;}
-body.dark .vr-upload-label{color:#6E645A;}
-body.dark .vr-saving-phase{color:#6E645A;}
-body.dark .vr-spinner{border-color:#D4C4B8;border-top-color:#A8452C;}
-body.dark .vr-saving-pct{color:#8A8078;}
-body.dark .vr-progress-track{background:#E4DCD1;}
-body.dark .vr-take + .vr-take{border-top-color:#E4DCD1;}
-body.dark .vr-take-title{color:#23201D;}
-body.dark .vr-take-title-input{background:#E8DDD5;color:#23201D;border-color:#D4C4B8;}
-body.dark .vr-take-meta{color:#8A8078;}
-body.dark .vr-take-bar{background:#D4C4B8;}
-body.dark .vr-tr-btn{border-color:#D4C4B8;color:#6E645A;}
-body.dark .vr-tr-btn:hover{background:#E8DDD5;}
-body.dark .vr-tr-play{background:#23201D;color:#F7F3EC;border-color:#23201D;}
-body.dark .vr-take-time{color:#8A8078;}
-body.dark .vr-mk-chip{background:#E8DDD5;color:#4E7047;}
-body.dark .vr-mk-input{background:#fff;color:#23201D;border-color:#D4C4B8;}
+body.dark .vr-box{background:#3A2E24;}
+body.dark .vr-takes-wrap{background:#2E2319!important;}
+body.dark .vr-caption{color:#B4A190;}
+body.dark .vr-caption.saved{color:#8FBF8A;}
+body.dark .vr-timer{color:#B4A190;}
+body.dark .vr-timer.live{color:#F0E6DA;}
+body.dark .vr-timer.warn{color:#E3A07D;}
+body.dark .vr-select{border-color:#5A4A3A;background:#241B14;color:#E3D5C4;}
+body.dark .vr-check-label{color:#B4A190;}
+body.dark .vr-ctl-btn{border-color:#5A4A3A;color:#B4A190;}
+body.dark .vr-ctl-btn:hover{background:#46392C;}
+body.dark .vr-ctl-btn.danger:hover{color:#E3A07D;border-color:#7A4433;}
+body.dark .vr-marker-chip{background:#46392C;color:#C9BCAE;}
+body.dark .vr-discard-link{color:#B4A190;}
+body.dark .vr-upload-label{color:#B4A190;}
+body.dark .vr-saving-phase{color:#B4A190;}
+body.dark .vr-spinner{border-color:#5A4A3A;border-top-color:#C97B62;}
+body.dark .vr-saving-pct{color:#B4A190;}
+body.dark .vr-progress-track{background:#46392C;}
+body.dark .vr-take + .vr-take{border-top-color:#46392C;}
+body.dark .vr-take-title{color:#F0E6DA;}
+body.dark .vr-take-title-input{background:#241B14;color:#F0E6DA;border-color:#5A4A3A;}
+body.dark .vr-take-meta{color:#B4A190;}
+body.dark .vr-take-bar{background:#5A4A3A;}
+body.dark .vr-tr-btn{border-color:#5A4A3A;color:#B4A190;}
+body.dark .vr-tr-btn:hover{background:#46392C;}
+body.dark .vr-tr-play{background:#F0E6DA;color:#241B14;border-color:#F0E6DA;}
+body.dark .vr-take-time{color:#B4A190;}
+body.dark .vr-mk-chip{background:#46392C;color:#8FBF8A;}
+body.dark .vr-mk-input{background:#241B14;color:#F0E6DA;border-color:#5A4A3A;}
 body.dark [data-dn-level]{background:var(--panel)!important;border-color:var(--line)!important;color:var(--muted)!important;}
 body.dark [data-dn-level].dn-level-active{background:var(--terracotta-dark)!important;border-color:var(--terracotta-dark)!important;color:#fff!important;}
 body.dark input[data-dn-hw-due]{background:var(--bg)!important;border-color:var(--line)!important;color:var(--text)!important;color-scheme:dark;}
@@ -989,7 +992,7 @@ const defaultData = () => ({
   students: [
     {
       id: 's1', name: 'Мария Соколова', status: 'active',
-      org: { schedule:'Постоянное расписание', format:'Онлайн', source:'Instagram', freq:'1×/нед 90 мин' },
+      org: { schedule:'Постоянное расписание', scheduleFormat:'Постоянное', format:'Онлайн', source:'Instagram', freq:'1×/нед 90 мин' },
       voice: { type:'Меццо-сопрано', vibrato:'Регулярное', breathType:'Диафрагмальное', support:'Стабильная', attack:'Мягкая', larynx:'Средняя' },
       range: { bottom:'ля м.о.', top:'до 2.о.', tessBottom:'до1.о.', tessTop:'ля1.о.', passaggio1:'ми1.о.', passaggio2:'соль#1.о.' },
       timbre: [], problems: [], compensations: [], flags: [],
@@ -1000,7 +1003,7 @@ const defaultData = () => ({
     },
     {
       id: 's2', name: 'Артём Волков', status: 'active',
-      org: { schedule:'Плавающее', format:'Онлайн', source:'Рекомендация ученика', freq:'2×/нед 90' },
+      org: { schedule:'Плавающее', scheduleFormat:'Плавающее', format:'Онлайн', source:'Рекомендация ученика', freq:'2×/нед 90' },
       voice: { type:'Баритон лирический', vibrato:'Нерегулярное', breathType:'Смешанное', support:'Нестабильная', attack:'Придыхательная', larynx:'Низкая' },
       range: { bottom:'соль б.о.', top:'ля1.о.', tessBottom:'до м.о.', tessTop:'фа м.о.', passaggio1:'ми м.о.', passaggio2:'ля#м.о.' },
       timbre: ['Тёмный','Дымчатый'], problems: ['Нет уверенности в голосе','Интонация'], compensations: ['Шея','Задержка перед фразой'],
@@ -1012,7 +1015,8 @@ const defaultData = () => ({
     },
     {
       id: 's3', name: 'Ксения Лебедева', status: 'trial',
-      org: { schedule:'—', format:'Онлайн', source:'Telegram', freq:'Пробное занятие' },
+      org: { schedule:'—', scheduleFormat:'', format:'Онлайн', source:'Telegram', freq:'' },
+      trialNote: '',
       voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
       range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
       timbre: [], problems: [], compensations: [], flags: [],
@@ -1232,7 +1236,8 @@ const OPTIONS = {
   format: ['Онлайн','Очно','Смешанный'],
   schedule: ['Постоянное расписание','Плавающее','—'],
   source: ['Instagram','Telegram','Рекомендация ученика','шк. Лаборатория звука','Прочее'],
-  freq: ['1×/нед 45 мин','1×/нед 90 мин','2×/нед 45','2×/нед 90','3×/нед 45','3×/нед 90','Постоянное расписание','Плавающее расписание','Пробное занятие'],
+  freq: ['1×/нед 45 мин','1×/нед 90 мин','2×/нед 45','2×/нед 90','3×/нед 45','3×/нед 90'],
+  scheduleFormat: ['Постоянное','Плавающее'],
   voiceType: ['Сопрано','Меццо-сопрано','Контральто','Тенор','Баритон лирический','Баритон драматический','Бас'],
   vibrato: ['Регулярное','Нерегулярное','Отсутствует'],
   breathType: ['Диафрагмальное','Ключичное','Смешанное'],
@@ -1338,7 +1343,8 @@ async function addStudent(){
   }
   state.data.students.push({
     id, name: trimmed, status: 'trial', telegramToken,
-    org: { schedule:'—', format:'Онлайн', source:'Прочее', freq:'Пробное занятие' },
+    org: { schedule:'—', scheduleFormat:'', format:'Онлайн', source:'Прочее', freq:'' },
+    trialNote: '',
     voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
     range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
     timbre: [], problems: [], compensations: [], flags: [],
@@ -1377,6 +1383,8 @@ async function syncStudentsFromServer(){
         loc.name = srv.name;
         loc.status = srv.status;
         if(srv.schedule){ loc.org.freq = srv.schedule; }
+        if(srv.scheduleFormat){ loc.org.scheduleFormat = srv.scheduleFormat; }
+        if(srv.trialNote != null){ loc.trialNote = srv.trialNote; }
         if(srv.telegramToken) loc.telegramToken = srv.telegramToken;
         loc.packageSize = srv.packageSize;
         loc.packageStartDate = srv.packageStartDate;
@@ -1386,7 +1394,8 @@ async function syncStudentsFromServer(){
         id: srv.id, name: srv.name, status: srv.status,
         telegramToken: srv.telegramToken || null,
         packageSize: srv.packageSize, packageStartDate: srv.packageStartDate,
-        org: { schedule:'—', format:'Онлайн', source:'Прочее', freq: srv.schedule || 'Пробное занятие' },
+        org: { schedule:'—', scheduleFormat: srv.scheduleFormat || '', format:'Онлайн', source:'Прочее', freq: srv.schedule || '' },
+        trialNote: srv.trialNote || '',
         voice: { type:'', vibrato:'', breathType:'', support:'', attack:'', larynx:'' },
         range: { bottom:'', top:'', tessBottom:'', tessTop:'', passaggio1:'', passaggio2:'' },
         timbre: [], problems: [], compensations: [], flags: [],
@@ -1420,7 +1429,8 @@ function renderMain(s){
   const eyebrowText = 'Карточка ученика' + (count!=null ? ' · ' + lessonsLabel(count) : '');
   const statusOptions = OPTIONS.status.map(o=>`<option value="${o[0]}" ${s.status===o[0]?'selected':''}>${o[1]}</option>`).join('')
     + `<option value="__delete__">Удалить ученика ⌘⌫</option>`;
-  const scheduleOptions = OPTIONS.freq.map(f=>`<option value="${f}" ${s.org.freq===f?'selected':''}>${f}</option>`).join('');
+  const scheduleFormatOptions = `<option value="">—</option>` + OPTIONS.scheduleFormat.map(f=>`<option value="${f}" ${s.org.scheduleFormat===f?'selected':''}>${f}</option>`).join('');
+  const scheduleOptions = `<option value="">—</option>` + OPTIONS.freq.map(f=>`<option value="${f}" ${s.org.freq===f?'selected':''}>${f}</option>`).join('');
 
   main.innerHTML = `
     <div class="student-header">
@@ -1433,10 +1443,20 @@ function renderMain(s){
           <select class="pill-select" id="statusPillSelect">${statusOptions}</select>
           <span class="pill-select-arrow">▾</span>
         </div>
-        <div class="pill-select-wrap schedule-pill">
-          <select class="pill-select" id="schedulePillSelect">${scheduleOptions}</select>
-          <span class="pill-select-arrow">▾</span>
-        </div>
+        ${s.status==='trial' ? `
+          <div class="pill-select-wrap schedule-pill trial-note-pill">
+            <input type="text" class="pill-text-input" id="trialNoteInput" placeholder="Как ученик себя чувствовал на уроке…" value="${(s.trialNote||'').replace(/"/g,'&quot;')}" />
+          </div>
+        ` : `
+          <div class="pill-select-wrap schedule-pill">
+            <select class="pill-select" id="scheduleFormatSelect">${scheduleFormatOptions}</select>
+            <span class="pill-select-arrow">▾</span>
+          </div>
+          <div class="pill-select-wrap schedule-pill">
+            <select class="pill-select" id="schedulePillSelect">${scheduleOptions}</select>
+            <span class="pill-select-arrow">▾</span>
+          </div>
+        `}
         <button class="save-fab" id="saveFab" title="Сохраняется автоматически — нажмите, чтобы сохранить вручную">${SAVE_ICON_SVG}</button>
       </div>
     </div>
@@ -1480,16 +1500,36 @@ function renderMain(s){
     apiUpdateStudent(s.id, {status: val}).catch(err=>{ alert('Не удалось сохранить статус в базе: ' + (err.message||err)); });
     render();
   };
-  document.getElementById('schedulePillSelect').onchange = (e)=>{
-    const val = e.target.value;
-    s.org.freq = val; saveData();
-    apiUpdateStudent(s.id, {schedule: val}).catch(err=>{ alert('Не удалось сохранить расписание в базе: ' + (err.message||err)); });
-    render();
-  };
+  const trialNoteInput = document.getElementById('trialNoteInput');
+  if(trialNoteInput){
+    trialNoteInput.onchange = (e)=>{
+      const val = e.target.value;
+      s.trialNote = val; saveData();
+      apiUpdateStudent(s.id, {trialNote: val}).catch(err=>{ alert('Не удалось сохранить комментарий в базе: ' + (err.message||err)); });
+    };
+  }
+  const scheduleFormatSelect = document.getElementById('scheduleFormatSelect');
+  if(scheduleFormatSelect){
+    scheduleFormatSelect.onchange = (e)=>{
+      const val = e.target.value;
+      s.org.scheduleFormat = val; saveData();
+      apiUpdateStudent(s.id, {scheduleFormat: val}).catch(err=>{ alert('Не удалось сохранить формат расписания в базе: ' + (err.message||err)); });
+      render();
+    };
+  }
+  const schedulePillSelect = document.getElementById('schedulePillSelect');
+  if(schedulePillSelect){
+    schedulePillSelect.onchange = (e)=>{
+      const val = e.target.value;
+      s.org.freq = val; saveData();
+      apiUpdateStudent(s.id, {schedule: val}).catch(err=>{ alert('Не удалось сохранить расписание в базе: ' + (err.message||err)); });
+      render();
+    };
+  }
   document.getElementById('saveFab').onclick = ()=>{
     const el = document.getElementById('saveFab');
     el.classList.add('saved');
-    apiUpdateStudent(s.id, {name: s.name, status: s.status, schedule: s.org.freq})
+    apiUpdateStudent(s.id, {name: s.name, status: s.status, schedule: s.org.freq, scheduleFormat: s.org.scheduleFormat, trialNote: s.trialNote})
       .catch(err=>{ alert('Не удалось сохранить: ' + (err.message||err)); })
       .then(()=>{ setTimeout(()=>{ if(el) el.classList.remove('saved'); }, 900); });
   };

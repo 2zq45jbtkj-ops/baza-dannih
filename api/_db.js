@@ -279,6 +279,15 @@ async function ensureSchema(p) {
       PRIMARY KEY (upload_id, chunk_index)
     );
   `);
+
+  // Верхняя пилюля расписания в шапке карточки ученика разделена на две
+  // независимые части: формат (Постоянное/Плавающее) и частота/длительность
+  // (schedule — та же колонка, что и раньше, но без значений формата и
+  // "Пробное занятие", которые раньше были в ней намешаны). Для пробных
+  // учеников вместо расписания показывается свободный комментарий —
+  // как ученик себя чувствовал на пробном уроке.
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS schedule_format TEXT;`);
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS trial_note TEXT;`);
 }
 
 async function query(sql, params) {
