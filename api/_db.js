@@ -288,6 +288,31 @@ async function ensureSchema(p) {
   // как ученик себя чувствовал на пробном уроке.
   await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS schedule_format TEXT;`);
   await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS trial_note TEXT;`);
+
+  // Токен — единственный ключ ученика к Mini App: без него войти нельзя,
+  // и в «Режиме админа» такой ученик помечен как «нет токена». Записям,
+  // заведённым до появления токенов, проставляем недостающие.
+  // Существующие НЕ трогаем: перегенерация отрезала бы ученику доступ.
+  await p.query(`UPDATE students SET telegram_token = gen_random_uuid()::text
+                 WHERE telegram_token IS NULL OR telegram_token = '';`);
+
+  // «Колесо баланса и срезы». Раньше и текущее колесо, и вся история срезов
+  // жили ТОЛЬКО в localStorage браузера (ключ kabinet_lz_v5): в базе их не
+  // было ни в одной таблице. Поэтому их нельзя было показать ученику в Mini
+  // App, а при чистке браузера они пропадали безвозвратно.
+  // Срез — снимок тем на дату, topics: [{name, level, score}].
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS student_srezy (
+      id TEXT PRIMARY KEY,
+      student_id TEXT NOT NULL,
+      srez_date TEXT NOT NULL,
+      topics JSONB DEFAULT '[]',
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS student_srezy_student_idx ON student_srezy (student_id);`);
+  // Текущее (ещё не снятое в срез) состояние колеса баланса.
+  await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS wheel_topics JSONB DEFAULT '[]';`);
 }
 
 async function query(sql, params) {

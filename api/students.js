@@ -16,7 +16,24 @@ function rowToJson(row) {
   };
 }
 
+// Telegram Mini App («Режим админа» → выбор ученика) живёт на другом домене,
+// поэтому без этих заголовков браузер резал запрос ещё до ответа, фронт падал
+// в catch и показывал пустой список — выглядело как «учеников нет».
+// Origin указан точечно, а не '*': эндпоинт отдаёт всех учеников целиком.
+const ALLOWED_ORIGINS = ['https://your-vocal.vercel.app'];
+// Локальные превью-серверы поднимаются на случайном свободном порту.
+const LOCAL_ORIGIN = /^http:\/\/localhost:\d+$/;
+
 module.exports = async (req, res) => {
+  const origin = req.headers && req.headers.origin;
+  if (origin && (ALLOWED_ORIGINS.indexOf(origin) !== -1 || LOCAL_ORIGIN.test(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+
   try {
     if (req.method === 'GET') {
       const r = await query('SELECT * FROM students ORDER BY created_at ASC, id ASC', []);

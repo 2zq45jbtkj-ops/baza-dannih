@@ -98,12 +98,26 @@ module.exports = async (req, res) => {
       [student.id]
     );
 
+    // «Колесо баланса и срезы» — то же, что Николай видит на сайте.
+    // Даты лежат как дд.мм.гггг, лексикографически они не сортируются,
+    // поэтому для сортировки разворачиваем их в гггг-мм-дд.
+    const zr = await query('SELECT * FROM student_srezy WHERE student_id = $1', [student.id]);
+    const srezDateKey = (d) => {
+      const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(d || ''));
+      return m ? m[3] + '-' + m[2] + '-' + m[1] : '0000-00-00';
+    };
+    const srezy = zr.rows
+      .map((r) => ({ id: r.id, date: r.srez_date, topics: Array.isArray(r.topics) ? r.topics : [] }))
+      .sort((a, b) => srezDateKey(a.date).localeCompare(srezDateKey(b.date)));
+
     res.status(200).json({
       student: {
         name: student.name,
         status: student.status,
         schedule: student.schedule || null,
       },
+      srezy,
+      wheelTopics: (intake && Array.isArray(intake.wheel_topics)) ? intake.wheel_topics : [],
       intake: intake ? {
         voiceType: intake.voice_type,
         genre: intake.genre,

@@ -1796,8 +1796,61 @@ function renderTags(options, selected){
   return options.map(o=>`<span class="tag ${selected.includes(o)?'selected':''}" data-val="${o}">${o}</span>`).join('');
 }
 
+/* ============================================================
+   СРЕЗЫ И КОЛЕСО БАЛАНСА НА СЕРВЕРЕ (/api/srezy)
+   Раньше и текущее колесо, и вся история срезов жили ТОЛЬКО в
+   localStorage (ключ kabinet_lz_v5): на сервер они не уходили,
+   поэтому их нельзя было показать ученику в Mini App, а чистка
+   браузера уничтожала историю без следа.
+   Теперь источник правды — Postgres, localStorage остаётся кэшем.
+   Перенос накопленного выполняется один раз и только если на
+   сервере у этого ученика срезов ещё нет: повторный заход ничего
+   не задвоит и ничего не затрёт.
+   ============================================================ */
+state.srezyLoaded = state.srezyLoaded || {};
+const srezySaveTimers = {};
+
+function srezyLoadFromServer(s, done){
+  if(state.srezyLoaded[s.id] !== undefined){ if(done) done(); return; }
+  state.srezyLoaded[s.id] = 'loading';
+  apiGet('/api/srezy?studentId=' + encodeURIComponent(s.id)).then(res=>{
+    const srvSrezy = (res && res.srezy) || [];
+    const srvTopics = (res && res.topics) || [];
+    const localSrezy = s.srezy || [];
+    if(!srvSrezy.length && localSrezy.length){
+      // На сервере пусто, а в браузере история есть — переносим её наверх.
+      // Локальные данные не удаляем: пусть остаются страховкой.
+      return apiSend('/api/srezy?migrate=1', 'POST', {
+        studentId: s.id, topics: s.topics || [], srezy: localSrezy
+      }).then(()=>{ state.srezyLoaded[s.id] = true; if(done) done(); });
+    }
+    if(srvSrezy.length) s.srezy = srvSrezy;
+    if(srvTopics.length) s.topics = srvTopics;
+    saveData();
+    state.srezyLoaded[s.id] = true;
+    if(done) done();
+  }).catch(()=>{
+    // Не повторяем в этой сессии, иначе render зациклится на ошибке.
+    state.srezyLoaded[s.id] = 'failed';
+    if(done) done();
+  });
+}
+
+// Оценки меняются часто (каждое нажатие цифры) — отправляем с задержкой,
+// чтобы не дёргать сервер на каждый символ.
+function srezyQueueTopics(s){
+  clearTimeout(srezySaveTimers[s.id]);
+  srezySaveTimers[s.id] = setTimeout(()=>{
+    apiSend('/api/srezy?studentId=' + encodeURIComponent(s.id), 'PUT', { topics: s.topics || [] }).catch(()=>{});
+  }, 600);
+}
+
+// Сохранить и локально, и (с задержкой) на сервере.
+function srezyTouch(s){ saveData(); srezyQueueTopics(s); }
+
 /* ---------- SREZY TAB ---------- */
 function renderSrezy(s){
+  if(state.srezyLoaded[s.id] === undefined) srezyLoadFromServer(s, ()=>renderSrezy(s));
   const c = document.getElementById('tabContent');
   const prev = lastSrez(s);
   const levelTopics = topicsForLevel(s, state.activeLevel);
@@ -1884,8 +1937,11 @@ function renderSrezy(s){
   document.getElementById('pinDateBtn').onclick = ()=>{
     const today = new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'});
     s.srezDate = today;
-    s.srezy.push({ id: nextSrezId(), date: today, topics: JSON.parse(JSON.stringify(s.topics)) });
+    const srez = { id: nextSrezId(), date: today, topics: JSON.parse(JSON.stringify(s.topics)) };
+    s.srezy.push(srez);
     saveData(); renderSrezy(s);
+    apiSend('/api/srezy', 'POST', { studentId: s.id, id: srez.id, date: srez.date, topics: srez.topics })
+      .catch(err=>{ alert('Срез сохранён в браузере, но не доехал на сервер: ' + String(err.message||err) + '\n\nУченик его пока не увидит. Открой вкладку заново, когда появится связь.'); });
   };
 
   c.querySelectorAll('[data-compare-id]').forEach(el=>{
@@ -1905,7 +1961,7 @@ function renderSrezy(s){
         const cur = s.topics.find(t=>t.name===st.name && t.level===st.level);
         if(cur) cur.score = st.score;
       });
-      saveData(); renderSrezy(s);
+      srezyTouch(s); renderSrezy(s);
     };
   });
   c.querySelectorAll('[data-delete-id]').forEach(el=>{
@@ -1917,6 +1973,7 @@ function renderSrezy(s){
       s.srezy = s.srezy.filter(x=>x.id!==id);
       state.compareIds = state.compareIds.filter(cid=>cid!==id);
       saveData(); renderSrezy(s);
+      apiSend('/api/srezy?id=' + encodeURIComponent(id), 'DELETE', {}).catch(()=>{});
     };
   });
 
@@ -1956,7 +2013,7 @@ function attachTopicPickerHandlers(s, c){
     el.onclick = ()=>{
       s.topics.push({name: el.dataset.pickName, level: state.activeLevel, score:null});
       state.topicPickerOpen = false;
-      saveData(); renderSrezy(s);
+      srezyTouch(s); renderSrezy(s);
     };
   });
   const customBtn = document.getElementById('customTopicBtn');
@@ -1971,7 +2028,7 @@ function attachTopicPickerHandlers(s, c){
       }
       s.topics.push({name, level: state.activeLevel, score:null});
       state.topicPickerOpen = false;
-      saveData(); renderSrezy(s);
+      srezyTouch(s); renderSrezy(s);
     };
   }
 }
@@ -1984,7 +2041,7 @@ function attachHandlers(s, c, levelTopics){
       const topic = levelTopics[i];
       const idx = s.topics.findIndex(t=>t.name===topic.name && t.level===topic.level);
       if(idx>-1) s.topics.splice(idx,1);
-      saveData(); renderSrezy(s);
+      srezyTouch(s); renderSrezy(s);
     };
   });
   // Ввод оценки темы одной цифрой: нажатие 0-9 сразу ставит значение и
@@ -1995,7 +2052,7 @@ function attachHandlers(s, c, levelTopics){
   const applyScoreDigit = (el, v)=>{
     const i = parseInt(el.dataset.numI);
     levelTopics[i].score = v;
-    saveData();
+    srezyTouch(s);
     renderSrezy(s);
     const next = document.querySelector(`[data-num-i="${i+1}"]`);
     if(next) next.focus();
@@ -2067,7 +2124,7 @@ function attachHandlers(s, c, levelTopics){
         ev.preventDefault();
         const i = parseInt(el.dataset.numI);
         levelTopics[i].score = null;
-        saveData(); renderSrezy(s);
+        srezyTouch(s); renderSrezy(s);
         const again = document.querySelector(`[data-num-i="${i}"]`);
         if(again) again.focus();
         return;
