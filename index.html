@@ -1797,7 +1797,7 @@ function renderTags(options, selected){
 }
 
 /* ============================================================
-   СРЕЗЫ И КОЛЕСО БАЛАНСА НА СЕРВЕРЕ (/api/srezy)
+   СРЕЗЫ И КОЛЕСО БАЛАНСА НА СЕРВЕРЕ (/api/intake?part=srezy)
    Раньше и текущее колесо, и вся история срезов жили ТОЛЬКО в
    localStorage (ключ kabinet_lz_v5): на сервер они не уходили,
    поэтому их нельзя было показать ученику в Mini App, а чистка
@@ -1813,14 +1813,14 @@ const srezySaveTimers = {};
 function srezyLoadFromServer(s, done){
   if(state.srezyLoaded[s.id] !== undefined){ if(done) done(); return; }
   state.srezyLoaded[s.id] = 'loading';
-  apiGet('/api/srezy?studentId=' + encodeURIComponent(s.id)).then(res=>{
+  apiGet('/api/intake?part=srezy&studentId=' + encodeURIComponent(s.id)).then(res=>{
     const srvSrezy = (res && res.srezy) || [];
     const srvTopics = (res && res.topics) || [];
     const localSrezy = s.srezy || [];
     if(!srvSrezy.length && localSrezy.length){
       // На сервере пусто, а в браузере история есть — переносим её наверх.
       // Локальные данные не удаляем: пусть остаются страховкой.
-      return apiSend('/api/srezy?migrate=1', 'POST', {
+      return apiSend('/api/intake?part=srezy&migrate=1', 'POST', {
         studentId: s.id, topics: s.topics || [], srezy: localSrezy
       }).then(()=>{ state.srezyLoaded[s.id] = true; if(done) done(); });
     }
@@ -1841,7 +1841,7 @@ function srezyLoadFromServer(s, done){
 function srezyQueueTopics(s){
   clearTimeout(srezySaveTimers[s.id]);
   srezySaveTimers[s.id] = setTimeout(()=>{
-    apiSend('/api/srezy?studentId=' + encodeURIComponent(s.id), 'PUT', { topics: s.topics || [] }).catch(()=>{});
+    apiSend('/api/intake?part=srezy&studentId=' + encodeURIComponent(s.id), 'PUT', { topics: s.topics || [] }).catch(()=>{});
   }, 600);
 }
 
@@ -1940,7 +1940,7 @@ function renderSrezy(s){
     const srez = { id: nextSrezId(), date: today, topics: JSON.parse(JSON.stringify(s.topics)) };
     s.srezy.push(srez);
     saveData(); renderSrezy(s);
-    apiSend('/api/srezy', 'POST', { studentId: s.id, id: srez.id, date: srez.date, topics: srez.topics })
+    apiSend('/api/intake?part=srezy', 'POST', { studentId: s.id, id: srez.id, date: srez.date, topics: srez.topics })
       .catch(err=>{ alert('Срез сохранён в браузере, но не доехал на сервер: ' + String(err.message||err) + '\n\nУченик его пока не увидит. Открой вкладку заново, когда появится связь.'); });
   };
 
@@ -1973,7 +1973,7 @@ function renderSrezy(s){
       s.srezy = s.srezy.filter(x=>x.id!==id);
       state.compareIds = state.compareIds.filter(cid=>cid!==id);
       saveData(); renderSrezy(s);
-      apiSend('/api/srezy?id=' + encodeURIComponent(id), 'DELETE', {}).catch(()=>{});
+      apiSend('/api/intake?part=srezy&id=' + encodeURIComponent(id), 'DELETE', {}).catch(()=>{});
     };
   });
 

@@ -72,8 +72,129 @@ function rowToJson(row) {
   };
 }
 
+/* ------------------------------------------------------------------
+   «Колесо баланса и срезы» — ?part=srezy
+   Живёт здесь, а не отдельным файлом, из-за лимита бесплатного тарифа
+   Vercel: не больше 12 серверных функций на деплой, а тринадцатая роняет
+   выкладку ЦЕЛИКОМ (errorCode exceeded_serverless_functions_per_deployment).
+   Срезы — это те же данные Кабинета по studentId, так что соседство
+   с анкетой логичное.
+     GET    ?part=srezy&studentId=ID  → { topics, srezy:[{id,date,topics}] }
+     POST   ?part=srezy               → { studentId, date, topics, id? }
+     POST   ?part=srezy&migrate=1     → { studentId, topics, srezy[] }
+     PUT    ?part=srezy&studentId=ID  → { topics }
+     DELETE ?part=srezy&id=ID
+   ------------------------------------------------------------------ */
+const { randomUUID } = require('crypto');
+
+function srezReadBody(req) {
+  let body = req.body;
+  if (!body || typeof body === 'string') {
+    try { body = JSON.parse(body || '{}'); } catch (e) { body = {}; }
+  }
+  return body || {};
+}
+
+// Даты лежат как дд.мм.гггг — лексикографически не сортируются,
+// поэтому для сравнения разворачиваем в гггг-мм-дд.
+function srezDateKey(d) {
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(d || ''));
+  return m ? m[3] + '-' + m[2] + '-' + m[1] : '0000-00-00';
+}
+
+async function handleSrezy(req, res, params) {
+  const studentId = params.get('studentId');
+  const srezId = params.get('id');
+  const isMigrate = params.get('migrate') === '1';
+
+  if (req.method === 'GET') {
+    if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
+    const sr = await query('SELECT * FROM student_srezy WHERE student_id = $1', [studentId]);
+    const ir = await query('SELECT wheel_topics FROM student_intake WHERE student_id = $1', [studentId]);
+    const srezy = sr.rows
+      .map((r) => ({ id: r.id, date: r.srez_date, topics: Array.isArray(r.topics) ? r.topics : [] }))
+      .sort((a, b) => srezDateKey(a.date).localeCompare(srezDateKey(b.date)));
+    const topics = (ir.rows[0] && Array.isArray(ir.rows[0].wheel_topics)) ? ir.rows[0].wheel_topics : [];
+    res.status(200).json({ topics, srezy });
+    return;
+  }
+
+  if (req.method === 'POST' && isMigrate) {
+    // Разовый перенос из браузера. Намеренно НЕ трогаем то, что уже лежит на
+    // сервере: иначе повторный заход продублировал бы всю историю.
+    const b = srezReadBody(req);
+    const id = b.studentId || studentId;
+    if (!id) { res.status(400).json({ error: 'studentId required' }); return; }
+    const existing = await query('SELECT COUNT(*)::int AS n FROM student_srezy WHERE student_id = $1', [id]);
+    if (existing.rows[0].n > 0) {
+      res.status(200).json({ ok: true, skipped: true, count: existing.rows[0].n });
+      return;
+    }
+    const list = Array.isArray(b.srezy) ? b.srezy : [];
+    for (const s of list) {
+      await query(
+        'INSERT INTO student_srezy (id, student_id, srez_date, topics) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING',
+        [String(s.id || randomUUID()), id, String(s.date || ''), JSON.stringify(Array.isArray(s.topics) ? s.topics : [])]
+      );
+    }
+    if (Array.isArray(b.topics)) {
+      await query(
+        `INSERT INTO student_intake (student_id, wheel_topics) VALUES ($1,$2)
+         ON CONFLICT (student_id) DO UPDATE SET wheel_topics = EXCLUDED.wheel_topics`,
+        [id, JSON.stringify(b.topics)]
+      );
+    }
+    res.status(200).json({ ok: true, migrated: list.length });
+    return;
+  }
+
+  if (req.method === 'POST') {
+    const b = srezReadBody(req);
+    const id = b.studentId || studentId;
+    if (!id) { res.status(400).json({ error: 'studentId required' }); return; }
+    const row = {
+      id: String(b.id || randomUUID()),
+      date: String(b.date || ''),
+      topics: Array.isArray(b.topics) ? b.topics : [],
+    };
+    await query(
+      'INSERT INTO student_srezy (id, student_id, srez_date, topics) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING',
+      [row.id, id, row.date, JSON.stringify(row.topics)]
+    );
+    res.status(200).json({ srez: row });
+    return;
+  }
+
+  if (req.method === 'PUT' || req.method === 'PATCH') {
+    if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
+    const b = srezReadBody(req);
+    await query(
+      `INSERT INTO student_intake (student_id, wheel_topics) VALUES ($1,$2)
+       ON CONFLICT (student_id) DO UPDATE SET wheel_topics = EXCLUDED.wheel_topics`,
+      [studentId, JSON.stringify(Array.isArray(b.topics) ? b.topics : [])]
+    );
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  if (req.method === 'DELETE') {
+    if (!srezId) { res.status(400).json({ error: 'id required' }); return; }
+    await query('DELETE FROM student_srezy WHERE id = $1', [srezId]);
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
+}
+
 module.exports = async (req, res) => {
   try {
+    const srezParams = new URL(req.url, 'http://x').searchParams;
+    if (((req.query && req.query.part) || srezParams.get('part')) === 'srezy') {
+      await handleSrezy(req, res, srezParams);
+      return;
+    }
+
     if (req.method === 'GET') {
       const studentId = (req.query && req.query.studentId) || new URL(req.url, 'http://x').searchParams.get('studentId');
       if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
