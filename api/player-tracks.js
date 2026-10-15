@@ -2,8 +2,15 @@
 // плеером (раздельные дорожки «Голос»/«Музыка», метки, текст песни, заметки).
 // GET    ?studentId=xxx   → список песен ученика (по дате добавления, старые сверху)
 // POST   { studentId }    → создать пустую песню «Новая песня» и сразу вернуть её
+// POST   ?action=auth { code } → вход ученика в плеер, см. ниже
 // PATCH  ?id=xxx  { любые поля песни } → частично обновить
 // DELETE ?id=xxx           → удалить
+//
+// Вход ученика живёт здесь же, а не отдельным файлом api/player-auth.js:
+// на плане Hobby у проекта лимит в 12 функций, и отдельный файл ради
+// сорока строк стоил бы целый слот (из-за такого перебора деплой уже
+// однажды падал целиком). Оба эндпоинта — про плеер и обращаются к одной
+// и той же паре таблиц, так что разнесение было искусственным.
 const { query } = require('./_db');
 const { randomUUID } = require('crypto');
 
@@ -54,6 +61,27 @@ module.exports = async (req, res) => {
         try { body = JSON.parse(body || '{}'); } catch (e) { body = {}; }
       }
       const b = body || {};
+
+      const action = (req.query && req.query.action) || url.searchParams.get('action');
+      if (action === 'auth') {
+        // Код доступа ученика — тот же, что открывает Telegram-бота с ДЗ
+        // (students.telegram_token). Один код на все приложения ученика:
+        // преподаватель нажал «↻ Новый код» — старый перестал пускать и сюда.
+        const code = String(b.code || '').trim();
+        if (!code) { res.status(400).json({ error: 'code required' }); return; }
+
+        const r = await query('SELECT id, name FROM students WHERE telegram_token = $1', [code]);
+        if (!r.rows.length) {
+          // Та же искусственная задержка, что в site-login.js и admin-auth.js:
+          // без неё по времени ответа видно, существует код или нет.
+          await new Promise(resolve => setTimeout(resolve, 400));
+          res.status(401).json({ error: 'unauthorized' });
+          return;
+        }
+        res.status(200).json({ ok: true, studentId: r.rows[0].id, name: r.rows[0].name });
+        return;
+      }
+
       if (!b.studentId) { res.status(400).json({ error: 'studentId required' }); return; }
       const id = 'song' + randomUUID();
       const r = await query(

@@ -98,6 +98,20 @@ module.exports = async (req, res) => {
       [student.id]
     );
 
+    // Вторичная цель — «над чем работаем сейчас». Берём цель последнего
+    // проведённого занятия: Николай ставит её в Дневнике на каждый урок,
+    // так что это всегда актуальная задача, а не то, что ученик написал
+    // при записи (это первичная цель, она лежит в анкете).
+    const lg = await query(
+      `SELECT lesson_date, goal, topic FROM lesson_log
+       WHERE student_id = $1 AND goal IS NOT NULL AND goal <> ''
+       ORDER BY lesson_date DESC LIMIT 1`,
+      [student.id]
+    );
+    const lastGoal = lg.rows[0]
+      ? { goal: lg.rows[0].goal, topic: lg.rows[0].topic || null, date: lg.rows[0].lesson_date }
+      : null;
+
     // «Колесо баланса и срезы» — то же, что Николай видит на сайте.
     // Даты лежат как дд.мм.гггг, лексикографически они не сортируются,
     // поэтому для сортировки разворачиваем их в гггг-мм-дд.
@@ -117,6 +131,7 @@ module.exports = async (req, res) => {
         schedule: student.schedule || null,
       },
       srezy,
+      lastGoal,
       wheelTopics: (intake && Array.isArray(intake.wheel_topics)) ? intake.wheel_topics : [],
       intake: intake ? {
         voiceType: intake.voice_type,
