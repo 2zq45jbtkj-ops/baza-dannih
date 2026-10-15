@@ -58,22 +58,19 @@ module.exports = async (req, res) => {
     const jsonResponse = await handleUpload({
       body,
       request: requestLike,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        let payload = clientPayload;
-        if (typeof payload === 'string') {
-          try { payload = JSON.parse(payload); } catch (e) { payload = {}; }
+      onBeforeGenerateToken: async (pathname) => {
+        // Папку задаёт клиент первым аргументом upload(). Вернуть pathname
+        // отсюда нельзя — handleUpload его игнорирует (проверено сквозным
+        // тестом: файл лёг в корень вместо warmups/). Поэтому здесь путь
+        // не назначаем, а проверяем — иначе клиент писал бы куда угодно.
+        const scope = String(pathname || '').split('/')[0];
+        if (!SCOPES.includes(scope)) {
+          throw new Error('Недопустимая папка для загрузки: ' + (scope || 'не указана'));
         }
-        const scope = (payload && SCOPES.includes(payload.scope)) ? payload.scope : 'takes';
-
-        // Клиент не должен уметь записать куда угодно: имя файла ему
-        // задаём сами, оставляя от присланного только базовую часть.
-        const safeName = String(pathname || 'audio').split('/').pop().slice(-80);
-
         return {
           allowedContentTypes: AUDIO_TYPES,
           addRandomSuffix: true,
           maximumSizeInBytes: MAX_SIZE,
-          pathname: `${scope}/${safeName}`,
         };
       },
       onUploadCompleted: async () => {

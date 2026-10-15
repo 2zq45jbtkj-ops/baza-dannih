@@ -3100,14 +3100,15 @@ async function wuUploadToBlob(ex, fileOrBlob, mime, name, durationSec, onProgres
     throw new Error('клиент хранилища не загрузился — обновите страницу');
   }
 
+  // Папка задаётся здесь, первым аргументом: сервер её только проверяет
+  // по белому списку, назначить путь со своей стороны handleUpload не даёт.
   const blob = await VercelBlob.upload(
-    wuUid() + '.' + (WU_EXT_BY_MIME[mime] || 'mp3'),
+    'warmups/' + wuUid() + '.' + (WU_EXT_BY_MIME[mime] || 'mp3'),
     fileOrBlob,
     {
       access: 'public',
       contentType: mime,
       handleUploadUrl: '/api/player-upload',
-      clientPayload: JSON.stringify({ scope: 'warmups' }),
       onUploadProgress: p => { if(onProgress) onProgress(Math.round(p.percentage), 100); }
     }
   );
