@@ -313,6 +313,43 @@ async function ensureSchema(p) {
   await p.query(`CREATE INDEX IF NOT EXISTS student_srezy_student_idx ON student_srezy (student_id);`);
   // Текущее (ещё не снятое в срез) состояние колеса баланса.
   await p.query(`ALTER TABLE student_intake ADD COLUMN IF NOT EXISTS wheel_topics JSONB DEFAULT '[]';`);
+
+  // Каскадное удаление. DELETE /api/students сносил только строку в students,
+  // а анкета, дневник и срезы оставались в базе навсегда: внешний ключ был
+  // лишь у player_tracks. Интерфейс при этом обещает обратное («Все данные
+  // (дневник, срезы, записи) будут удалены»), и место, которое Николай
+  // рассчитывает освободить удалением старых учеников, не освобождалось.
+  //
+  // NOT VALID: ключ начинает работать на всех последующих удалениях, но
+  // Postgres не сканирует и не трогает уже накопленные осиротевшие строки —
+  // иначе ALTER упал бы на первой же из них. Их чистим отдельно, вручную,
+  // после того как посмотрим счётчики.
+  //
+  // Одним DO-блоком, а не тремя запросами: ensureSchema и так гоняет ~60
+  // последовательных ALTER к Neon на холодном старте и подходит к лимиту
+  // в 10с (см. комментарий к queryRaw ниже).
+  await p.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_intake_student_fk') THEN
+        ALTER TABLE student_intake ADD CONSTRAINT student_intake_student_fk
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE NOT VALID;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lesson_log_student_fk') THEN
+        ALTER TABLE lesson_log ADD CONSTRAINT lesson_log_student_fk
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE NOT VALID;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_srezy_student_fk') THEN
+        ALTER TABLE student_srezy ADD CONSTRAINT student_srezy_student_fk
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE NOT VALID;
+      END IF;
+    EXCEPTION WHEN others THEN
+      -- ensureSchema висит на каждом запросе: необработанное исключение
+      -- здесь положило бы весь сайт целиком. Пусть лучше каскад не
+      -- применится — это проверяется отдельно, тестовым удалением.
+      RAISE NOTICE 'cascade fk skipped: %', SQLERRM;
+    END $$;
+  `);
 }
 
 async function query(sql, params) {
