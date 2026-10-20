@@ -33,7 +33,45 @@ module.exports = async (req, res) => {
     const url = new URL(req.url, 'http://x');
 
     if (req.method === 'GET') {
-      const r = await query('SELECT * FROM warmups ORDER BY level ASC, sort_order ASC, created_at ASC', []);
+      // Одно аудио по требованию. Нужно только для legacy-записей, залитых
+      // до переезда на Vercel Blob: у них в dataUrl лежит сам файл в base64,
+      // и в общий список он не попадает (см. ниже).
+      const audioId = (req.query && req.query.audio) || url.searchParams.get('audio');
+      if (audioId) {
+        const ra = await query(
+          `SELECT elem->>'dataUrl' AS data_url
+             FROM warmups, jsonb_array_elements(COALESCE(audios, '[]'::jsonb)) elem
+            WHERE elem->>'id' = $1
+            LIMIT 1`,
+          [audioId]
+        );
+        if (!ra.rows.length || !ra.rows[0].data_url) { res.status(404).json({ error: 'audio not found' }); return; }
+        res.status(200).json({ dataUrl: ra.rows[0].data_url });
+        return;
+      }
+
+      // Главный источник тормозов вкладки: одна legacy-распевка на 2:38
+      // весит 9.65 МБ base64 внутри audios, и весь этот объём ехал в каждом
+      // ответе — 6 с на прогретом запросе, 17 с на холодном.
+      // Вырезаем такие dataUrl прямо в SQL, чтобы они даже не выходили
+      // из Postgres; вместо них ставим флаг inline, по которому клиент
+      // догружает файл только когда его реально собрались слушать.
+      // Короткие https-ссылки на Blob (всё, что залито после миграции)
+      // проходят насквозь и остаются в списке как раньше.
+      const r = await query(
+        `SELECT id, level, title, topics, sort_order, created_at, updated_at,
+                (SELECT COALESCE(jsonb_agg(
+                          CASE WHEN elem->>'dataUrl' LIKE 'data:%'
+                               THEN (elem - 'dataUrl') || '{"inline":true}'::jsonb
+                               ELSE elem END
+                          ORDER BY ord), '[]'::jsonb)
+                   FROM jsonb_array_elements(COALESCE(audios, '[]'::jsonb))
+                        WITH ORDINALITY AS t(elem, ord)
+                ) AS audios
+           FROM warmups
+          ORDER BY level ASC, sort_order ASC, created_at ASC`,
+        []
+      );
       res.status(200).json({ warmups: r.rows.map(rowToJson) });
       return;
     }

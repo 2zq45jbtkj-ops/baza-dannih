@@ -182,24 +182,24 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
    var(--bg)/--panel — как и остальные компоненты плеера на сайте. */
 .rep-grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:24px;align-items:start;}
 .rep-list{display:flex;flex-direction:column;gap:6px;}
-.rep-list-title{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#A09488;margin:0 0 6px 4px;}
+.rep-list-title{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 6px 4px;}
 .rep-row{cursor:pointer;padding:12px 14px;border-radius:12px;border:1px solid transparent;background:transparent;display:flex;align-items:center;gap:12px;}
-.rep-row:hover{background:#fff;}
-.rep-row.sel{background:#fff;border-color:#E0D6C8;}
+.rep-row:hover{background:var(--panel);}
+.rep-row.sel{background:var(--panel);border-color:var(--line);}
 .rep-row-main{flex:1;min-width:0;}
-.rep-row-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#23201D;}
-.rep-row-artist{font-size:13px;color:#8A7E74;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rep-row-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.rep-row-artist{font-size:13px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rep-status-wrap{flex:none;position:relative;}
 .rep-status-btn{display:flex;align-items:center;gap:4px;border:none;cursor:pointer;font-size:11.5px;font-weight:700;padding:3px 7px 3px 8px;border-radius:6px;font-family:inherit;}
 .rep-status-arrow{font-size:9px;}
-.rep-status-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:150px;background:#fff;border:1px solid #E0D6C8;border-radius:10px;box-shadow:0 6px 20px rgba(35,32,29,.12);padding:4px;display:flex;flex-direction:column;gap:2px;}
-.rep-status-opt{display:flex;align-items:center;gap:8px;border:none;background:transparent;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:13px;font-weight:700;color:#23201D;text-align:left;font-family:inherit;}
-.rep-status-opt:hover,.rep-status-opt.on{background:#F4EFE8;}
+.rep-status-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;gap:2px;}
+.rep-status-opt{display:flex;align-items:center;gap:8px;border:none;background:transparent;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);text-align:left;font-family:inherit;}
+.rep-status-opt:hover,.rep-status-opt.on{background:var(--cream);}
 .rep-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.rep-add-btn{margin-top:6px;border:1px dashed #C9B7A4;background:none;color:#A8452C;font-size:14px;font-weight:700;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;}
-.rep-add-btn:hover{background:#EFE7DC;}
-.rep-empty{background:#fff;border:1px solid #ECE5DB;border-radius:18px;padding:26px 28px;font-size:14.5px;color:#6E645A;}
-.rep-card{background:#fff;border:1px solid #ECE5DB;border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
+.rep-add-btn{margin-top:6px;border:1px dashed var(--line);background:none;color:#A8452C;font-size:14px;font-weight:700;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;}
+.rep-add-btn:hover{background:var(--cream);}
+.rep-empty{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;font-size:14.5px;color:var(--muted);}
+.rep-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
 .rep-player{background:#23201D;color:#FAF7F2;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
 .rep-player-head{display:flex;gap:16px;align-items:flex-start;}
 .rep-title-input,.rep-artist-input{display:block;width:100%;border:1px solid transparent;border-radius:8px;padding:2px 6px;margin-left:-7px;background:transparent;font-family:inherit;}
@@ -241,26 +241,26 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .rep-fields{display:grid;grid-template-columns:110px 160px minmax(0,1fr);gap:12px;}
 .rep-field-label{display:flex;flex-direction:column;gap:5px;}
 .rep-field-label>span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#A09488;}
-.rep-field-input{padding:9px 12px;border:1px solid #E0D6C8;border-radius:10px;font-size:14px;font-weight:700;color:#23201D;background:#fff;font-family:inherit;}
+.rep-field-input{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-weight:700;color:var(--text);background:var(--bg);font-family:inherit;}
 .rep-field-input.date{font-weight:600;}
 .rep-link-row{display:flex;gap:8px;}
-.rep-link-input{flex:1;min-width:0;padding:9px 12px;border:1px solid #E0D6C8;border-radius:10px;font-size:14px;font-weight:600;color:#23201D;background:#fff;font-family:inherit;}
-.rep-link-badge{flex:none;display:flex;align-items:center;padding:0 10px;border-radius:10px;background:#F4EFE8;font-size:13px;font-weight:700;color:#A8452C;text-decoration:none;}
+.rep-link-input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;color:var(--text);background:var(--bg);font-family:inherit;}
+.rep-link-badge{flex:none;display:flex;align-items:center;padding:0 10px;border-radius:10px;background:var(--terracotta-bg);font-size:13px;font-weight:700;color:#A8452C;text-decoration:none;}
 .rep-lyrics{display:flex;flex-direction:column;gap:10px;}
 .rep-lyrics-head{display:flex;align-items:center;justify-content:space-between;}
 .rep-lyrics-title{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#A09488;}
-.rep-lyrics-edit-btn{border:1px solid #E4DCD1;background:#fff;color:#6E645A;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:9px;cursor:pointer;font-family:inherit;}
-.rep-lyrics-edit-btn:hover{background:#F4EFE8;}
-.rep-lyrics-textarea{box-sizing:border-box;width:100%;resize:vertical;padding:12px 14px;border:1px solid #E0D6C8;border-radius:12px;font-size:14px;line-height:1.55;color:#23201D;background:#fff;font-family:inherit;}
+.rep-lyrics-edit-btn{border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:9px;cursor:pointer;font-family:inherit;}
+.rep-lyrics-edit-btn:hover{background:var(--cream);}
+.rep-lyrics-textarea{box-sizing:border-box;width:100%;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;line-height:1.55;color:var(--text);background:var(--bg);font-family:inherit;}
 .rep-lyrics-hint{font-size:12.5px;color:#8A7E74;}
-.rep-lyrics-box{background:#FAF7F2;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.rep-lyrics-box{background:var(--bg);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
 .rep-lyrics-lines{font-size:14.5px;line-height:1.6;color:#3A342E;}
 .rep-lyrics-line{min-height:10px;}
 .rep-lyrics-more{align-self:flex-start;border:none;background:none;color:#A8452C;font-size:13px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;}
 .rep-lyrics-add{border:1px dashed #C9B7A4;background:none;color:#A8452C;font-size:14px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;text-align:left;font-family:inherit;}
 .rep-notes-label{display:flex;flex-direction:column;gap:8px;}
 .rep-notes-label>span{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#A09488;}
-.rep-notes-textarea{box-sizing:border-box;width:100%;resize:vertical;padding:11px 14px;border:1px solid #E0D6C8;border-radius:12px;font-size:14px;line-height:1.5;color:#23201D;background:#fff;font-family:inherit;}
+.rep-notes-textarea{box-sizing:border-box;width:100%;resize:vertical;padding:11px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;line-height:1.5;color:var(--text);background:var(--bg);font-family:inherit;}
 .rep-delete-row{display:flex;justify-content:flex-end;}
 .rep-delete-btn{border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;color:#A09488;font-family:inherit;}
 .rep-delete-btn.confirm{color:#A8452C;}
@@ -3062,6 +3062,30 @@ function wuRemoveTopic(ex, topic){
 // слетающая после перезагрузки. Потом появилась нарезка на куски по 2 МБ
 // (api/warmups-chunk.js), она это чинила, но аудио всё равно оседало
 // base64-строками в Postgres и съедало бесплатную квоту.
+// Адрес файла распевки. У всего, что залито после переезда на Blob, это
+// короткая https-ссылка и она уже лежит в списке. У legacy-записей сервер
+// не отдаёт base64 в общем списке (иначе вкладка грузится 6 секунд) и ставит
+// флаг inline — такой файл тянем ровно один раз, когда он реально понадобился,
+// и кладём рядом, чтобы повторные обращения шли уже из памяти.
+async function wuAudioUrl(au){
+  if(!au) return null;
+  if(au.dataUrl) return au.dataUrl;
+  if(!au.inline) return null;
+  if(au._urlPromise) return au._urlPromise;
+  au._urlPromise = (async ()=>{
+    try{
+      const r = await fetch('/api/warmups?audio=' + encodeURIComponent(au.id));
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      au.dataUrl = d.dataUrl || null;
+      return au.dataUrl;
+    } finally { au._urlPromise = null; }
+  })();
+  return au._urlPromise;
+}
+// Есть ли у аудио файл вообще — для guard-ов, которые раньше смотрели dataUrl
+function wuHasAudio(au){ return !!(au && (au.dataUrl || au.inline)); }
+
 async function wuRecomputePeaks(exId, auId){
   const found = wuFindAudio(auId); if(!found) return;
   const au = found.au;
@@ -3069,7 +3093,9 @@ async function wuRecomputePeaks(exId, auId){
   try{
     const Ctx = window.AudioContext || window.webkitAudioContext;
     const ctx = new Ctx();
-    const buf = await ctx.decodeAudioData(await (await fetch(au.dataUrl)).arrayBuffer());
+    const srcUrl = await wuAudioUrl(au);
+    if(!srcUrl) return;
+    const buf = await ctx.decodeAudioData(await (await fetch(srcUrl)).arrayBuffer());
     const ch = buf.getChannelData(0);
     const N = 60, out = new Array(N).fill(0);
     const step = Math.floor(ch.length/N) || 1;
@@ -3243,10 +3269,12 @@ function wuRemoveAudio(ex, au){
   if(au._shiftCache) Object.values(au._shiftCache).forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
   wuRemoveAudioRemote(ex, au.id).then(()=> paintWarmupsActive()).catch(()=>{});
 }
-function wuDownloadAudio(au){
-  if(!au.dataUrl) return;
+async function wuDownloadAudio(au){
+  if(!wuHasAudio(au)) return;
+  const url = await wuAudioUrl(au);
+  if(!url) return;
   const a = document.createElement('a');
-  a.href = au.dataUrl; a.download = (au.name||'audio') + '.webm'; a.click();
+  a.href = url; a.download = (au.name||'audio') + '.webm'; a.click();
 }
 function wuSetBaseBpm(ex, au, v){
   v = Math.max(20, Math.min(300, Math.round(v)||90));
@@ -3277,7 +3305,8 @@ async function wuGetRawBuffer(au){
   if(au._rawBufferPromise) return au._rawBufferPromise;
   au._rawBufferPromise = (async ()=>{
     const ctx = wuGetAudioCtx();
-    const arr = await (await fetch(au.dataUrl)).arrayBuffer();
+    const srcUrl = await wuAudioUrl(au);
+    const arr = await (await fetch(srcUrl)).arrayBuffer();
     const buf = await ctx.decodeAudioData(arr);
     au._rawBuffer = buf;
     au._rawBufferPromise = null;
@@ -3361,7 +3390,7 @@ function wuBufferToWavBlob(buffer){
   return new Blob([ab], {type:'audio/wav'});
 }
 async function wuGetShiftedUrl(au, semitones){
-  if(!semitones) return au.dataUrl;
+  if(!semitones) return await wuAudioUrl(au);
   au._shiftCache = au._shiftCache || {};
   if(au._shiftCache[semitones]) return au._shiftCache[semitones];
   const raw = await wuGetRawBuffer(au);
@@ -3380,7 +3409,7 @@ function wuRateOf(au){ const bpm = state.warmBpm[au.id] || au.bpm || 90; return 
 function wuTagFor(au){ return au.id + '::' + (state.warmShift[au.id] || 0); }
 
 async function wuToggle(au){
-  if(!au.dataUrl) return;
+  if(!wuHasAudio(au)) return;
   const p = state.warmPlay;
   const v = wuVideoFor(au.id);
   if(!v) return;
@@ -3394,7 +3423,8 @@ async function wuToggle(au){
   const tag = wuTagFor(au);
   if(v.dataset.wuTag !== tag){
     let url;
-    try{ url = await wuGetShiftedUrl(au, sh); } catch(e){ url = au.dataUrl; }
+    try{ url = await wuGetShiftedUrl(au, sh); } catch(e){ url = await wuAudioUrl(au); }
+    if(!url) return;
     if((state.warmShift[au.id]||0) !== sh) return wuToggle(au); // сдвиг поменяли, пока ждали обработку
     v.src = url;
     v.dataset.wuTag = tag;
