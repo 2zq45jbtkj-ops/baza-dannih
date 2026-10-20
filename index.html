@@ -41,6 +41,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .s-status.status-color-active{color:#6E8C6A;}
 .s-status.status-color-paused{color:#9A8E82;}
 .s-status.status-color-trial{color:#C96B5C;}
+.s-status.status-color-done{color:#7A736B;}
 .mask-toggle{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:20px;width:34px;height:34px;font-size:15px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;flex-shrink:0;}
 .mask-toggle.active{background:#E8DDD5;border-color:#D4C4B8;color:#A8452C;}
 body.dark .mask-toggle{background:#2E2A27;border-color:#4A4038;color:#EFE9E3;}
@@ -77,6 +78,7 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .status-pill-active{background:#E6F0E3;color:#4E7047;}
 .status-pill-trial{background:#F7E3DD;color:#A8452C;}
 .status-pill-paused{background:#EFEAE3;color:#8A8078;}
+.status-pill-done{background:#E4DFD8;color:#6E6760;}
 .schedule-pill{background:var(--panel);border:1px solid var(--line);color:var(--text);}
 .schedule-pill .pill-select{font-weight:600;}
 .trial-note-pill{flex:1;min-width:260px;}
@@ -552,6 +554,7 @@ body.dark .chip.flag{background:#301C14;border-color:#5A3020;}
 body.dark .status-pill-active{background:#1E3020;color:#6DA874;}
 body.dark .status-pill-trial{background:#301C18;color:#D8936A;}
 body.dark .status-pill-paused{background:#2A2520;color:#9A9088;}
+body.dark .status-pill-done{background:#232019;color:#8A8178;}
 body.dark .card-error{background:#341818;border-color:#5A2C2C;color:#E0A0A0;}
 body.dark .kb-dict-dropdown{box-shadow:0 12px 28px rgba(0,0,0,.5);}
 body.dark .kb-dict-divider{background:#3A342F;}
@@ -1364,7 +1367,7 @@ function renderStudentList(){
     const meta = s.status==='trial'
       ? 'Пробный · анкета не заполнена'
       : (statusLabel(s.status) + (count!=null ? ' · ' + lessonsLabel(count) : ''));
-    const statusColorClass = s.status==='active' ? 'status-color-active' : s.status==='trial' ? 'status-color-trial' : 'status-color-paused';
+    const statusColorClass = s.status==='active' ? 'status-color-active' : s.status==='trial' ? 'status-color-trial' : s.status==='done' ? 'status-color-done' : 'status-color-paused';
     const isMasked = _maskActive && s.id !== state.activeStudentId;
     return `<div class="student-item ${s.id===state.activeStudentId?'active':''}${isMasked?' masked':''}" data-id="${s.id}">
             <div class="avatar" style="background:${av[0]};color:${av[1]};">${initials(s.name)}</div>
@@ -1388,7 +1391,10 @@ function renderStudentList(){
 }
 
 const OPTIONS = {
-  status: [['active','Активный'],['trial','Пробный'],['paused','Пауза']],
+  // «Завершил» закрывает ученику вход в Telegram Mini App (см.
+  // api/student-public.js и app.js Mini App) — ученик остаётся в базе со всей
+  // историей, но приложением пользоваться больше не может.
+  status: [['active','Активный'],['trial','Пробный'],['paused','Пауза'],['done','Завершил']],
   format: ['Онлайн','Очно','Смешанный'],
   schedule: ['Постоянное расписание','Плавающее','—'],
   source: ['Instagram','Telegram','Рекомендация ученика','шк. Лаборатория звука','Прочее'],
@@ -4254,18 +4260,6 @@ function dnEditCardHtml(l){
           ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="kb-small-btn${ed.grade===n?' on':''}" data-dn-set-num="grade:${n}" data-dn-ctx="${ctx}" style="min-width:34px;text-align:center;">${n}</button>`).join('')}
         </div>
       </div>
-      <div>
-        ${dnUpperLabel('Моды CVT')}
-        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-          ${KB_MODE_KEYS.map(m=>`<button type="button" class="kb-small-btn${(ed.cvtModes||[]).indexOf(m)>=0?' on':''}" data-dn-toggle-mode="${m}" data-dn-ctx="${ctx}">${m}</button>`).join('')}
-        </div>
-      </div>
-      <div>
-        ${dnUpperLabel('Анкеровка')}
-        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-          ${KB_ANCHOR_KEYS.map(a=>`<button type="button" class="kb-small-btn${(ed.anchors||[]).indexOf(a)>=0?' on':''}" data-dn-toggle-anchor="${a}" data-dn-ctx="${ctx}">${a}</button>`).join('')}
-        </div>
-      </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px;">
@@ -5382,12 +5376,12 @@ function wireDiaryHandlers(s){
     if(el.dataset.dnField==='date') bdAttachDatePicker(el.id);
   });
 
-  // toggle-кнопки: структуры / моды CVT / анкеровка (множественный выбор)
+  // toggle-кнопки: структуры (множественный выбор)
   function toggleArrayHandler(key){
     return (el)=>{
       el.onclick = ()=>{
         const ctx = el.dataset.dnCtx;
-        const value = el.dataset.dnToggleStructure || el.dataset.dnToggleMode || el.dataset.dnToggleAnchor;
+        const value = el.dataset.dnToggleStructure;
         if(ctx==='new'){
           const draft = dnDraft(s);
           const cur = draft[key]||[];
@@ -5405,8 +5399,6 @@ function wireDiaryHandlers(s){
     };
   }
   c.querySelectorAll('[data-dn-toggle-structure]').forEach(toggleArrayHandler('structures'));
-  c.querySelectorAll('[data-dn-toggle-mode]').forEach(toggleArrayHandler('cvtModes'));
-  c.querySelectorAll('[data-dn-toggle-anchor]').forEach(toggleArrayHandler('anchors'));
 
   // числовые toggle-кнопки: интенсивность / оценка (одиночный выбор, повторный клик снимает)
   c.querySelectorAll('[data-dn-set-num]').forEach(el=>{

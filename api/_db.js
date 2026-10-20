@@ -350,6 +350,28 @@ async function ensureSchema(p) {
       RAISE NOTICE 'cascade fk skipped: %', SQLERRM;
     END $$;
   `);
+
+  // Telegram Mini App: прогресс ученика по шагам урока (лекция/тест/распевки/
+  // песня) и персональный override разблокировки. Это последнее, что у Mini
+  // App жило не здесь, а в Notion (база «Прогресс» + поле «Доп. открытые
+  // уроки»). Читается и пишется через /api/student-public по telegram_token —
+  // отдельного роута намеренно нет, чтобы не плодить функции.
+  // Галочка только ставится и никогда не снимается — так же, как было в Notion.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS lesson_progress (
+      student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      lesson_number INTEGER NOT NULL,
+      lecture_done BOOLEAN NOT NULL DEFAULT false,
+      quiz_done BOOLEAN NOT NULL DEFAULT false,
+      warmups_done BOOLEAN NOT NULL DEFAULT false,
+      song_done BOOLEAN NOT NULL DEFAULT false,
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      PRIMARY KEY (student_id, lesson_number)
+    );
+  `);
+  // «Доп. открытые уроки» из Notion: строка вида "10, 15" — открывает уроки
+  // вне очереди, не дожидаясь прохождения предыдущих.
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS extra_unlocked_lessons TEXT;`);
 }
 
 async function query(sql, params) {

@@ -25,6 +25,59 @@ module.exports = async (req, res) => {
       if (!body || typeof body === 'string') {
         try { body = JSON.parse(body || '{}'); } catch (e) { body = {}; }
       }
+      // Отметка шага урока из Mini App — раньше это был api/notion-progress.js.
+      // Галочка только ставится и никогда не снимается, как было в Notion.
+      const STEP_COLUMNS = {
+        lecture: 'lecture_done',
+        quiz: 'quiz_done',
+        warmups: 'warmups_done',
+        song: 'song_done',
+      };
+      const step = body && body.step;
+      if (step) {
+        const column = STEP_COLUMNS[step];
+        const lessonNum = parseInt(body.lessonNum, 10);
+        if (!column || !Number.isInteger(lessonNum) || lessonNum < 1) {
+          res.status(400).json({ error: 'need lessonNum and step (lecture|quiz|warmups|song)' });
+          return;
+        }
+        const psr = await query('SELECT id, status FROM students WHERE telegram_token = $1', [token]);
+        if (!psr.rows.length) { res.status(404).json({ error: 'student not found' }); return; }
+        const pStudent = psr.rows[0];
+
+        // Имя колонки подставляется только из STEP_COLUMNS выше — из тела
+        // запроса в текст SQL не попадает ничего, значения идут параметрами.
+        await query(
+          `INSERT INTO lesson_progress (student_id, lesson_number, ${column}, updated_at)
+           VALUES ($1, $2, true, now())
+           ON CONFLICT (student_id, lesson_number)
+           DO UPDATE SET ${column} = true, updated_at = now()`,
+          [pStudent.id, lessonNum]
+        );
+
+        // Автопереход «Пробный» → «Активный», перенесён из notion-progress.js:
+        // урок 1 пройден целиком (4/4) и есть хоть какой-то прогресс по уроку
+        // с номером больше 1. Статусы «Пауза» и «Завершил», выставленные
+        // вручную, никогда не перезаписываем — только trial.
+        if (pStudent.status === 'trial') {
+          const allp = await query(
+            `SELECT lesson_number, lecture_done, quiz_done, warmups_done, song_done
+               FROM lesson_progress WHERE student_id = $1`,
+            [pStudent.id]
+          );
+          const lesson1Done = allp.rows.some((r) => r.lesson_number === 1 &&
+            r.lecture_done && r.quiz_done && r.warmups_done && r.song_done);
+          const otherProgress = allp.rows.some((r) => r.lesson_number > 1 &&
+            (r.lecture_done || r.quiz_done || r.warmups_done || r.song_done));
+          if (lesson1Done && otherProgress) {
+            await query(`UPDATE students SET status = 'active' WHERE id = $1`, [pStudent.id]);
+          }
+        }
+
+        res.status(200).json({ ok: true });
+        return;
+      }
+
       const chatId = body && body.chatId;
       if (!chatId) { res.status(400).json({ error: 'chatId required' }); return; }
       await query('UPDATE students SET telegram_chat_id = $1 WHERE telegram_token = $2', [String(chatId), token]);
@@ -124,6 +177,32 @@ module.exports = async (req, res) => {
       .map((r) => ({ id: r.id, date: r.srez_date, topics: Array.isArray(r.topics) ? r.topics : [] }))
       .sort((a, b) => srezDateKey(a.date).localeCompare(srezDateKey(b.date)));
 
+    // Прогресс по шагам урока для Mini App. Раньше это жило в Notion (база
+    // «Прогресс»), формат ответа оставлен тот же, что отдавал notion-student.js:
+    // { "1": { lecture, quiz, warmups, song }, "2": {...} } — чтобы app.js
+    // не пришлось переучивать на новую форму данных.
+    const pr = await query(
+      `SELECT lesson_number, lecture_done, quiz_done, warmups_done, song_done
+         FROM lesson_progress WHERE student_id = $1`,
+      [student.id]
+    );
+    const progressByLesson = {};
+    for (const row of pr.rows) {
+      progressByLesson[row.lesson_number] = {
+        lecture: !!row.lecture_done,
+        quiz: !!row.quiz_done,
+        warmups: !!row.warmups_done,
+        song: !!row.song_done,
+      };
+    }
+
+    // «Доп. открытые уроки» — строка вида "10, 15"; отдаём массивом чисел,
+    // как раньше делал parseLessonNumbers в notion-student.js.
+    const unlockedLessons = String(student.extra_unlocked_lessons || '')
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => Number.isInteger(n) && n > 0);
+
     res.status(200).json({
       student: {
         name: student.name,
@@ -131,6 +210,8 @@ module.exports = async (req, res) => {
         schedule: student.schedule || null,
       },
       srezy,
+      progressByLesson,
+      unlockedLessons,
       lastGoal,
       wheelTopics: (intake && Array.isArray(intake.wheel_topics)) ? intake.wheel_topics : [],
       intake: intake ? {
