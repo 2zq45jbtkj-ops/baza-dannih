@@ -1647,6 +1647,13 @@ function renderMain(s){
       }
     </div>
 
+    ${/\(admin\)/i.test(s.name || '') ? `
+    <div class="tg-token-row">
+      <span class="tg-token-label">Двойной код</span>
+      <span class="tg-token-val" id="admKeyVal" style="color:var(--muted);">••••••••••••• · •••••••</span>
+      <button class="tg-token-btn" id="admKeyShow">Показать</button>
+    </div>` : ''}
+
     <div class="tabs-row">
       <div class="tabs">
         <div class="tab ${state.activeTab==='profile'?'active':''}" data-tab="profile">Кабинет</div>
@@ -1734,6 +1741,49 @@ function renderMain(s){
           render();
         }
       }catch(e){ alert('Ошибка: ' + (e.message||e)); }
+    };
+  }
+
+  // Двойной код администратора. Ключи живут в env vars Vercel и на клиенте их
+  // нет — сервер отдаёт их только в обмен на пароль от сайта (см. admin-auth.js).
+  const admShowBtn = document.getElementById('admKeyShow');
+  if(admShowBtn){
+    admShowBtn.onclick = async ()=>{
+      const el = document.getElementById('admKeyVal');
+      if(admShowBtn.dataset.shown === '1'){
+        el.textContent = '••••••••••••• · •••••••';
+        el.style.color = 'var(--muted)';
+        admShowBtn.textContent = 'Показать';
+        admShowBtn.dataset.shown = '';
+        return;
+      }
+      const password = prompt('Пароль от сайта — чтобы показать ключи:');
+      if(!password) return;
+      admShowBtn.disabled = true;
+      admShowBtn.textContent = 'Проверяем…';
+      try{
+        const r = await fetch('/api/admin-auth', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'reveal', password })
+        });
+        const data = await r.json().catch(()=>null);
+        if(r.ok && data && data.ok){
+          el.textContent = data.key1 + ' · ' + data.key2;
+          el.style.color = 'var(--text)';
+          admShowBtn.textContent = 'Скрыть';
+          admShowBtn.dataset.shown = '1';
+        } else if(r.status === 401){
+          alert('Неверный пароль.');
+          admShowBtn.textContent = 'Показать';
+        } else {
+          alert('Ошибка: ' + ((data && data.error) || r.status));
+          admShowBtn.textContent = 'Показать';
+        }
+      }catch(e){
+        alert('Ошибка: ' + (e.message||e));
+        admShowBtn.textContent = 'Показать';
+      }
+      admShowBtn.disabled = false;
     };
   }
 

@@ -36,6 +36,26 @@ module.exports = async (req, res) => {
     return diff === 0;
   }
 
+  // Показ ключей в карточке админа на сайте.
+  // Отдаём их только тому, кто прямо сейчас ввёл пароль от сайта: серверной
+  // сессии у сайта нет (site-login.js просто отвечает ok, а браузер хранит в
+  // localStorage только дату входа), поэтому проверить «он уже залогинен»
+  // нечем. Без этой проверки GET-ручка раздавала бы ключи кому угодно.
+  if (body && body.action === 'reveal') {
+    const SITE_PASSWORD = process.env.SITE_PASSWORD;
+    if (!SITE_PASSWORD) {
+      res.status(503).json({ error: 'site password not configured' });
+      return;
+    }
+    if (!safeEq(body.password, SITE_PASSWORD)) {
+      await new Promise(r => setTimeout(r, 400));
+      res.status(401).json({ error: 'unauthorized' });
+      return;
+    }
+    res.status(200).json({ ok: true, key1: K1, key2: K2 });
+    return;
+  }
+
   if (safeEq(key1, K1) && safeEq(key2, K2)) {
     res.status(200).json({ ok: true });
   } else {

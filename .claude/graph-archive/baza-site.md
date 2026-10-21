@@ -56,6 +56,21 @@ clean from it and was still broken. Add two passes:
   from the DOM when you scan, and that is exactly where light-theme leftovers
   survive — `#E8C4B6` borders and `#7E3220` text on a dark plaque.
 
+## У сайта нет серверной сессии — помни при любой новой ручке
+
+`site-login.js` только сверяет пароль и отвечает `{ok:true}`; браузер кладёт в
+localStorage `bd_auth_ts` — просто дату. **Сервер не может отличить залогиненный
+браузер от любого запроса из интернета.** Поэтому «эта ручка под паролем сайта»
+— неправда по умолчанию: всё, что отдаёт секреты, обязано требовать пароль
+прямо в запросе.
+
+Так сделан показ двойного кода админа (2026-10-22): `POST /api/admin-auth`
+`{action:'reveal', password}` сверяет `SITE_PASSWORD` timing-safe и только тогда
+возвращает `ADMIN_KEY_1/2`. GET намеренно не поддержан (405), при незаданном
+`SITE_PASSWORD` — 503, а не утечка. Ветка добавлена **внутрь** существующего
+`admin-auth.js`: в `api/` ровно 12 из 12 функций, 13-й файл уронил бы деплой.
+Старый контракт мини-аппа (`{key1,key2}`) не тронут — проверено юнит-тестом.
+
 ## Data model notes
 
 Schema is created idempotently in `api/_db.js → ensureSchema()`; every new
