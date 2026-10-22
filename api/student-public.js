@@ -78,9 +78,62 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // Ученик отметил задание выполненным (или снял отметку) в Mini App.
+      // Статус лежит внутри lesson_log.hw_items — JSONB-массива, поэтому
+      // нужную запись находим по паре title+due: id у заданий нет, а именно
+      // этой парой они и склеиваются в GET ниже (seen = `${title}|${due}`),
+      // так что одно и то же задание из разных уроков меняется целиком.
+      const hwDone = body && body.hwDone;
+      if (hwDone && hwDone.title) {
+        const hsr = await query('SELECT id FROM students WHERE telegram_token = $1', [token]);
+        if (!hsr.rows.length) { res.status(404).json({ error: 'student not found' }); return; }
+        const hStudentId = hsr.rows[0].id;
+        const done = hwDone.done !== false;
+        const newStatus = done ? 'выполнено учеником' : 'в приложении: не начато';
+        const lrows = await query(
+          `SELECT id, hw_items FROM lesson_log
+            WHERE student_id = $1 AND hw_items IS NOT NULL AND jsonb_array_length(hw_items) > 0`,
+          [hStudentId]
+        );
+        for (const row of lrows.rows) {
+          const items = Array.isArray(row.hw_items) ? row.hw_items : [];
+          let changed = false;
+          const next = items.map((it) => {
+            if (String(it.title || '') !== String(hwDone.title)) return it;
+            if (String(it.due || '') !== String(hwDone.due || '')) return it;
+            changed = true;
+            return Object.assign({}, it, {
+              status: newStatus,
+              doneAt: done ? new Date().toISOString().slice(0, 10) : null,
+            });
+          });
+          if (changed) {
+            await query('UPDATE lesson_log SET hw_items = $1, updated_at = now() WHERE id = $2',
+              [JSON.stringify(next), row.id]);
+          }
+        }
+        // Отметка ДЗ — тоже признак жизни: без этого ученик, который зашёл,
+        // всё сделал и закрыл приложение, мог бы вечером получить напоминание.
+        await query('UPDATE students SET last_seen_at = now() WHERE telegram_token = $1', [token]);
+        res.status(200).json({ ok: true, status: newStatus });
+        return;
+      }
+
+      // Пинг «ученик открыл приложение» — питает напоминания о ДЗ в боте
+      // (см. api/lessons.js?part=hw-reminder). Шлётся при каждом запуске
+      // Mini App, в том числе вне Telegram, где chatId неизвестен.
+      if (body && body.seen) {
+        await query('UPDATE students SET last_seen_at = now() WHERE telegram_token = $1', [token]);
+        res.status(200).json({ ok: true });
+        return;
+      }
+
       const chatId = body && body.chatId;
       if (!chatId) { res.status(400).json({ error: 'chatId required' }); return; }
-      await query('UPDATE students SET telegram_chat_id = $1 WHERE telegram_token = $2', [String(chatId), token]);
+      await query(
+        'UPDATE students SET telegram_chat_id = $1, last_seen_at = now() WHERE telegram_token = $2',
+        [String(chatId), token]
+      );
       res.status(200).json({ ok: true });
     } catch (err) {
       const status = err.code === 'DB_NOT_CONFIGURED' ? 503 : 500;
@@ -130,7 +183,14 @@ module.exports = async (req, res) => {
         const key = `${item.title}|${item.due}`;
         if (!seen.has(key)) {
           seen.add(key);
-          hwAll.push({ ...item, lessonDate: row.lesson_date });
+          // done — явный флаг вместо разбора строки статуса на клиенте:
+          // статусы заводятся вручную в Дневнике и формулируются по-разному
+          // («выполнено учеником», «в приложении: не начато», …).
+          hwAll.push({
+            ...item,
+            done: /выполнен/i.test(String(item.status || '')),
+            lessonDate: row.lesson_date,
+          });
         }
       }
     }

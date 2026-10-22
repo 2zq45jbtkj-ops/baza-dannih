@@ -23,6 +23,129 @@ async function notifyHomeworkSent(studentId, hwItems) {
     // намеренно молча — доставка в Telegram не должна блокировать сохранение
   }
 }
+
+/* ---------- ежедневное напоминание о домашнем задании ----------
+
+   GET /api/lessons?part=hw-reminder — дёргается Vercel Cron раз в сутки
+   (расписание в vercel.json). Отдельным файлом в api/ эту ручку сделать
+   нельзя: проект на Hobby-плане и уже занимает все 12 serverless-функций,
+   тринадцатая роняет деплой целиком. Поэтому — ветка внутри lessons.js, тем
+   же приёмом, что api/intake.js?part=srezy. Домашние задания и так лежат в
+   lesson_log, который обслуживает именно этот файл.
+
+   Пишем ученику, только если выполнены ОБА условия: задание не отмечено
+   выполненным И ученик сутки не открывал Mini App. Тому, кто заходит и
+   занимается, бот не пишет вовсе. */
+
+const REMINDER_LOOKBACK_DAYS = 7;
+
+function hwIsDone(item) {
+  return /выполнен/i.test(String((item && item.status) || ''));
+}
+
+// Сколько дней осталось до дедлайна: >0 — ещё есть время, 0 — сегодня,
+// <0 — просрочено. Считаем в календарных днях по UTC: due хранится как
+// дата без времени, и разница часовых поясов сдвинула бы её на сутки.
+function daysUntil(due, todayMs) {
+  if (!due) return null;
+  const t = Date.parse(String(due).slice(0, 10) + 'T00:00:00Z');
+  if (Number.isNaN(t)) return null;
+  return Math.round((t - todayMs) / 86400000);
+}
+
+function reminderText(name, items, todayMs) {
+  const lines = items.map((it) => {
+    const left = daysUntil(it.due, todayMs);
+    // Хвост в скобках, а не через тире: fmtDue уже начинается с « — до …»,
+    // и два тире подряд в одной строке читаются как опечатка.
+    let tail = '';
+    if (left === null) tail = '';
+    else if (left < 0) tail = ` (просрочено на ${-left} дн.)`;
+    else if (left === 0) tail = ' (сегодня последний день)';
+    else if (left === 1) tail = ' (остался 1 день)';
+    else tail = ` (осталось ${left} дн.)`;
+    return `• [Уровень ${it.level || '?'}] ${it.title}${fmtDue(it.due)}${tail}`;
+  });
+  const hello = name ? `${String(name).trim().split(' ')[0]}, ` : '';
+  return `🎤 ${hello}не вижу тебя в приложении, а домашнее задание ждёт:\n\n` +
+    `${lines.join('\n')}\n\n` +
+    'Открой мини-приложение и отметь выполненное — тогда я перестану напоминать.';
+}
+
+async function runHomeworkReminders(req, res) {
+  // Vercel Cron сам подставляет заголовок Authorization: Bearer $CRON_SECRET,
+  // если переменная CRON_SECRET задана в проекте. Без неё ручка закрыта
+  // наглухо: иначе разослать сообщения всем ученикам смог бы любой, кто
+  // угадает адрес — ручка-то живёт внутри публичного /api/lessons.
+  const secret = process.env.CRON_SECRET;
+  if (!secret) { res.status(503).json({ error: 'CRON_SECRET not configured' }); return; }
+  if ((req.headers.authorization || '') !== `Bearer ${secret}`) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+
+  const todayMs = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+
+  // Отбор кандидатов целиком в SQL: «есть chat_id», «учится», «сутки не
+  // заходил», «сегодня уже не писали». Порог последнего условия 20 часов,
+  // а не 24: Vercel запускает крон в пределах часа, и при ровно 24 время
+  // отправки уползало бы вперёд, пока в какие-то сутки не пропустилось бы.
+  const cands = await query(
+    `SELECT id, name, telegram_chat_id
+       FROM students
+      WHERE telegram_chat_id IS NOT NULL AND telegram_chat_id <> ''
+        AND status IN ('active', 'trial')
+        AND (last_seen_at IS NULL OR last_seen_at < now() - interval '24 hours')
+        AND (hw_reminder_sent_at IS NULL OR hw_reminder_sent_at < now() - interval '20 hours')`
+  );
+
+  let sent = 0;
+  let noPendingHw = 0;
+  let failed = 0;
+  for (const st of cands.rows) {
+    const lr = await query(
+      `SELECT hw_items FROM lesson_log
+        WHERE student_id = $1 AND hw_items IS NOT NULL AND jsonb_array_length(hw_items) > 0
+        ORDER BY lesson_date DESC LIMIT 20`,
+      [st.id]
+    );
+
+    // Дубли по title+due убираем так же, как в GET /api/student-public:
+    // одно и то же задание может быть выписано на нескольких уроках подряд.
+    const seen = new Set();
+    const pending = [];
+    for (const row of lr.rows) {
+      for (const it of (Array.isArray(row.hw_items) ? row.hw_items : [])) {
+        const key = `${it.title}|${it.due}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (hwIsDone(it)) continue;
+        const left = daysUntil(it.due, todayMs);
+        // Про задания без дедлайна и просроченные больше чем на неделю не
+        // напоминаем: иначе бот пишет ученику бесконечно и его перестают
+        // читать вовсе. Такое задание Николай либо закроет, либо выдаст заново.
+        if (left === null || left < -REMINDER_LOOKBACK_DAYS) continue;
+        pending.push(it);
+      }
+    }
+    if (!pending.length) { noPendingHw += 1; continue; }
+
+    pending.sort((a, b) => (String(a.due || '9999') < String(b.due || '9999') ? -1 : 1));
+    const r = await sendTelegramMessage(st.telegram_chat_id, reminderText(st.name, pending, todayMs));
+    // Штамп ставим только на реально доставленное сообщение: если ученик
+    // заблокировал бота или chat_id протух, строка останется кандидатом и
+    // попытка повторится завтра, а не «отметится отправленной» навсегда.
+    if (r && r.ok) {
+      await query('UPDATE students SET hw_reminder_sent_at = now() WHERE id = $1', [st.id]);
+      sent += 1;
+    } else {
+      failed += 1;
+    }
+  }
+
+  res.status(200).json({ ok: true, candidates: cands.rows.length, sent, noPendingHw, failed });
+}
+
 function rowToJson(row) {
   return {
     id: row.id,
@@ -64,6 +187,14 @@ function rowToJson(row) {
 module.exports = async (req, res) => {
   try {
     const url = new URL(req.url, 'http://x');
+    const part = (req.query && req.query.part) || url.searchParams.get('part');
+
+    // Крон-ручка, а не CRUD: проверяется до всего остального и не трогает
+    // ни studentId, ни тело запроса. См. runHomeworkReminders выше.
+    if (part === 'hw-reminder') {
+      await runHomeworkReminders(req, res);
+      return;
+    }
 
     if (req.method === 'GET') {
       const studentId = (req.query && req.query.studentId) || url.searchParams.get('studentId');

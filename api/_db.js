@@ -372,6 +372,17 @@ async function ensureSchema(p) {
   // «Доп. открытые уроки» из Notion: строка вида "10, 15" — открывает уроки
   // вне очереди, не дожидаясь прохождения предыдущих.
   await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS extra_unlocked_lessons TEXT;`);
+
+  // Напоминания о домашнем задании (бот пишет раз в сутки тем, кто не сделал
+  // ДЗ и давно не заходил — см. api/lessons.js?part=hw-reminder).
+  // last_seen_at: когда ученик последний раз открывал Mini App. Пишется из
+  //   POST /api/student-public телом {seen:true} при каждом запуске приложения.
+  // hw_reminder_sent_at: когда напоминание уже ушло. Нужен именно отдельный
+  //   штамп, а не расчёт «раз в день» по времени крона: Vercel запускает
+  //   задание в пределах часа и может повторить попытку, а два одинаковых
+  //   сообщения подряд ученик воспримет как спам.
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;`);
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS hw_reminder_sent_at TIMESTAMPTZ;`);
 }
 
 async function query(sql, params) {

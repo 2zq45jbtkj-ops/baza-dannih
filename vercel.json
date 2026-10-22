@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/cron/hw-reminder",
+      "destination": "/api/lessons?part=hw-reminder"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/hw-reminder",
+      "schedule": "0 15 * * *"
+    }
+  ]
+}

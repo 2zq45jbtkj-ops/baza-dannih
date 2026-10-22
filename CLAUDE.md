@@ -24,13 +24,23 @@ Postgres (Neon, подключено через Vercel Storage). Схема со
 
 - `students.js` — CRUD учеников, статус, телеграм-токен
 - `intake.js` — GET/POST анкета ученика (весь Кабинет одним объектом, названные колонки — не free-form JSONB)
-- `lessons.js` — Дневник занятий
+- `lessons.js` — Дневник занятий + ветка `?part=hw-reminder` (см. «Напоминания о ДЗ»)
 - `dicts.js` — словари для Справочника (pinned/added варианты)
 - `student-public.js` — публичный профиль по telegram-токену (дёргает Telegram Mini App)
 - `admin-auth.js` — два 13-символьных ключа для админ-режима в Mini App
 - `site-login.js` — пароль от всего сайта
 - `player-auth.js`, `player-tracks.js`, `player-upload.js` — дистанционный плеер (см. ниже)
 - `health.js` — healthcheck
+
+## Напоминания о домашнем задании
+
+Раз в сутки бот пишет ученику, если **оба** условия верны: задание не отмечено выполненным и ученик сутки не открывал Mini App.
+
+- Расписание — `vercel.json` (`0 15 * * *`, UTC). Крон бьёт в `/api/cron/hw-reminder`, оттуда rewrite на `/api/lessons?part=hw-reminder` — в `path` крона намеренно нет query-строки, а rewrite не создаёт новую функцию и не ест лимит 12.
+- Ручка закрыта `CRON_SECRET` (env в Vercel): Vercel сам шлёт `Authorization: Bearer $CRON_SECRET`. Без переменной ручка отвечает 503 и ничего не рассылает.
+- Колонки `students.last_seen_at` / `students.hw_reminder_sent_at`. Первую пишет Mini App при каждом запуске (`POST /api/student-public` телом `{seen:true}`), вторую — сам крон, и **только после успешной доставки**, чтобы заблокировавший бота ученик остался в очереди на завтра.
+- Ученик отмечает задание выполненным в Mini App → `POST /api/student-public` с `{hwDone:{title,due,done}}` → статус внутри `lesson_log.hw_items` становится `выполнено учеником` (видно в Дневнике). Задания своего id не имеют — ищутся по паре `title+due`.
+- Про задания без дедлайна и просроченные больше чем на 7 дней бот молчит — иначе напоминания идут бесконечно.
 
 ## Экраны
 
