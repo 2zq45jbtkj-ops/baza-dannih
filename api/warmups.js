@@ -29,6 +29,14 @@ function rowToJson(row) {
 }
 
 module.exports = async (req, res) => {
+  // Распевки читает ещё и приложение для онлайн-уроков (отдельный проект,
+  // отдельный домен) — третья кнопка его дока. Без этих заголовков браузер
+  // режет запрос с чужого origin.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+
   try {
     const url = new URL(req.url, 'http://x');
 
