@@ -210,6 +210,11 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .rep-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .rep-add-btn{margin-top:6px;border:1px dashed var(--line);background:none;color:#A8452C;font-size:14px;font-weight:700;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;}
 .rep-add-btn:hover{background:var(--cream);}
+/* Ссылка в приложение для онлайн-уроков. Только var(), без хардкода hex —
+   иначе в тёмной теме плашка остаётся светлой (см. CLAUDE.md). */
+.rep-player-link{margin-top:10px;display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--terracotta);font-size:14px;font-weight:700;text-decoration:none;}
+.rep-player-link:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
+.rep-player-hint{font-size:11px;font-weight:600;color:var(--muted);}
 .rep-empty{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;font-size:14.5px;color:var(--muted);}
 .rep-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
 .rep-player{background:#23201D;color:#FAF7F2;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
@@ -2399,6 +2404,12 @@ function renderVariantScale(s, compareList, levelTopics, isAll, autoMode){
    Аудио хранится как data: URL (base64), как и остальные записи в
    проекте — переход на Vercel Blob сознательно отложен (см. ПРОМТ).
    ============================================================ */
+// Приложение для онлайн-уроков — отдельный проект, работает в паре с
+// Zoom/Телемостом (синхронный плеер + текст песни). Ссылка на весь сайт
+// одна, менять здесь.
+const PLAYER_URL = 'https://urok-pleer.vercel.app';
+function playerLessonUrl(s){ return PLAYER_URL + '#lesson=' + encodeURIComponent(s.id); }
+
 const REP_STATUS = {
   work: ['в работе', '#9A6A1F', '#F6EFE2'],
   ready: ['готова', '#4C7A45', '#EFF5EE'],
@@ -2779,7 +2790,7 @@ function repSetStatus(s, song, status){
   repRenderAll(s);
 }
 
-function repListHtml(songs, selSong){
+function repListHtml(s, songs, selSong){
   const rows = songs.map(song=>{
     const st = REP_STATUS[song.status] || REP_STATUS.work;
     const isSel = selSong && selSong.id===song.id;
@@ -2805,6 +2816,7 @@ function repListHtml(songs, selSong){
       <div class="rep-list-title">Песни · ${songs.length}</div>
       ${rows}
       <button type="button" class="rep-add-btn" id="repAddBtn">+ Добавить песню</button>
+      <a class="rep-player-link" href="${playerLessonUrl(s)}" target="_blank" rel="noopener">▶ Плеер урока<span class="rep-player-hint">синхронный минус рядом с Zoom</span></a>
     </div>`;
 }
 
@@ -2969,7 +2981,7 @@ function repRenderAll(s){
   const selId = state.repSel[s.id];
   const song = songs.find(x=>x.id===selId) || songs[0] || null;
   if(song && state.repSel[s.id] !== song.id) state.repSel[s.id] = song.id;
-  c.innerHTML = `<div class="rep-grid">${repListHtml(songs, song)}${song ? repCardHtml(song) : '<div class="rep-empty">Песен пока нет. Нажмите «+ Добавить песню».</div>'}</div>`;
+  c.innerHTML = `<div class="rep-grid">${repListHtml(s, songs, song)}${song ? repCardHtml(song) : '<div class="rep-empty">Песен пока нет. Нажмите «+ Добавить песню».</div>'}</div>`;
   repWireList(s, songs);
   if(song) repWireCard(s, song);
 }
