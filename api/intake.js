@@ -1,4 +1,5 @@
 const { query } = require('./_db');
+const auth = require('./_auth');
 
 function rowToJson(row) {
   if (!row) return null;
@@ -188,6 +189,12 @@ async function handleSrezy(req, res, params) {
 }
 
 module.exports = async (req, res) => {
+  // Вся анкета — только преподавателю, включая ?part=srezy. Самое
+  // чувствительное, что есть в базе: голосовой анамнез (ЛОР-диагнозы, сон,
+  // алкоголь, курение). Ученику сюда не нужно — Mini App читает профиль
+  // через api/student-public.js по своему токену.
+  if (!auth.requireTeacher(req, res)) return;
+
   try {
     const srezParams = new URL(req.url, 'http://x').searchParams;
     if (((req.query && req.query.part) || srezParams.get('part')) === 'srezy') {

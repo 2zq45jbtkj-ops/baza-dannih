@@ -13,8 +13,19 @@
 // сорока строк стоил бы целый слот (из-за такого перебора деплой уже
 // однажды падал целиком). Оба эндпоинта — про плеер и обращаются к одной
 // и той же паре таблиц, так что разнесение было искусственным.
+//
+// ДОСТУП (api/_auth.js). Раньше GET не требовал ничего: хватало знать id
+// ученика, а id предсказуемы (s1, s3, s<timestamp>) — список песен любого
+// ученика читался перебором, и это было видно на проде обычным curl. Теперь:
+//   GET            — токен преподавателя (X-Site-Auth) либо сессия ученика
+//                    (X-Player-Session), и ученику видны только свои песни
+//   POST/PATCH/DELETE, ?inline= — только преподаватель: это запись и выгрузка
+//                    файлов, по id песни можно было затереть текст или удалить
+//                    трек
+//   POST ?action=auth — открыт, это и есть вход по коду
 const { query } = require('./_db');
 const { randomUUID, randomBytes } = require('crypto');
+const auth = require('./_auth');
 
 // Короткий код входа в плеер. students.telegram_token — это UUID на 36
 // символов: боту и Mini App он годится, потому что приезжает готовой
@@ -107,7 +118,7 @@ function rowToJson(row) {
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', auth.CORS_HEADERS);
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
   try {
@@ -120,6 +131,10 @@ module.exports = async (req, res) => {
       // в хранилище. Тот же приём, что ?audio= в api/warmups.js.
       const inlineId = (req.query && req.query.inline) || url.searchParams.get('inline');
       if (inlineId) {
+        // Только преподаватель: ветка отдаёт файл целиком и нужна ровно
+        // кнопке переноса в Репертуаре. Ученику она ни к чему — у него
+        // играют уже перенесённые дорожки по ссылкам на Blob.
+        if (!auth.requireTeacher(req, res)) return;
         const kind = ((req.query && req.query.kind) || url.searchParams.get('kind')) === 'music' ? 'music' : 'voice';
         const col = kind === 'music' ? 'instrumental_url' : 'vocal_url';
         const ri = await query(`SELECT ${col} AS data_url FROM player_tracks WHERE id = $1`, [inlineId]);
@@ -132,8 +147,19 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const studentId = (req.query && req.query.studentId) || url.searchParams.get('studentId');
-      if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
+      // Чей список отдаём. У ученика id берётся из подписанной сессии, а
+      // ?studentId= игнорируется: подменить параметр и прочитать чужие песни
+      // нельзя в принципе, проверять совпадение отдельно не нужно.
+      // Преподавателю ?studentId= нужен — он открывает карточку любого.
+      let studentId;
+      const sess = auth.readStudentSession(req);
+      if (sess) {
+        studentId = sess.studentId;
+      } else {
+        if (!auth.requireTeacher(req, res)) return;
+        studentId = (req.query && req.query.studentId) || url.searchParams.get('studentId');
+        if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
+      }
       const r = await query(
         `SELECT ${SONG_COLS} FROM player_tracks WHERE student_id = $1 ORDER BY created_at ASC`,
         [studentId]
@@ -210,10 +236,21 @@ module.exports = async (req, res) => {
           res.status(401).json({ error: 'unauthorized' });
           return;
         }
-        res.status(200).json({ ok: true, studentId: r.rows[0].id, name: r.rows[0].name });
+        // session — то, чем плеер потом подтверждает доступ к списку песен
+        // (X-Player-Session). Сам код в запросах больше не участвует.
+        // studentId оставлен для совместимости со старым плеером и для UI;
+        // доверять ему как «чей это список» нельзя — см. GET выше.
+        res.status(200).json({
+          ok: true,
+          studentId: r.rows[0].id,
+          name: r.rows[0].name,
+          session: auth.studentSession(r.rows[0].id),
+          expiresInSec: auth.STUDENT_TTL_SEC,
+        });
         return;
       }
 
+      if (!auth.requireTeacher(req, res)) return;
       if (!b.studentId) { res.status(400).json({ error: 'studentId required' }); return; }
       const id = 'song' + randomUUID();
       const r = await query(
@@ -227,6 +264,12 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PATCH') {
+      // Пока только преподаватель. Комментарий ниже про pitch/tempo/lyricTimes
+      // («это пишет ещё и приложение для онлайн-уроков») описывает задуманное:
+      // комнату урока (lesson_rooms) в api/ сейчас не читает никто, и писать
+      // в песни со стороны ученика некому. Когда оно появится — разрешать
+      // ему не весь PATCH, а именно эти поля и только у своих песен.
+      if (!auth.requireTeacher(req, res)) return;
       const id = (req.query && req.query.id) || url.searchParams.get('id');
       if (!id) { res.status(400).json({ error: 'id required' }); return; }
       let body = req.body;
@@ -302,6 +345,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'DELETE') {
+      if (!auth.requireTeacher(req, res)) return;
       const id = (req.query && req.query.id) || url.searchParams.get('id');
       if (!id) { res.status(400).json({ error: 'id required' }); return; }
       await query('DELETE FROM player_tracks WHERE id = $1', [id]);
@@ -311,7 +355,7 @@ module.exports = async (req, res) => {
 
     res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    const status = err.code === 'DB_NOT_CONFIGURED' ? 503 : 500;
+    const status = (err.code === 'DB_NOT_CONFIGURED' || err.code === 'AUTH_NOT_CONFIGURED') ? 503 : 500;
     res.status(status).json({ error: err.message || String(err) });
   }
 };

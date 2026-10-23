@@ -1,5 +1,12 @@
-// POST /api/site-login { password } → { ok: true } или 401
+// POST /api/site-login { password } → { ok: true, token } или 401
 // Проверяет пароль от сайта (env var SITE_PASSWORD). Не затрагивает /api/student-public и другие публичные эндпоинты.
+//
+// token — подписанный токен преподавателя (api/_auth.js). Браузер кладёт его
+// в localStorage и присылает в X-Site-Auth на каждый запрос к закрытым
+// ручкам. До этого пароль закрывал только страницу, а API оставался
+// открытым: /api/students отдавал всех учеников с их кодами любому.
+const auth = require('./_auth');
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
@@ -21,12 +28,17 @@ module.exports = async (req, res) => {
   }
 
   if (safeEq(password, SITE_PASSWORD)) {
-    // Подписанный токен для показа двойного кода без повторного ввода пароля
-    // (проверяется в admin-auth.js, живёт 30 дней как и сессия сайта).
+    // Два разных токена, и оба нужны:
+    //   token       — доступ к закрытым ручкам (X-Site-Auth, api/_auth.js);
+    //   revealToken — показ двойного кода без повторного ввода пароля.
+    // Схемы несовместимы: teacherToken() это постоянное 't1.<подпись>', а
+    // admin-auth.js ждёт 'время.подпись' от «reveal:» и проверяет возраст.
+    // Выкинуть revealToken значит вернуть лишний запрос пароля в карточке
+    // админа, поэтому отдаём оба.
     const crypto = require('crypto');
     const ts = String(Date.now());
     const sig = crypto.createHmac('sha256', SITE_PASSWORD).update('reveal:' + ts).digest('hex');
-    res.status(200).json({ ok: true, revealToken: ts + '.' + sig });
+    res.status(200).json({ ok: true, token: auth.teacherToken(), revealToken: ts + '.' + sig });
   } else {
     await new Promise(r => setTimeout(r, 400));
     res.status(401).json({ error: 'unauthorized' });

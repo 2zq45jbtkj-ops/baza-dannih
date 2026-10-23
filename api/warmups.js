@@ -14,6 +14,7 @@
 // DELETE ?id=xxx                  → удалить распевку
 const { query } = require('./_db');
 const { randomUUID } = require('crypto');
+const auth = require('./_auth');
 
 function rowToJson(row) {
   return {
@@ -29,13 +30,22 @@ function rowToJson(row) {
 }
 
 module.exports = async (req, res) => {
-  // Распевки читает ещё и приложение для онлайн-уроков (отдельный проект,
-  // отдельный домен) — третья кнопка его дока. Без этих заголовков браузер
-  // режет запрос с чужого origin.
+  // Заголовки оставлены на будущее: распевки задумано показывать и в
+  // приложении для онлайн-уроков (отдельный проект, чужой домен — без них
+  // браузер режет такой запрос). Сейчас оттуда сюда никто не ходит:
+  // в urok-pleer/index.html обращений к /api/warmups нет, да и деплоев у
+  // того проекта пока ноль — единственный живой клиент это index.html.
+  // Появится третья кнопка в доке — ей понадобится токен, как и всем.
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', auth.CORS_HEADERS);
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+
+  // Вся библиотека — преподавателю, вместе с веткой ?audio=: без неё можно
+  // было бы вытащить любой legacy-файл по id, зная только его. Проверка
+  // ПОСЛЕ OPTIONS: preflight ходит без заголовков, и 401 на нём браузер
+  // показал бы как «сервер недоступен», так и не отправив настоящий запрос.
+  if (!auth.requireTeacher(req, res)) return;
 
   try {
     const url = new URL(req.url, 'http://x');

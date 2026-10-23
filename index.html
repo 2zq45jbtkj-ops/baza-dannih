@@ -790,10 +790,21 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 (function() {
   var MAX_AGE = 30 * 24 * 3600 * 1000; // 30 дней
   var ts = parseInt(localStorage.getItem('bd_auth_ts') || '0', 10);
+  // bd_auth_token — токен преподавателя от /api/site-login, им закрытые
+  // ручки (/api/students, /api/player-tracks) отличают Николая от любого,
+  // кто знает адрес. Раньше хранилась только дата входа, и пароль закрывал
+  // страницу, но не API. Поэтому дату одной недостаточно: у тех, кто вошёл
+  // до этого изменения, токена нет — им один раз покажется форма пароля.
+  var tok = localStorage.getItem('bd_auth_token') || '';
+  // На localhost оверлея нет (дев-сервер .claude/server.js подставляет
+  // токен в проксируемые запросы сам, см. его шапку), поэтому и токен тут
+  // браузеру не нужен.
   var onProduction = location.hostname === 'baza-dannih.vercel.app';
-  if (!onProduction || Date.now() - ts < MAX_AGE) {
+  if (!onProduction || (tok && Date.now() - ts < MAX_AGE)) {
     document.getElementById('site-lock').classList.add('hidden');
-    return;
+    // Без return: обработчики ниже всё равно нужны. Токен может оказаться
+    // от прежнего пароля сайта — тогда закрытая ручка ответит 401 и
+    // apiOn401() снова покажет этот же оверлей, и ввод должен работать.
   }
   var input = document.getElementById('lock-input');
   var btn   = document.getElementById('lock-btn');
@@ -811,10 +822,17 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
     })
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d && d.ok) {
+      if (d && d.ok && d.token) {
         localStorage.setItem('bd_auth_ts', String(Date.now()));
+        localStorage.setItem('bd_auth_token', d.token);
+        // Отдельный токен для показа двойного кода — у него своя схема и свой
+        // срок, см. api/site-login.js. Без него карточка админа снова начала бы
+        // спрашивать пароль поверх уже введённого.
         if (d.revealToken) { try { localStorage.setItem('bd_reveal_tok', d.revealToken); } catch(e){} }
         document.getElementById('site-lock').classList.add('hidden');
+        // Запросы к базе уходят раньше, чем вводят пароль, и уже получили
+        // 401 — страницу проще перезагрузить, чем до-загружать по частям.
+        location.reload();
       } else {
         err.textContent = 'Неверный пароль.';
         btn.disabled = false; btn.textContent = 'Войти';
@@ -826,7 +844,11 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
       btn.disabled = false; btn.textContent = 'Войти';
     });
   });
-  setTimeout(function(){ input.focus(); }, 50);
+  setTimeout(function(){
+    // Только если оверлей действительно показан — иначе отобрали бы фокус
+    // у уже открытой базы (обработчики выше теперь вешаются всегда).
+    if (!document.getElementById('site-lock').classList.contains('hidden')) input.focus();
+  }, 50);
 })();
 </script>
 
@@ -1348,8 +1370,11 @@ function ensureLessonCounts(){
   state.data.students.forEach(s=>{
     if(state.lessonCounts[s.id]!==undefined) return;
     state.lessonCounts[s.id] = null;
-    fetch('/api/lessons?studentId=' + encodeURIComponent(s.id))
-      .then(r=> r.ok ? r.json() : Promise.reject(new Error('http '+r.status)))
+    fetch('/api/lessons?studentId=' + encodeURIComponent(s.id), {headers: apiAuthHeaders()})
+      .then(r=>{
+        if(r.status === 401) apiOn401();
+        return r.ok ? r.json() : Promise.reject(new Error('http '+r.status));
+      })
       .then(data=>{
         state.lessonCounts[s.id] = (data.lessons||[]).length;
         renderStudentList();
@@ -2643,6 +2668,7 @@ async function repUploadTrackFile(s, song, kind, f){
         access: 'public',
         contentType: mime,
         handleUploadUrl: '/api/player-upload',
+        clientPayload: apiUploadPayload(),
         onUploadProgress: p => { if(btn) btn.textContent = 'Загружаю… ' + Math.round(p.percentage) + '%'; }
       }
     );
@@ -2696,6 +2722,7 @@ async function repMigrateTrack(s, song, kind, btn){
         access: 'public',
         contentType: mime,
         handleUploadUrl: '/api/player-upload',
+        clientPayload: apiUploadPayload(),
         onUploadProgress: p => setTxt('Загружаю… ' + Math.round(p.percentage) + '%')
       }
     );
@@ -3214,13 +3241,37 @@ function repWireCard(s, song){
    Реальный бэкенд: /api/intake и /api/lessons (Postgres)
    ============================================================ */
 
+// Токен преподавателя из localStorage (его кладёт оверлей #site-lock после
+// проверки пароля). Закрытые ручки без него отвечают 401 — см. api/_auth.js.
+// На localhost токена нет и он не нужен: дев-сервер .claude/server.js
+// подставляет свой в проксируемые запросы.
+function apiAuthHeaders(extra){
+  const h = Object.assign({}, extra || {});
+  const tok = localStorage.getItem('bd_auth_token');
+  if(tok) h['X-Site-Auth'] = tok;
+  return h;
+}
+// Тот же токен, но для VercelBlob.upload(): свои заголовки он слать не умеет,
+// поэтому /api/player-upload ждёт токен в clientPayload. См. комментарий там.
+function apiUploadPayload(){
+  return localStorage.getItem('bd_auth_token') || '';
+}
+// 401 здесь значит «токена нет или он от старого пароля» — показываем форму
+// пароля вместо того, чтобы молча остаться с пустыми/локальными данными.
+function apiOn401(){
+  localStorage.removeItem('bd_auth_token');
+  const lock = document.getElementById('site-lock');
+  if(lock) lock.classList.remove('hidden');
+}
 async function apiGet(url){
-  const r = await fetch(url);
+  const r = await fetch(url, {headers: apiAuthHeaders()});
+  if(r.status === 401) apiOn401();
   if(!r.ok){ const t = await r.text().catch(()=> ''); throw new Error('HTTP '+r.status+' '+t); }
   return r.json();
 }
 async function apiSend(url, method, body){
-  const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  const r = await fetch(url, {method, headers: apiAuthHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body)});
+  if(r.status === 401) apiOn401();
   if(!r.ok){ const t = await r.text().catch(()=> ''); throw new Error('HTTP '+r.status+' '+t); }
   return r.json();
 }
@@ -3390,7 +3441,8 @@ async function wuAudioUrl(au){
   if(au._urlPromise) return au._urlPromise;
   au._urlPromise = (async ()=>{
     try{
-      const r = await fetch('/api/warmups?audio=' + encodeURIComponent(au.id));
+      const r = await fetch('/api/warmups?audio=' + encodeURIComponent(au.id), {headers: apiAuthHeaders()});
+      if(r.status === 401) apiOn401();
       if(!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       au.dataUrl = d.dataUrl || null;
@@ -3457,6 +3509,7 @@ async function wuUploadToBlob(ex, fileOrBlob, mime, name, durationSec, onProgres
       access: 'public',
       contentType: mime,
       handleUploadUrl: '/api/player-upload',
+      clientPayload: apiUploadPayload(),
       onUploadProgress: p => { if(onProgress) onProgress(Math.round(p.percentage), 100); }
     }
   );

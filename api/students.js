@@ -1,5 +1,6 @@
 const { query } = require('./_db');
 const { randomUUID } = require('crypto');
+const auth = require('./_auth');
 
 function rowToJson(row) {
   return {
@@ -24,15 +25,22 @@ const ALLOWED_ORIGINS = ['https://your-vocal.vercel.app'];
 // Локальные превью-серверы поднимаются на случайном свободном порту.
 const LOCAL_ORIGIN = /^http:\/\/localhost:\d+$/;
 
+// Весь файл — только для преподавателя (X-Site-Auth, см. api/_auth.js).
+// Проверка CORS выше от чтения не защищала вообще: Origin смотрит браузер, а
+// curl его просто не присылает — и получал список всех учеников вместе с их
+// telegram_token, то есть готовые коды доступа к боту, Mini App и плееру.
+// Токен выдают site-login.js (пароль от сайта) и admin-auth.js (два ключа,
+// ими входит «Режим админа» в Mini App).
 module.exports = async (req, res) => {
   const origin = req.headers && req.headers.origin;
   if (origin && (ALLOWED_ORIGINS.indexOf(origin) !== -1 || LOCAL_ORIGIN.test(origin))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', auth.CORS_HEADERS);
   }
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  if (!auth.requireTeacher(req, res)) return;
 
   try {
     if (req.method === 'GET') {
@@ -102,7 +110,7 @@ module.exports = async (req, res) => {
 
     res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    const status = err.code === 'DB_NOT_CONFIGURED' ? 503 : 500;
+    const status = (err.code === 'DB_NOT_CONFIGURED' || err.code === 'AUTH_NOT_CONFIGURED') ? 503 : 500;
     res.status(status).json({ error: err.message || String(err) });
   }
 };

@@ -1,11 +1,18 @@
 // Проверка двух ключей администратора для Telegram Mini App.
 // POST /api/admin-auth  { key1, key2 }
-// → 200 { ok: true }  или  401 { error: 'unauthorized' }
+// → 200 { ok: true, token }  или  401 { error: 'unauthorized' }
 // Ключи хранятся в env vars ADMIN_KEY_1, ADMIN_KEY_2 — в коде фронтенда их нет.
+//
+// token — тот же токен преподавателя, что выдаёт site-login.js по паролю от
+// сайта (api/_auth.js): обе пары «ключи» и «пароль» подтверждают одно и то
+// же — что это Николай. Mini App в «Режиме админа» присылает его в
+// X-Site-Auth, когда читает /api/students.
+const auth = require('./_auth');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', auth.CORS_HEADERS);
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
   if (req.method !== 'POST') {
@@ -67,7 +74,7 @@ module.exports = async (req, res) => {
   }
 
   if (safeEq(key1, K1) && safeEq(key2, K2)) {
-    res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true, token: auth.teacherToken() });
   } else {
     // Одинаковая задержка чтобы нельзя было угадать какой ключ неверный
     await new Promise(r => setTimeout(r, 300));

@@ -1,5 +1,6 @@
 const { query } = require('./_db');
 const { sendTelegramMessage } = require('./_telegram');
+const auth = require('./_auth');
 
 function fmtDue(due) {
   if (!due) return '';
@@ -195,6 +196,12 @@ module.exports = async (req, res) => {
       await runHomeworkReminders(req, res);
       return;
     }
+
+    // Всё остальное — Дневник занятий, только преподавателю. Проверка стоит
+    // ПОСЛЕ ветки hw-reminder намеренно: у крона своя защита по CRON_SECRET,
+    // а Vercel Cron шлёт Authorization: Bearer, не X-Site-Auth — поставь
+    // requireTeacher выше, и ежедневные напоминания молча перестали бы ходить.
+    if (!auth.requireTeacher(req, res)) return;
 
     if (req.method === 'GET') {
       const studentId = (req.query && req.query.studentId) || url.searchParams.get('studentId');
