@@ -14,7 +14,28 @@
 // однажды падал целиком). Оба эндпоинта — про плеер и обращаются к одной
 // и той же паре таблиц, так что разнесение было искусственным.
 const { query } = require('./_db');
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes } = require('crypto');
+
+// Короткий код входа в плеер. students.telegram_token — это UUID на 36
+// символов: боту и Mini App он годится, потому что приезжает готовой
+// ссылкой, но ученик, открывший плеер на телефоне, набрать его руками не
+// может. Поэтому у ученика есть ещё короткий код, он лежит в lesson_rooms.
+// Алфавит без 0/O/1/I/L — эти символы не различить, когда код диктуют
+// голосом на уроке.
+const ROOM_ALPHABET = 'ACDEFGHJKMNPQRSTUVWXYZ23456789';
+function makeRoomCode() {
+  let out = '';
+  while (out.length < 6) {
+    // Отбрасываем байты >= 240: 240 = 8×30, так что остаток по модулю 30
+    // распределён ровно. Иначе первые символы алфавита выпадали бы чаще.
+    for (const byte of randomBytes(12)) {
+      if (byte >= 240) continue;
+      out += ROOM_ALPHABET[byte % ROOM_ALPHABET.length];
+      if (out.length === 6) break;
+    }
+  }
+  return out;
+}
 
 // Явный список колонок вместо SELECT */RETURNING *. У дорожек, залитых до
 // переезда на Vercel Blob, в vocal_url/instrumental_url лежит сам файл в
@@ -129,14 +150,59 @@ module.exports = async (req, res) => {
       const b = body || {};
 
       const action = (req.query && req.query.action) || url.searchParams.get('action');
+      // Короткий код ученика: выдать существующий или перевыдать новый.
+      // Дёргает преподаватель из карточки, ученик сюда не обращается.
+      if (action === 'room') {
+        const studentId = String(b.studentId || '').trim();
+        if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
+        const st = await query('SELECT id FROM students WHERE id = $1', [studentId]);
+        if (!st.rows.length) { res.status(404).json({ error: 'student not found' }); return; }
+
+        if (b.regenerate) {
+          // Старый код перестаёт пускать сразу же — так же, как «↻» у
+          // telegram_token. Иначе отозвать выданный код было бы нечем.
+          await query('DELETE FROM lesson_rooms WHERE student_id = $1', [studentId]);
+        } else {
+          const cur = await query(
+            'SELECT code FROM lesson_rooms WHERE student_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [studentId]
+          );
+          if (cur.rows.length) { res.status(200).json({ code: cur.rows[0].code }); return; }
+        }
+
+        // code — PRIMARY KEY, так что от совпадения спасает сама база, а не
+        // предварительная проверка: между SELECT и INSERT код мог бы занять
+        // параллельный запрос.
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const ins = await query(
+            `INSERT INTO lesson_rooms (code, student_id) VALUES ($1, $2)
+             ON CONFLICT (code) DO NOTHING RETURNING code`,
+            [makeRoomCode(), studentId]
+          );
+          if (ins.rows.length) { res.status(200).json({ code: ins.rows[0].code }); return; }
+        }
+        res.status(500).json({ error: 'не удалось подобрать свободный код' });
+        return;
+      }
+
       if (action === 'auth') {
-        // Код доступа ученика — тот же, что открывает Telegram-бота с ДЗ
-        // (students.telegram_token). Один код на все приложения ученика:
-        // преподаватель нажал «↻ Новый код» — старый перестал пускать и сюда.
+        // Пускаем по двум видам кода. Длинный UUID (students.telegram_token)
+        // — тот же, что открывает Telegram-бота с ДЗ; приезжает ссылкой.
+        // Короткий шестисимвольный (lesson_rooms.code) — тот, что ученик
+        // набирает руками на телефоне. Любой из них отзывается кнопкой «↻»
+        // в карточке, и старый сразу перестаёт пускать.
         const code = String(b.code || '').trim();
         if (!code) { res.status(400).json({ error: 'code required' }); return; }
 
-        const r = await query('SELECT id, name FROM students WHERE telegram_token = $1', [code]);
+        let r = await query('SELECT id, name FROM students WHERE telegram_token = $1', [code]);
+        if (!r.rows.length) {
+          r = await query(
+            `SELECT s.id, s.name FROM lesson_rooms lr
+               JOIN students s ON s.id = lr.student_id
+              WHERE lr.code = $1 AND (lr.expires_at IS NULL OR lr.expires_at > now())`,
+            [code.toUpperCase()]
+          );
+        }
         if (!r.rows.length) {
           // Та же искусственная задержка, что в site-login.js и admin-auth.js:
           // без неё по времени ответа видно, существует код или нет.

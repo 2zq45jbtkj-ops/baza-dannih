@@ -215,6 +215,16 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .rep-player-link{margin-top:10px;display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--terracotta);font-size:14px;font-weight:700;text-decoration:none;}
 .rep-player-link:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
 .rep-player-hint{font-size:11px;font-weight:600;color:var(--muted);}
+/* Вход ученика в плеер: одна ссылка на всех + личный короткий код. */
+.rep-entry{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
+.rep-entry-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.rep-entry-row{display:flex;align-items:center;gap:8px;}
+.rep-entry-label{font-size:12px;font-weight:700;color:var(--muted);min-width:52px;}
+.rep-entry-val{flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rep-entry-code{flex:1;font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;letter-spacing:.14em;color:var(--terracotta);}
+.rep-entry-btn{flex:none;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.rep-entry-btn:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
+.rep-entry-hint{font-size:11px;color:var(--muted);line-height:1.45;}
 .rep-empty{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;font-size:14.5px;color:var(--muted);}
 .rep-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
 .rep-player{background:#23201D;color:#FAF7F2;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
@@ -2817,6 +2827,21 @@ function repListHtml(s, songs, selSong){
       ${rows}
       <button type="button" class="rep-add-btn" id="repAddBtn">+ Добавить песню</button>
       <a class="rep-player-link" href="${playerLessonUrl(s)}" target="_blank" rel="noopener">▶ Плеер урока<span class="rep-player-hint">синхронный минус рядом с Zoom</span></a>
+      <div class="rep-entry">
+        <div class="rep-entry-title">Вход ученика</div>
+        <div class="rep-entry-row">
+          <span class="rep-entry-label">Ссылка</span>
+          <span class="rep-entry-val">${PLAYER_URL}</span>
+          <button type="button" class="rep-entry-btn" id="repEntryCopyLink">Копировать</button>
+        </div>
+        <div class="rep-entry-row">
+          <span class="rep-entry-label">Код</span>
+          <span class="rep-entry-code" id="repEntryCode">······</span>
+          <button type="button" class="rep-entry-btn" id="repEntryCopyCode">Копировать</button>
+          <button type="button" class="rep-entry-btn" id="repEntryRegen" title="Новый код — старый сразу перестанет пускать">↻</button>
+        </div>
+        <div class="rep-entry-hint">Ссылка одна на всех, код у каждого свой. Открывает только песни этого ученика.</div>
+      </div>
     </div>`;
 }
 
@@ -2986,10 +3011,65 @@ function repRenderAll(s){
   if(song) repWireCard(s, song);
 }
 
+// Короткий код живёт в lesson_rooms и выдаётся по требованию: пока
+// преподаватель не открыл Репертуар, комнату ученику заводить незачем.
+// Код кладём в тот же кеш, что и песни, — иначе каждая перерисовка
+// карточки (а она идёт на любой чих) дёргала бы базу заново.
+function repWireEntry(s){
+  const cache = repCache(s);
+  const codeEl = document.getElementById('repEntryCode');
+  const paint = () => { if(codeEl) codeEl.textContent = cache.roomCode || '······'; };
+  paint();
+
+  if(!cache.roomCode && !cache.roomCodePending){
+    cache.roomCodePending = true;
+    apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id})
+      .then(res => { cache.roomCode = res.code || ''; })
+      .catch(() => { cache.roomCode = null; if(codeEl) codeEl.textContent = 'нет связи'; })
+      .finally(() => { cache.roomCodePending = false; paint(); });
+  }
+
+  const flash = (btn, text) => {
+    const was = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = was; }, 1600);
+  };
+  // Тот же приём, что у tgTokenCopy: если браузер отказал в доступе к
+  // буферу, выделяем текст, чтобы скопировать можно было руками.
+  const copy = (btn, text, el) => {
+    if(!text) return;
+    navigator.clipboard.writeText(text)
+      .then(() => flash(btn, 'Скопировано!'))
+      .catch(() => {
+        if(el){ const r = document.createRange(); r.selectNode(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+        flash(btn, 'выделено');
+      });
+  };
+
+  const linkBtn = document.getElementById('repEntryCopyLink');
+  if(linkBtn) linkBtn.onclick = () => copy(linkBtn, PLAYER_URL, document.querySelector('.rep-entry-val'));
+
+  const codeBtn = document.getElementById('repEntryCopyCode');
+  if(codeBtn) codeBtn.onclick = () => copy(codeBtn, cache.roomCode || '', codeEl);
+
+  const regenBtn = document.getElementById('repEntryRegen');
+  if(regenBtn) regenBtn.onclick = async () => {
+    if(!confirm('Выдать новый код? Старый перестанет пускать сразу — ученику нужно будет отправить новый.')) return;
+    regenBtn.disabled = true;
+    try{
+      const res = await apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id, regenerate: true});
+      cache.roomCode = res.code || '';
+      paint();
+    }catch(e){ alert('Не удалось выдать код: ' + (e.message||e)); }
+    regenBtn.disabled = false;
+  };
+}
+
 function repWireList(s, songs){
   const c = document.getElementById('tabContent');
   const addBtn = document.getElementById('repAddBtn');
   if(addBtn) addBtn.onclick = ()=> repAddSong(s);
+  repWireEntry(s);
   songs.forEach(song=>{
     const row = c.querySelector(`[data-rep-row="${song.id}"]`);
     if(row) row.onclick = (e)=>{
