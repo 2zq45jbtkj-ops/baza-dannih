@@ -51,8 +51,21 @@ module.exports = async (req, res) => {
     try { body = JSON.parse(body || '{}'); } catch (e) { body = {}; }
   }
 
-  // @vercel/blob ждёт Fetch-подобный Request — ему нужен только .headers.get
-  const requestLike = { headers: { get: (name) => req.headers[String(name).toLowerCase()] } };
+  // @vercel/blob ждёт Fetch-подобный Request, но читает заголовки двумя
+  // разными способами и выбирает по наличию поля credentials:
+  //   "credentials" in request ? request.headers.get(name) : request.headers[name]
+  // У нашей заглушки credentials нет, поэтому на ветке blob.upload-completed
+  // библиотека лезет за подписью как за обычным свойством. Пока здесь был
+  // только .get(), x-vercel-signature приходил undefined → пустая строка →
+  // «Missing callback signature» → 400 на каждый коллбэк от серверов Blob.
+  // Поэтому отдаём оба способа сразу: сами заголовки — своими свойствами,
+  // .get() — через прототип (так настоящий заголовок не затрёт метод).
+  const requestLike = {
+    headers: Object.assign(
+      Object.create({ get: (name) => req.headers[String(name).toLowerCase()] }),
+      req.headers
+    ),
+  };
 
   try {
     const jsonResponse = await handleUpload({
