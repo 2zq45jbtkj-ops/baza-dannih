@@ -24,7 +24,7 @@
 //                    трек
 //   POST ?action=auth — открыт, это и есть вход по коду
 const { query } = require('./_db');
-const { randomUUID, randomBytes } = require('crypto');
+const { randomUUID, randomBytes, timingSafeEqual } = require('crypto');
 const auth = require('./_auth');
 
 // Короткий код входа в плеер. students.telegram_token — это UUID на 36
@@ -179,6 +179,13 @@ module.exports = async (req, res) => {
       // Короткий код ученика: выдать существующий или перевыдать новый.
       // Дёргает преподаватель из карточки, ученик сюда не обращается.
       if (action === 'room') {
+        // Проверка внутри ветки, а не до неё: ниже лежит ?action=auth, вход
+        // ученика по коду, и он обязан остаться открытым. А эта ветка отдаёт
+        // сам код входа — без проверки знающий id ученика (а они вида s1,
+        // s<время>) забирал бы код этим запросом и заходил в плеер за него,
+        // то есть вся проверка сессий обходилась бы одним POST. С regenerate
+        // он же отзывал бы чужие коды, оставляя учеников без доступа.
+        if (!auth.requireTeacher(req, res)) return;
         const studentId = String(b.studentId || '').trim();
         if (!studentId) { res.status(400).json({ error: 'studentId required' }); return; }
         const st = await query('SELECT id FROM students WHERE id = $1', [studentId]);
@@ -208,6 +215,66 @@ module.exports = async (req, res) => {
           if (ins.rows.length) { res.status(200).json({ code: ins.rows[0].code }); return; }
         }
         res.status(500).json({ error: 'не удалось подобрать свободный код' });
+        return;
+      }
+
+      // Вход преподавателя в сам плеер (страница /teacher в urok-pleer).
+      // Живёт здесь, а не в site-login.js, по одной причине: плеер на чужом
+      // домене, а у site-login.js нет CORS-заголовков вообще. Заводить ради
+      // этого новый файл в api/ нельзя — там ровно 12 функций из 12.
+      // Пароль тот же, что у сайта, и токен выдаётся тот же самый.
+      if (action === 'teacher-login') {
+        const SITE_PASSWORD = process.env.SITE_PASSWORD;
+        if (!SITE_PASSWORD) { res.status(503).json({ error: 'password not configured' }); return; }
+        const given = String(b.password || '');
+        // Сравнение за постоянное время + задержка на неудаче — как в
+        // site-login.js: иначе пароль подбирается по времени ответа.
+        const A = Buffer.from(given, 'utf8');
+        const B = Buffer.from(SITE_PASSWORD, 'utf8');
+        const ok = A.length === B.length && A.length > 0 && timingSafeEqual(A, B);
+        if (!ok) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          res.status(401).json({ error: 'unauthorized' });
+          return;
+        }
+        res.status(200).json({ ok: true, token: auth.teacherToken() });
+        return;
+      }
+
+      // Список учеников с их кодами — для учительской страницы плеера.
+      // Код нужен затем, чтобы продиктовать его на занятии, поэтому тем, у
+      // кого комнаты ещё нет, заводим её здесь же: иначе пришлось бы идти
+      // за кодом в базу, ради чего страница и затевалась.
+      if (action === 'teacher-students') {
+        if (!auth.requireTeacher(req, res)) return;
+        const r = await query(
+          `SELECT s.id, s.name, s.status, lr.code
+             FROM students s
+             LEFT JOIN LATERAL (
+               SELECT code FROM lesson_rooms
+                WHERE student_id = s.id
+                  AND (expires_at IS NULL OR expires_at > now())
+                ORDER BY created_at DESC LIMIT 1
+             ) lr ON true
+            WHERE s.status <> 'archived'
+            ORDER BY s.name`
+        );
+        const out = [];
+        for (const row of r.rows) {
+          let code = row.code;
+          if (!code) {
+            for (let attempt = 0; attempt < 6 && !code; attempt++) {
+              const ins = await query(
+                `INSERT INTO lesson_rooms (code, student_id) VALUES ($1, $2)
+                 ON CONFLICT (code) DO NOTHING RETURNING code`,
+                [makeRoomCode(), row.id]
+              );
+              if (ins.rows.length) code = ins.rows[0].code;
+            }
+          }
+          out.push({ id: row.id, name: row.name, status: row.status, code: code || null });
+        }
+        res.status(200).json({ students: out });
         return;
       }
 
