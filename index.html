@@ -210,6 +210,21 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .rep-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .rep-add-btn{margin-top:6px;border:1px dashed var(--line);background:none;color:#A8452C;font-size:14px;font-weight:700;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;}
 .rep-add-btn:hover{background:var(--cream);}
+/* Ссылка в приложение для онлайн-уроков. Только var(), без хардкода hex —
+   иначе в тёмной теме плашка остаётся светлой (см. CLAUDE.md). */
+.rep-player-link{margin-top:10px;display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--terracotta);font-size:14px;font-weight:700;text-decoration:none;}
+.rep-player-link:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
+.rep-player-hint{font-size:11px;font-weight:600;color:var(--muted);}
+/* Вход ученика в плеер: одна ссылка на всех + личный короткий код. */
+.rep-entry{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
+.rep-entry-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.rep-entry-row{display:flex;align-items:center;gap:8px;}
+.rep-entry-label{font-size:12px;font-weight:700;color:var(--muted);min-width:52px;}
+.rep-entry-val{flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rep-entry-code{flex:1;font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;letter-spacing:.14em;color:var(--terracotta);}
+.rep-entry-btn{flex:none;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.rep-entry-btn:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
+.rep-entry-hint{font-size:11px;color:var(--muted);line-height:1.45;}
 .rep-empty{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;font-size:14.5px;color:var(--muted);}
 .rep-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
 .rep-player{background:#23201D;color:#FAF7F2;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
@@ -2416,6 +2431,12 @@ function renderVariantScale(s, compareList, levelTopics, isAll, autoMode){
    Аудио хранится как data: URL (base64), как и остальные записи в
    проекте — переход на Vercel Blob сознательно отложен (см. ПРОМТ).
    ============================================================ */
+// Приложение для онлайн-уроков — отдельный проект, работает в паре с
+// Zoom/Телемостом (синхронный плеер + текст песни). Ссылка на весь сайт
+// одна, менять здесь.
+const PLAYER_URL = 'https://urok-pleer.vercel.app';
+function playerLessonUrl(s){ return PLAYER_URL + '#lesson=' + encodeURIComponent(s.id); }
+
 const REP_STATUS = {
   work: ['в работе', '#9A6A1F', '#F6EFE2'],
   ready: ['готова', '#4C7A45', '#EFF5EE'],
@@ -2521,31 +2542,107 @@ function repDeleteClick(s, song){
   }).catch(err=> alert('Не удалось удалить: ' + (err.message||err)));
 }
 
-async function repRecomputePeaks(s, song){
-  const urls = ['voice','music'].map(k=> song[k] && song[k].url).filter(Boolean);
-  let peaks = [];
-  if(urls.length){
-    try{
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ctx = new Ctx();
-      const N = 90, out = new Array(N).fill(0);
-      for(const u of urls){
-        const buf = await ctx.decodeAudioData(await (await fetch(u)).arrayBuffer());
-        const ch = buf.getChannelData(0);
-        const step = Math.floor(ch.length/N) || 1;
-        for(let i=0;i<N;i++){
-          let m = 0;
-          for(let j=i*step; j<(i+1)*step && j<ch.length; j+=16) m = Math.max(m, Math.abs(ch[j]));
-          out[i] = Math.max(out[i], m);
-        }
-      }
-      ctx.close();
-      const mx = Math.max(...out) || 1;
-      peaks = out.map(v=> v/mx);
-    } catch(e){ peaks = []; }
+const REP_PEAK_BARS = 90;
+
+async function repStemPeaks(ctx, url, N){
+  const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
+  const ch = buf.getChannelData(0);
+  const step = Math.floor(ch.length/N) || 1;
+  const out = new Array(N).fill(0);
+  for(let i=0;i<N;i++){
+    let m = 0;
+    for(let j=i*step; j<(i+1)*step && j<ch.length; j+=16) m = Math.max(m, Math.abs(ch[j]));
+    out[i] = m;
   }
-  await repPatch(s, song, {peaks});
+  return out;
+}
+
+// Волна считается здесь, на ноуте преподавателя, один раз на загрузку, и
+// ложится в базу готовыми числами — чтобы приложению для онлайн-уроков не
+// пришлось декодировать многомегабайтный файл на планшете только ради
+// картинки.
+//   peaks            — обе дорожки, свёрнутые через max. На нём держится
+//                      плеер в этой вкладке, формат не меняем.
+//   peaksVoice/Music — каждая дорожка отдельно: в новом приложении две волны.
+// Нормируем все дорожки ОДНИМ общим максимумом, а не каждую своим — иначе
+// тихий вокал визуально сравнялся бы по высоте с громким минусом.
+async function repRecomputePeaks(s, song){
+  const N = REP_PEAK_BARS;
+  const raw = {voice: null, music: null};
+  if(['voice','music'].some(k=> song[k] && song[k].url)){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    for(const k of ['voice','music']){
+      const u = song[k] && song[k].url;
+      if(!u) continue;
+      try { raw[k] = await repStemPeaks(ctx, u, N); } catch(e){ raw[k] = null; }
+    }
+    ctx.close();
+  }
+  const all = [].concat(raw.voice||[], raw.music||[]);
+  const mx = all.length ? (Math.max(...all) || 1) : 1;
+  const norm = a => a ? a.map(v=> v/mx) : [];
+  const peaksVoice = norm(raw.voice), peaksMusic = norm(raw.music);
+  const peaks = all.length
+    ? new Array(N).fill(0).map((_,i)=> Math.max(peaksVoice[i]||0, peaksMusic[i]||0))
+    : [];
+  await repPatch(s, song, {peaks, peaksVoice, peaksMusic});
   repRenderAll(s);
+}
+
+function repProbeDuration(file){
+  return new Promise(resolve=>{
+    const localUrl = URL.createObjectURL(file);
+    const probe = document.createElement('audio');
+    probe.preload = 'metadata';
+    const finish = d => { URL.revokeObjectURL(localUrl); resolve(d); };
+    probe.onloadedmetadata = ()=> finish(probe.duration || 0);
+    probe.onerror = ()=> finish(0);
+    probe.src = localUrl;
+  });
+}
+
+// Дорожка уходит из браузера прямо в Vercel Blob, мимо наших функций — тот
+// же путь, что у распевок (см. wuUploadToBlob). Раньше файл читался в
+// base64 и целиком ложился в Postgres: песня на три минуты — это ~9 МБ в
+// базе и те же 9 МБ в каждом ответе списка песен. Теперь в базе ссылка.
+async function repUploadTrackFile(s, song, kind, f){
+  const btn = document.querySelector('[data-rep-upload="'+kind+'"]');
+  const btnText = btn ? btn.textContent : '';
+  const restore = ()=>{ if(btn){ btn.textContent = btnText; btn.disabled = false; } };
+
+  if(f.size > WU_MAX_UPLOAD_BYTES){
+    alert('Файл больше ' + Math.round(WU_MAX_UPLOAD_BYTES/1024/1024) + ' МБ — возьмите файл поменьше');
+    return;
+  }
+  if(typeof VercelBlob === 'undefined' || !VercelBlob.upload){
+    alert('Клиент хранилища не загрузился — обновите страницу');
+    return;
+  }
+
+  const durationSec = await repProbeDuration(f);
+  const mime = f.type || 'audio/mpeg';
+  if(btn){ btn.disabled = true; btn.textContent = 'Загружаю… 0%'; }
+
+  try{
+    const blob = await VercelBlob.upload(
+      'tracks/' + wuUid() + '.' + (WU_EXT_BY_MIME[mime] || 'mp3'),
+      f,
+      {
+        access: 'public',
+        contentType: mime,
+        handleUploadUrl: '/api/player-upload',
+        onUploadProgress: p => { if(btn) btn.textContent = 'Загружаю… ' + Math.round(p.percentage) + '%'; }
+      }
+    );
+    if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
+    await repPatch(s, song, {[kind]: {name: f.name, url: blob.url, durationSec}});
+    repRenderAll(s);
+    repRecomputePeaks(s, song);
+  } catch(err){
+    restore();
+    alert('Не удалось загрузить файл: ' + (err.message||err));
+  }
 }
 
 function repUploadTrack(s, song, kind){
@@ -2553,24 +2650,53 @@ function repUploadTrack(s, song, kind){
   inp.type = 'file'; inp.accept = 'audio/*';
   inp.onchange = ()=>{
     const f = inp.files[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      const dataUrl = reader.result;
-      const probe = document.createElement('audio');
-      probe.preload = 'metadata';
-      probe.onloadedmetadata = ()=>{
-        const durationSec = probe.duration || 0;
-        if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
-        repPatch(s, song, {[kind]: {name: f.name, url: dataUrl, durationSec}}).then(()=>{
-          repRenderAll(s);
-          repRecomputePeaks(s, song);
-        });
-      };
-      probe.src = dataUrl;
-    };
-    reader.readAsDataURL(f);
+    repUploadTrackFile(s, song, kind, f);
   };
   inp.click();
+}
+
+// Перенос одной дорожки, залитой до переезда на Blob: base64 из базы →
+// хранилище, в базу вместо него ложится ссылка. Делается в браузере
+// преподавателя, а не на сервере: тело запроса serverless-функции ограничено
+// ~4.5 МБ, а дорожки крупнее (именно из-за этого лимита распевки когда-то
+// приходилось резать на куски). PATCH перезаписывает vocal_url ссылкой, так
+// что место в Postgres освобождается тем же запросом.
+async function repMigrateTrack(s, song, kind, btn){
+  const t = song[kind];
+  if(!t || !t.inline) return;
+  const label = btn ? btn.textContent : '';
+  const setTxt = x => { if(btn) btn.textContent = x; };
+  if(typeof VercelBlob === 'undefined' || !VercelBlob.upload){
+    alert('Клиент хранилища не загрузился — обновите страницу');
+    return;
+  }
+  if(btn) btn.disabled = true;
+  try{
+    setTxt('Читаю…');
+    const res = await apiGet('/api/player-tracks?inline=' + encodeURIComponent(song.id) + '&kind=' + kind);
+    if(!res || !res.dataUrl) throw new Error('файл не найден в базе');
+    const file = await (await fetch(res.dataUrl)).blob();
+    const mime = file.type || 'audio/mpeg';
+    setTxt('Загружаю… 0%');
+    const up = await VercelBlob.upload(
+      'tracks/' + wuUid() + '.' + (WU_EXT_BY_MIME[mime] || 'mp3'),
+      file,
+      {
+        access: 'public',
+        contentType: mime,
+        handleUploadUrl: '/api/player-upload',
+        onUploadProgress: p => setTxt('Загружаю… ' + Math.round(p.percentage) + '%')
+      }
+    );
+    if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
+    await repPatch(s, song, {[kind]: {name: t.name || '', url: up.url, durationSec: t.durationSec || 0}});
+    repRenderAll(s);
+    // У legacy-песен нет пиков по дорожкам — считаем заодно, пока файл рядом.
+    repRecomputePeaks(s, song);
+  } catch(err){
+    if(btn){ btn.disabled = false; btn.textContent = label; }
+    alert('Не удалось перенести файл: ' + (err.message||err));
+  }
 }
 function repRemoveTrack(s, song, kind){
   if(state.repPlay.id === song.id){ repPauseAll(); state.repPlay = {id:null, on:false, pos:0}; }
@@ -2691,7 +2817,7 @@ function repSetStatus(s, song, status){
   repRenderAll(s);
 }
 
-function repListHtml(songs, selSong){
+function repListHtml(s, songs, selSong){
   const rows = songs.map(song=>{
     const st = REP_STATUS[song.status] || REP_STATUS.work;
     const isSel = selSong && selSong.id===song.id;
@@ -2717,11 +2843,42 @@ function repListHtml(songs, selSong){
       <div class="rep-list-title">Песни · ${songs.length}</div>
       ${rows}
       <button type="button" class="rep-add-btn" id="repAddBtn">+ Добавить песню</button>
+      <a class="rep-player-link" href="${playerLessonUrl(s)}" target="_blank" rel="noopener">▶ Плеер урока<span class="rep-player-hint">синхронный минус рядом с Zoom</span></a>
+      <div class="rep-entry">
+        <div class="rep-entry-title">Вход ученика</div>
+        <div class="rep-entry-row">
+          <span class="rep-entry-label">Ссылка</span>
+          <span class="rep-entry-val">${PLAYER_URL}</span>
+          <button type="button" class="rep-entry-btn" id="repEntryCopyLink">Копировать</button>
+        </div>
+        <div class="rep-entry-row">
+          <span class="rep-entry-label">Код</span>
+          <span class="rep-entry-code" id="repEntryCode">······</span>
+          <button type="button" class="rep-entry-btn" id="repEntryCopyCode">Копировать</button>
+          <button type="button" class="rep-entry-btn" id="repEntryRegen" title="Новый код — старый сразу перестанет пускать">↻</button>
+        </div>
+        <div class="rep-entry-hint">Ссылка одна на всех, код у каждого свой. Открывает только песни этого ученика.</div>
+      </div>
     </div>`;
 }
 
 function repTrackRowHtml(song, kind, label){
   const t = song[kind];
+  // inline — файл залит до переезда на Vercel Blob и лежит base64 в базе.
+  // Сервер такие ссылки в список не отдаёт (см. SONG_COLS в api/player-tracks.js),
+  // так что играть нечем: вместо плеера предлагаем перенос.
+  if(t && t.inline){
+    return `
+    <div class="rep-track-row">
+      <div class="rep-track-label">${label}</div>
+      <div class="rep-track-info">
+        <div class="rep-track-name">${t.name || 'Файл в старом формате'}</div>
+        <div class="rep-track-dur" style="color:var(--muted);">нужно перенести в хранилище</div>
+      </div>
+      <button type="button" class="rep-track-replace" data-rep-migrate="${kind}">Перенести</button>
+      <button type="button" class="rep-track-remove" data-rep-remove="${kind}" title="Удалить файл">✕</button>
+    </div>`;
+  }
   if(t){
     const vol = (song.volumes && song.volumes[kind]!=null) ? song.volumes[kind] : 80;
     return `
@@ -2866,15 +3023,70 @@ function repRenderAll(s){
   const selId = state.repSel[s.id];
   const song = songs.find(x=>x.id===selId) || songs[0] || null;
   if(song && state.repSel[s.id] !== song.id) state.repSel[s.id] = song.id;
-  c.innerHTML = `<div class="rep-grid">${repListHtml(songs, song)}${song ? repCardHtml(song) : '<div class="rep-empty">Песен пока нет. Нажмите «+ Добавить песню».</div>'}</div>`;
+  c.innerHTML = `<div class="rep-grid">${repListHtml(s, songs, song)}${song ? repCardHtml(song) : '<div class="rep-empty">Песен пока нет. Нажмите «+ Добавить песню».</div>'}</div>`;
   repWireList(s, songs);
   if(song) repWireCard(s, song);
+}
+
+// Короткий код живёт в lesson_rooms и выдаётся по требованию: пока
+// преподаватель не открыл Репертуар, комнату ученику заводить незачем.
+// Код кладём в тот же кеш, что и песни, — иначе каждая перерисовка
+// карточки (а она идёт на любой чих) дёргала бы базу заново.
+function repWireEntry(s){
+  const cache = repCache(s);
+  const codeEl = document.getElementById('repEntryCode');
+  const paint = () => { if(codeEl) codeEl.textContent = cache.roomCode || '······'; };
+  paint();
+
+  if(!cache.roomCode && !cache.roomCodePending){
+    cache.roomCodePending = true;
+    apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id})
+      .then(res => { cache.roomCode = res.code || ''; })
+      .catch(() => { cache.roomCode = null; if(codeEl) codeEl.textContent = 'нет связи'; })
+      .finally(() => { cache.roomCodePending = false; paint(); });
+  }
+
+  const flash = (btn, text) => {
+    const was = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = was; }, 1600);
+  };
+  // Тот же приём, что у tgTokenCopy: если браузер отказал в доступе к
+  // буферу, выделяем текст, чтобы скопировать можно было руками.
+  const copy = (btn, text, el) => {
+    if(!text) return;
+    navigator.clipboard.writeText(text)
+      .then(() => flash(btn, 'Скопировано!'))
+      .catch(() => {
+        if(el){ const r = document.createRange(); r.selectNode(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+        flash(btn, 'выделено');
+      });
+  };
+
+  const linkBtn = document.getElementById('repEntryCopyLink');
+  if(linkBtn) linkBtn.onclick = () => copy(linkBtn, PLAYER_URL, document.querySelector('.rep-entry-val'));
+
+  const codeBtn = document.getElementById('repEntryCopyCode');
+  if(codeBtn) codeBtn.onclick = () => copy(codeBtn, cache.roomCode || '', codeEl);
+
+  const regenBtn = document.getElementById('repEntryRegen');
+  if(regenBtn) regenBtn.onclick = async () => {
+    if(!confirm('Выдать новый код? Старый перестанет пускать сразу — ученику нужно будет отправить новый.')) return;
+    regenBtn.disabled = true;
+    try{
+      const res = await apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id, regenerate: true});
+      cache.roomCode = res.code || '';
+      paint();
+    }catch(e){ alert('Не удалось выдать код: ' + (e.message||e)); }
+    regenBtn.disabled = false;
+  };
 }
 
 function repWireList(s, songs){
   const c = document.getElementById('tabContent');
   const addBtn = document.getElementById('repAddBtn');
   if(addBtn) addBtn.onclick = ()=> repAddSong(s);
+  repWireEntry(s);
   songs.forEach(song=>{
     const row = c.querySelector(`[data-rep-row="${song.id}"]`);
     if(row) row.onclick = (e)=>{
@@ -2932,6 +3144,8 @@ function repWireCard(s, song){
   ['voice','music'].forEach(kind=>{
     const uploadBtn = c.querySelector(`[data-rep-upload="${kind}"]`);
     if(uploadBtn) uploadBtn.onclick = ()=> repUploadTrack(s, song, kind);
+    const migrateBtn = c.querySelector(`[data-rep-migrate="${kind}"]`);
+    if(migrateBtn) migrateBtn.onclick = ()=> repMigrateTrack(s, song, kind, migrateBtn);
     const removeBtn = c.querySelector(`[data-rep-remove="${kind}"]`);
     if(removeBtn) removeBtn.onclick = ()=> repRemoveTrack(s, song, kind);
     const volInp = c.querySelector(`[data-rep-vol="${kind}"]`);

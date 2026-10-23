@@ -222,9 +222,11 @@ async function ensureSchema(p) {
   // плеером: раздельные дорожки «Голос»/«Музыка», своя громкость на каждую,
   // метки, текст песни, заметки). Использует ранее заведённую под дистанционный
   // плеер таблицу player_tracks (vocal_url/instrumental_url/title/markers уже
-  // были) — просто добавляем к ней остальные поля песни. vocal_url/instrumental_url
-  // пока хранят data: URL (base64), как и остальные записи в проекте (см.
-  // referenceTakes/takes) — переход на Vercel Blob осознанно отложен, см. ПРОМТ.
+  // были) — просто добавляем к ней остальные поля песни.
+  // vocal_url/instrumental_url хранят https-ссылку на Vercel Blob. Залитое до
+  // переезда лежит там же data: URL (base64) и в список песен не попадает:
+  // GET /api/player-tracks вырезает такие ссылки прямо в SQL и ставит флаг
+  // inline — тот же приём, что и для распевок (см. api/warmups.js).
   await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS artist TEXT;`);
   await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS song_key TEXT;`);
   await p.query(`ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'work';`);
@@ -383,6 +385,55 @@ async function ensureSchema(p) {
   //   сообщения подряд ученик воспримет как спам.
   await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;`);
   await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS hw_reminder_sent_at TIMESTAMPTZ;`);
+
+  // Приложение для онлайн-уроков (отдельный проект urok-pleer, работает в
+  // паре с Zoom/Телемостом). Схемой владеет ЭТОТ проект и только он: там
+  // ensureSchema нет вообще, иначе два деплоя дрались бы за блокировки на
+  // одних и тех же ALTER. Новые поля песни добавлять сюда.
+  //
+  // peaks_voice/peaks_music — волна по каждой дорожке отдельно. Общий peaks
+  //   остаётся как был (обе дорожки свёрнуты через max) — на нём держится
+  //   тёмный плеер в Репертуаре.
+  // pitch_semitones/tempo_pct — тональность и темп, выставленные на уроке.
+  //   Лежат на песне, а не в состоянии комнаты, чтобы ученик дома занимался
+  //   ровно в том виде, который поставил преподаватель.
+  // lyric_times — разметка текста: [{i, t, text}], индекс строки, секунда и
+  //   сама строка. Текст хранится рядом с индексом намеренно: если песню
+  //   отредактировали, по нему видно, что разметка поехала, и приложение
+  //   говорит об этом вместо того чтобы молча сдвинуть подсветку.
+  //
+  // Одним запросом, а не шестью: на холодном старте ensureSchema уже гоняет
+  // ~60 последовательных ALTER к Neon и подходит к лимиту 10с (см. queryRaw).
+  await p.query(`
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS peaks_voice JSONB DEFAULT '[]';
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS peaks_music JSONB DEFAULT '[]';
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS pitch_semitones INTEGER DEFAULT 0;
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS tempo_pct INTEGER DEFAULT 100;
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS lyric_times JSONB DEFAULT '[]';
+  `);
+
+  // Комната урока. state — синхронизируемое состояние плеера целиком
+  // (какой трек, играет ли, якорь времени, тональность, темп, активный
+  // экран); rev растёт на каждую запись и служит и версией для защиты от
+  // гонок, и курсором для опроса: клиент присылает свой rev и получает
+  // несколько байт «не изменилось» вместо всего состояния.
+  // code — то, что ученик вводит руками (короткий код для пробных) либо
+  // telegram_token постоянного ученика.
+  // teacher_seen/student_seen — по ним приложение различает урок и домашнюю
+  // работу: преподаватель «жив» (< 15с) → транспорт у ученика заблокирован.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS lesson_rooms (
+      code         TEXT PRIMARY KEY,
+      student_id   TEXT REFERENCES students(id) ON DELETE CASCADE,
+      state        JSONB NOT NULL DEFAULT '{}',
+      rev          BIGINT NOT NULL DEFAULT 0,
+      teacher_seen TIMESTAMPTZ,
+      student_seen TIMESTAMPTZ,
+      created_at   TIMESTAMPTZ DEFAULT now(),
+      expires_at   TIMESTAMPTZ
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS lesson_rooms_student_idx ON lesson_rooms (student_id);`);
 }
 
 async function query(sql, params) {
