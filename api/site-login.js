@@ -21,7 +21,12 @@ module.exports = async (req, res) => {
   }
 
   if (safeEq(password, SITE_PASSWORD)) {
-    res.status(200).json({ ok: true });
+    // Подписанный токен для показа двойного кода без повторного ввода пароля
+    // (проверяется в admin-auth.js, живёт 30 дней как и сессия сайта).
+    const crypto = require('crypto');
+    const ts = String(Date.now());
+    const sig = crypto.createHmac('sha256', SITE_PASSWORD).update('reveal:' + ts).digest('hex');
+    res.status(200).json({ ok: true, revealToken: ts + '.' + sig });
   } else {
     await new Promise(r => setTimeout(r, 400));
     res.status(401).json({ error: 'unauthorized' });

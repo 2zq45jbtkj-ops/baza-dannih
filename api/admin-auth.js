@@ -47,12 +47,22 @@ module.exports = async (req, res) => {
       res.status(503).json({ error: 'site password not configured' });
       return;
     }
-    if (!safeEq(body.password, SITE_PASSWORD)) {
+    const crypto = require('crypto');
+    const sign = ts => crypto.createHmac('sha256', SITE_PASSWORD).update('reveal:' + ts).digest('hex');
+    // Токен из site-login: "ts.hmac", валиден 30 дней — пароль не нужен
+    let tokenOk = false;
+    if (typeof body.token === 'string' && body.token.includes('.')) {
+      const [ts, sig] = body.token.split('.');
+      const age = Date.now() - parseInt(ts, 10);
+      tokenOk = age >= 0 && age < 30 * 24 * 3600 * 1000 && safeEq(sig, sign(ts));
+    }
+    if (!tokenOk && !safeEq(body.password, SITE_PASSWORD)) {
       await new Promise(r => setTimeout(r, 400));
       res.status(401).json({ error: 'unauthorized' });
       return;
     }
-    res.status(200).json({ ok: true, key1: K1, key2: K2 });
+    const nts = String(Date.now());
+    res.status(200).json({ ok: true, key1: K1, key2: K2, revealToken: tokenOk ? body.token : nts + '.' + sign(nts) });
     return;
   }
 

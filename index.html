@@ -805,6 +805,7 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
     .then(function(d){
       if (d && d.ok) {
         localStorage.setItem('bd_auth_ts', String(Date.now()));
+        if (d.revealToken) { try { localStorage.setItem('bd_reveal_tok', d.revealToken); } catch(e){} }
         document.getElementById('site-lock').classList.add('hidden');
       } else {
         err.textContent = 'Неверный пароль.';
@@ -1757,16 +1758,32 @@ function renderMain(s){
         admShowBtn.dataset.shown = '';
         return;
       }
-      const password = prompt('Пароль от сайта — чтобы показать ключи:');
-      if(!password) return;
+      let token = null;
+      try{ token = localStorage.getItem('bd_reveal_tok'); }catch(e){}
+      let password = null;
+      if(!token){
+        // Разово (для уже залогиненных до этого обновления): дальше токен
+        password = prompt('Пароль от сайта (один раз, дальше не спросит):');
+        if(!password) return;
+      }
       admShowBtn.disabled = true;
       admShowBtn.textContent = 'Проверяем…';
       try{
-        const r = await fetch('/api/admin-auth', {
+        let r = await fetch('/api/admin-auth', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ action:'reveal', password })
+          body: JSON.stringify(token ? { action:'reveal', token } : { action:'reveal', password })
         });
+        if(r.status === 401 && token){
+          try{ localStorage.removeItem('bd_reveal_tok'); }catch(e){}
+          password = prompt('Пароль от сайта (один раз, дальше не спросит):');
+          if(!password){ admShowBtn.disabled = false; admShowBtn.textContent = 'Показать'; return; }
+          r = await fetch('/api/admin-auth', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ action:'reveal', password })
+          });
+        }
         const data = await r.json().catch(()=>null);
+        if(r.ok && data && data.revealToken){ try{ localStorage.setItem('bd_reveal_tok', data.revealToken); }catch(e){} }
         if(r.ok && data && data.ok){
           el.textContent = data.key1 + ' · ' + data.key2;
           el.style.color = 'var(--text)';
