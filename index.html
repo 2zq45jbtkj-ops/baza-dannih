@@ -84,6 +84,9 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .tg-token-btn{flex-shrink:0;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .tg-token-btn:hover{background:var(--line);}
 .tg-token-btn.copied{background:var(--terracotta-dark);color:#fff;border-color:var(--terracotta-dark);}
+/* Код урока диктуют вслух на занятии, поэтому он крупнее токена и разрежен:
+   его читают с экрана голосом, а не копируют глазами. */
+.tg-token-code{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;letter-spacing:.14em;color:var(--terracotta);flex:1;min-width:0;}
 .pill-select-wrap{position:relative;display:inline-flex;align-items:center;border-radius:999px;}
 .pill-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:none;border-radius:999px;padding:8px 28px 8px 15px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;color:inherit;background:transparent;}
 .pill-select-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:11px;color:inherit;opacity:.75;}
@@ -215,16 +218,6 @@ body.dark .mask-toggle.active{background:#4A3830;border-color:#6A5040;color:#E0A
 .rep-player-link{margin-top:10px;display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--terracotta);font-size:14px;font-weight:700;text-decoration:none;}
 .rep-player-link:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
 .rep-player-hint{font-size:11px;font-weight:600;color:var(--muted);}
-/* Вход ученика в плеер: одна ссылка на всех + личный короткий код. */
-.rep-entry{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
-.rep-entry-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
-.rep-entry-row{display:flex;align-items:center;gap:8px;}
-.rep-entry-label{font-size:12px;font-weight:700;color:var(--muted);min-width:52px;}
-.rep-entry-val{flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.rep-entry-code{flex:1;font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;letter-spacing:.14em;color:var(--terracotta);}
-.rep-entry-btn{flex:none;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
-.rep-entry-btn:hover{background:var(--terracotta-bg);border-color:var(--terracotta-light);}
-.rep-entry-hint{font-size:11px;color:var(--muted);line-height:1.45;}
 .rep-empty{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;font-size:14.5px;color:var(--muted);}
 .rep-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:24px;}
 .rep-player{background:#23201D;color:#FAF7F2;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
@@ -1663,6 +1656,17 @@ function renderMain(s){
       }
     </div>
 
+    <!-- Код плеера стоит рядом с телеграм-кодом намеренно: оба выдаются
+         ученику, и искать их в разных местах неудобно. Раньше этот код жил
+         внутри вкладки Репертуар, где его просто не находили. -->
+    <div class="tg-token-row">
+      <span class="tg-token-label">Урок</span>
+      <span class="tg-token-code" id="roomCodeVal">······</span>
+      <button class="tg-token-btn" id="roomCodeCopy">Копировать</button>
+      <button class="tg-token-btn" id="roomCodeCopyLink" title="Ссылка с кодом внутри — ученику достаточно открыть её">Ссылка</button>
+      <button class="tg-token-btn" id="roomCodeRegen" title="Новый код — старый сразу перестанет пускать">↻</button>
+    </div>
+
     ${/\(admin\)/i.test(s.name || '') ? `
     <div class="tg-token-row">
       <span class="tg-token-label">Двойной код</span>
@@ -1759,6 +1763,8 @@ function renderMain(s){
       }catch(e){ alert('Ошибка: ' + (e.message||e)); }
     };
   }
+
+  wireRoomCode(s);
 
   // Двойной код администратора. Ключи живут в env vars Vercel и на клиенте их
   // нет — сервер отдаёт их только в обмен на пароль от сайта (см. admin-auth.js).
@@ -2435,7 +2441,12 @@ function renderVariantScale(s, compareList, levelTopics, isAll, autoMode){
 // Zoom/Телемостом (синхронный плеер + текст песни). Ссылка на весь сайт
 // одна, менять здесь.
 const PLAYER_URL = 'https://urok-pleer.vercel.app';
-function playerLessonUrl(s){ return PLAYER_URL + '#lesson=' + encodeURIComponent(s.id); }
+// В хвосте ссылки плеер ждёт сам код комнаты и ничего больше: он берёт
+// location.hash и проверяет его маской /^[A-Z0-9]{4,40}$/. Здесь когда-то
+// подставлялся '#lesson=' + id ученика — из-за приставки и дефисов в id
+// маска не срабатывала, и ссылка молча высаживала на экран ввода кода.
+// Кода ещё нет (грузится) — отдаём голый адрес, это рабочий экран ввода.
+function playerLessonUrl(code){ return code ? PLAYER_URL + '#' + code : PLAYER_URL; }
 
 const REP_STATUS = {
   work: ['в работе', '#9A6A1F', '#F6EFE2'],
@@ -2843,22 +2854,10 @@ function repListHtml(s, songs, selSong){
       <div class="rep-list-title">Песни · ${songs.length}</div>
       ${rows}
       <button type="button" class="rep-add-btn" id="repAddBtn">+ Добавить песню</button>
-      <a class="rep-player-link" href="${playerLessonUrl(s)}" target="_blank" rel="noopener">▶ Плеер урока<span class="rep-player-hint">синхронный минус рядом с Zoom</span></a>
-      <div class="rep-entry">
-        <div class="rep-entry-title">Вход ученика</div>
-        <div class="rep-entry-row">
-          <span class="rep-entry-label">Ссылка</span>
-          <span class="rep-entry-val">${PLAYER_URL}</span>
-          <button type="button" class="rep-entry-btn" id="repEntryCopyLink">Копировать</button>
-        </div>
-        <div class="rep-entry-row">
-          <span class="rep-entry-label">Код</span>
-          <span class="rep-entry-code" id="repEntryCode">······</span>
-          <button type="button" class="rep-entry-btn" id="repEntryCopyCode">Копировать</button>
-          <button type="button" class="rep-entry-btn" id="repEntryRegen" title="Новый код — старый сразу перестанет пускать">↻</button>
-        </div>
-        <div class="rep-entry-hint">Ссылка одна на всех, код у каждого свой. Открывает только песни этого ученика.</div>
-      </div>
+      <!-- Код и кнопки переехали в шапку карточки, к телеграм-коду. Здесь
+           осталась только сама ссылка: href проставляется в repWireList,
+           когда код доедет из lesson_rooms. -->
+      <a class="rep-player-link" id="repPlayerLink" href="${PLAYER_URL}" target="_blank" rel="noopener">▶ Плеер урока<span class="rep-player-hint">синхронный минус рядом с Zoom</span></a>
     </div>`;
 }
 
@@ -3028,23 +3027,37 @@ function repRenderAll(s){
   if(song) repWireCard(s, song);
 }
 
-// Короткий код живёт в lesson_rooms и выдаётся по требованию: пока
-// преподаватель не открыл Репертуар, комнату ученику заводить незачем.
-// Код кладём в тот же кеш, что и песни, — иначе каждая перерисовка
-// карточки (а она идёт на любой чих) дёргала бы базу заново.
-function repWireEntry(s){
+// Короткий код живёт в lesson_rooms. Раньше он запрашивался только при
+// открытии Репертуара; теперь строка с кодом висит в шапке карточки, то
+// есть комната заводится на любого открытого ученика. Это сознательно:
+// код должен быть на виду, а строка в lesson_rooms стоит дёшево.
+// Кеш — тот же, что у песен, иначе каждая перерисовка карточки (а она
+// идёт на любой чих) дёргала бы базу заново.
+function roomCodeLoad(s, onChange){
   const cache = repCache(s);
-  const codeEl = document.getElementById('repEntryCode');
-  const paint = () => { if(codeEl) codeEl.textContent = cache.roomCode || '······'; };
-  paint();
+  if(cache.roomCode || cache.roomCodePending){ onChange(cache.roomCode); return; }
+  cache.roomCodePending = true;
+  apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id})
+    .then(res => { cache.roomCode = res.code || ''; })
+    .catch(() => { cache.roomCode = null; })
+    .finally(() => { cache.roomCodePending = false; onChange(cache.roomCode); });
+}
 
-  if(!cache.roomCode && !cache.roomCodePending){
-    cache.roomCodePending = true;
-    apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id})
-      .then(res => { cache.roomCode = res.code || ''; })
-      .catch(() => { cache.roomCode = null; if(codeEl) codeEl.textContent = 'нет связи'; })
-      .finally(() => { cache.roomCodePending = false; paint(); });
-  }
+// Строка «Урок» в шапке карточки — рядом с телеграм-кодом.
+function wireRoomCode(s){
+  const cache = repCache(s);
+  const codeEl = document.getElementById('roomCodeVal');
+  if(!codeEl) return;
+
+  const paint = () => {
+    if(cache.roomCode){ codeEl.textContent = cache.roomCode; codeEl.style.color = ''; return; }
+    // null — запрос не прошёл, '' — сервер не вернул код; для преподавателя
+    // это разные беды, и молчать про первую нельзя.
+    codeEl.textContent = cache.roomCode === null ? 'нет связи' : '······';
+    codeEl.style.color = cache.roomCode === null ? 'var(--muted)' : '';
+  };
+  paint();
+  roomCodeLoad(s, paint);
 
   const flash = (btn, text) => {
     const was = btn.textContent;
@@ -3063,13 +3076,13 @@ function repWireEntry(s){
       });
   };
 
-  const linkBtn = document.getElementById('repEntryCopyLink');
-  if(linkBtn) linkBtn.onclick = () => copy(linkBtn, PLAYER_URL, document.querySelector('.rep-entry-val'));
-
-  const codeBtn = document.getElementById('repEntryCopyCode');
+  const codeBtn = document.getElementById('roomCodeCopy');
   if(codeBtn) codeBtn.onclick = () => copy(codeBtn, cache.roomCode || '', codeEl);
 
-  const regenBtn = document.getElementById('repEntryRegen');
+  const linkBtn = document.getElementById('roomCodeCopyLink');
+  if(linkBtn) linkBtn.onclick = () => copy(linkBtn, playerLessonUrl(cache.roomCode), codeEl);
+
+  const regenBtn = document.getElementById('roomCodeRegen');
   if(regenBtn) regenBtn.onclick = async () => {
     if(!confirm('Выдать новый код? Старый перестанет пускать сразу — ученику нужно будет отправить новый.')) return;
     regenBtn.disabled = true;
@@ -3077,16 +3090,25 @@ function repWireEntry(s){
       const res = await apiSend('/api/player-tracks?action=room', 'POST', {studentId: s.id, regenerate: true});
       cache.roomCode = res.code || '';
       paint();
+      repPaintPlayerLink(s);
     }catch(e){ alert('Не удалось выдать код: ' + (e.message||e)); }
     regenBtn.disabled = false;
   };
+}
+
+// Ссылка «▶ Плеер урока» в Репертуаре: href дописываем кодом, когда он
+// приедет. Без кода остаётся голый адрес — это рабочий экран ввода.
+function repPaintPlayerLink(s){
+  const a = document.getElementById('repPlayerLink');
+  if(a) a.href = playerLessonUrl(repCache(s).roomCode);
 }
 
 function repWireList(s, songs){
   const c = document.getElementById('tabContent');
   const addBtn = document.getElementById('repAddBtn');
   if(addBtn) addBtn.onclick = ()=> repAddSong(s);
-  repWireEntry(s);
+  repPaintPlayerLink(s);
+  roomCodeLoad(s, () => repPaintPlayerLink(s));
   songs.forEach(song=>{
     const row = c.querySelector(`[data-rep-row="${song.id}"]`);
     if(row) row.onclick = (e)=>{
