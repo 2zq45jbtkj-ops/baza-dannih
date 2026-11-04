@@ -771,6 +771,114 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 .wu-pick-item{height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
 .wu-pick-item.taken{background:var(--bg);color:var(--muted);cursor:default;}
 .wu-pick-empty{font-size:12px;color:var(--muted);}
+/* ===================== КАЛЕНДАРЬ =====================
+   Разметка — в calendar.js. Ни одного захардкоженного hex:
+   всё через переменные темы, иначе тёмная тема ломается
+   (см. «Повторяющиеся грабли» в CLAUDE.md).                */
+
+.cal-nav-btn{display:flex;align-items:center;gap:8px;margin:0 20px 12px;padding:9px 14px;
+  border:1px solid var(--line);border-radius:20px;background:var(--bg);color:var(--text);
+  font-family:inherit;font-size:13.5px;cursor:pointer;text-align:left;}
+.cal-nav-btn:hover{border-color:var(--terracotta-light);}
+.cal-nav-btn.active{background:var(--terracotta-bg);border-color:var(--terracotta-light);
+  color:var(--terracotta-dark);font-weight:600;}
+.cal-nav-ico{font-size:14px;}
+
+/* Высота от окна, а не height:100%: .main — обычный блок, который растёт
+   под содержимое, и процент там не во что упереть. Без этого сетка не
+   скроллится внутри себя, а уезжает вся страница вместе с шапкой дней. */
+.cal-wrap{padding:24px 32px 28px;display:flex;flex-direction:column;
+  height:100vh;box-sizing:border-box;overflow:hidden;}
+.cal-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.cal-toolbar-left{display:flex;align-items:baseline;gap:14px;}
+.cal-title{margin:0;font-size:26px;font-weight:600;color:var(--text);}
+.cal-range{font-size:14px;color:var(--muted);}
+.cal-toolbar-right{display:flex;align-items:center;gap:8px;}
+.cal-legend{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin-right:8px;}
+.cal-dot{width:9px;height:9px;border-radius:50%;background:var(--ev-color);display:inline-block;margin-left:6px;}
+.cal-legend .cal-dot:first-child{margin-left:0;}
+
+.cal-btn{padding:7px 14px;border:1px solid var(--line);border-radius:18px;background:var(--panel);
+  color:var(--text);font-family:inherit;font-size:13px;cursor:pointer;}
+.cal-btn:hover{border-color:var(--terracotta-light);}
+.cal-btn-primary{background:var(--terracotta);border-color:var(--terracotta);color:var(--white);}
+.cal-btn-primary:hover{background:var(--terracotta-dark);border-color:var(--terracotta-dark);}
+.cal-btn-danger{color:var(--terracotta-dark);border-color:var(--terracotta-light);}
+
+.cal-now-bar{margin:16px 0 14px;padding:11px 16px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel);font-size:13.5px;color:var(--text);display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap;}
+.cal-now-badge{padding:2px 9px;border-radius:10px;font-size:11px;text-transform:uppercase;
+  letter-spacing:.04em;background:var(--ev-color,var(--terracotta));color:var(--white);}
+.cal-now-badge-idle{background:var(--muted);}
+.cal-now-dim{color:var(--muted);}
+.cal-now-sep{color:var(--line);}
+
+/* Сетка: угол + шапка дней сверху, шкала часов + колонки снизу.
+   Прокручивается только нижняя пара, шапка остаётся на месте. */
+.cal-grid{flex:1;min-height:0;display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);}
+.cal-head-row{display:grid;grid-template-columns:56px 1fr;flex-shrink:0;}
+.cal-body{flex:1;min-height:0;overflow-y:auto;}
+.cal-body-inner{display:grid;grid-template-columns:56px 1fr;}
+.cal-gutter-head{border-right:1px solid var(--line);border-bottom:1px solid var(--line);}
+.cal-heads{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line);}
+.cal-head{padding:9px 0;text-align:center;border-left:1px solid var(--line);}
+.cal-head:first-child{border-left:none;}
+.cal-head-dow{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+.cal-head-num{display:block;font-size:17px;color:var(--text);margin-top:2px;}
+.cal-head-today .cal-head-dow,.cal-head-today .cal-head-num{color:var(--terracotta);font-weight:600;}
+
+.cal-gutter{position:relative;border-right:1px solid var(--line);}
+.cal-hlabel{position:absolute;right:8px;transform:translateY(-50%);font-size:11px;color:var(--muted);}
+.cal-cols{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-col{position:relative;border-left:1px solid var(--line);cursor:crosshair;}
+.cal-col:first-child{border-left:none;}
+.cal-col-today{background:var(--terracotta-bg);}
+.cal-hline{position:absolute;left:0;right:0;border-top:1px solid var(--line);pointer-events:none;}
+
+/* Блок урока. --ev-color задаётся инлайн по источнику события:
+   заливка — полупрозрачная (color-mix), полоса слева — сплошная. */
+.cal-ev{position:absolute;box-sizing:border-box;padding:3px 6px;border-radius:6px;overflow:hidden;
+  cursor:pointer;background:color-mix(in srgb,var(--ev-color) 16%,var(--panel));
+  border-left:3px solid var(--ev-color);color:var(--text);line-height:1.25;}
+.cal-ev:hover{background:color-mix(in srgb,var(--ev-color) 28%,var(--panel));}
+.cal-ev-time{font-size:10.5px;color:var(--muted);}
+.cal-ev-title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-ev-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Бегунок текущего времени */
+.cal-now{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--terracotta);
+  pointer-events:none;z-index:4;}
+.cal-now::before{content:'';position:absolute;left:-4px;top:-4px;width:7px;height:7px;
+  border-radius:50%;background:var(--terracotta);}
+/* Часы бегунка живут на шкале слева, а не в колонке дня: внутри колонки
+   плашка перекрывала название урока. */
+.cal-now-pin{position:absolute;right:4px;transform:translateY(-50%);font-size:10px;
+  padding:1px 5px;border-radius:8px;background:var(--terracotta);color:var(--white);z-index:5;}
+
+/* Модалка создания/правки урока */
+.cal-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;
+  align-items:center;justify-content:center;z-index:200;padding:20px;}
+.cal-modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:22px 24px;width:460px;max-width:100%;max-height:90vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:12px;color:var(--text);}
+.cal-modal-head{display:flex;align-items:center;justify-content:space-between;}
+.cal-modal-head h2{margin:0;font-size:18px;font-weight:600;}
+.cal-modal-x{background:none;border:none;font-size:16px;color:var(--muted);cursor:pointer;padding:4px;}
+.cal-field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);flex:1;}
+.cal-field i{font-style:normal;opacity:.75;}
+.cal-field input,.cal-field select,.cal-field textarea{padding:8px 11px;border:1px solid var(--line);
+  border-radius:9px;background:var(--bg);color:var(--text);font-family:inherit;font-size:13.5px;
+  box-sizing:border-box;width:100%;}
+.cal-field textarea{resize:vertical;}
+.cal-field-row{display:flex;gap:10px;}
+.cal-field-sm{flex:0 0 96px;}
+.cal-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;}
+.cal-hidden{display:none;}
+.cal-modal-foot{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
+.cal-modal-foot-right{display:flex;gap:8px;}
+.cal-modal-err{color:var(--terracotta-dark);font-size:12.5px;min-height:16px;}
 </style>
 </head>
 <body>
@@ -884,6 +992,11 @@ is-buffer/index.js:
 </script>
 
 <div class="app" id="app"></div>
+
+<!-- Календарь вынесен в отдельный файл — см. шапку calendar.js.
+     Обычный (не module) скрипт: ему нужны state/apiGet/render из
+     инлайн-скрипта ниже, а им — renderCalendarView отсюда. -->
+<script src="calendar.js"></script>
 
 <script>
 
@@ -1249,6 +1362,9 @@ function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data
 const state = {
   data: loadData(),
   activeStudentId: null,
+  // Верхний уровень навигации: карточка ученика или общий календарь.
+  // activeTab — вкладки ВНУТРИ карточки и к календарю отношения не имеют.
+  view: 'student',
   activeTab: 'card',
   activeLevel: 'A',
   openSliderTopicIndex: null,
@@ -1430,6 +1546,7 @@ function renderStudentList(){
         state.kabinetOpen = { general:true, articulatory:true, anamnesis:true, evt:true, qualities:true, record:true, files:true };
       }
       setActiveStudentId(el.dataset.id);
+      state.view = 'student';
       state.openSliderTopicIndex=null; state.topicPickerOpen=false; state.compareIds=[];
       scheduleAutoMask();
       render();
@@ -1489,6 +1606,9 @@ function render(){
         <button class="mask-toggle${(_maskActive||_maskCountdown>0)?' active':''}" id="maskToggle" title="Скрыть имена / показать">${_maskActive?'🔒':'⏱'}</button>
         <button class="theme-toggle" id="themeToggle" title="Тёмная/светлая тема">${state.data.theme==='dark'?'☀️':'🌙'}</button>
       </div>
+      <button class="cal-nav-btn${state.view==='calendar'?' active':''}" id="calendarNavBtn">
+        <span class="cal-nav-ico">📅</span> Календарь
+      </button>
       <div class="search-meta" id="searchMeta"></div>
       <div class="student-list" id="studentListWrap"></div>
       <button class="add-student-btn" id="addStudentBtn">+ Добавить ученика</button>
@@ -1502,6 +1622,10 @@ function render(){
     saveData(); render();
   };
   document.getElementById('maskToggle').onclick = toggleMask;
+  document.getElementById('calendarNavBtn').onclick = ()=>{
+    state.view = 'calendar';
+    render();
+  };
   const searchInput = document.getElementById('studentSearch');
   searchInput.oninput = (e)=>{ state.search = e.target.value; renderStudentList(); };
   renderStudentList();
@@ -1534,7 +1658,16 @@ function render(){
     document.getElementById('sidebarEl').style.width = '288px';
   };
 
-  renderMain(active);
+  if(state.view === 'calendar') renderCalendarView();
+  else renderMain(active);
+}
+
+// Единая точка «открыть ученика»: сбрасывает вид на карточку, иначе клик по
+// событию в календаре менял бы activeStudentId, а на экране оставалась сетка.
+function setStudentView(id){
+  state.view = 'student';
+  state.activeStudentId = id;
+  render();
 }
 
 async function addStudent(){

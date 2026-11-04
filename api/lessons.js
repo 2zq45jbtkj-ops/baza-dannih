@@ -185,6 +185,113 @@ function rowToJson(row) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// КАЛЕНДАРЬ (?part=calendar)
+// ---------------------------------------------------------------------------
+
+function calRow(r) {
+  return {
+    id: r.id,
+    studentId: r.student_id || null,
+    source: r.source || 'personal',
+    title: r.title || '',
+    day: r.day ? String(r.day).slice(0, 10) : null,
+    startMin: r.start_min,
+    endMin: r.end_min,
+    location: r.location || '',
+    note: r.note || '',
+    color: r.color || null,
+    repeatWeekly: !!r.repeat_weekly,
+    repeatUntil: r.repeat_until ? String(r.repeat_until).slice(0, 10) : null,
+    externalId: r.external_id || null
+  };
+}
+
+function calBody(req) {
+  let body = req.body;
+  if (!body || typeof body === 'string') {
+    try { body = JSON.parse(body || '{}'); } catch (e) { body = {}; }
+  }
+  return body || {};
+}
+
+async function handleCalendar(req, res, url) {
+  const q = (k) => (req.query && req.query[k]) || url.searchParams.get(k);
+
+  if (req.method === 'GET') {
+    // Разовые события берём по пересечению с окном, повторяющиеся — все,
+    // что ещё не закончились: развернуть их по дням должен фронтенд,
+    // который и так знает, какую неделю рисует.
+    const from = q('from');
+    const to = q('to');
+    if (!from || !to) { res.status(400).json({ error: 'from and to required' }); return; }
+    const r = await query(
+      `SELECT * FROM calendar_events
+        WHERE (repeat_weekly IS NOT TRUE AND day BETWEEN $1 AND $2)
+           OR (repeat_weekly IS TRUE AND day <= $2
+               AND (repeat_until IS NULL OR repeat_until >= $1))
+        ORDER BY day, start_min`,
+      [from, to]
+    );
+    res.status(200).json({ events: r.rows.map(calRow) });
+    return;
+  }
+
+  if (req.method === 'POST' || req.method === 'PUT') {
+    const b = calBody(req);
+    if (!b.day || b.startMin == null || b.endMin == null) {
+      res.status(400).json({ error: 'day, startMin and endMin required' });
+      return;
+    }
+    if (Number(b.endMin) <= Number(b.startMin)) {
+      res.status(400).json({ error: 'endMin must be greater than startMin' });
+      return;
+    }
+    const id = b.id || ('ce' + Date.now() + Math.random().toString(36).slice(2, 7));
+    const r = await query(
+      `INSERT INTO calendar_events
+         (id, student_id, source, title, day, start_min, end_min,
+          location, note, color, repeat_weekly, repeat_until, external_id, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now())
+       ON CONFLICT (id) DO UPDATE SET
+         student_id = EXCLUDED.student_id, source = EXCLUDED.source,
+         title = EXCLUDED.title, day = EXCLUDED.day,
+         start_min = EXCLUDED.start_min, end_min = EXCLUDED.end_min,
+         location = EXCLUDED.location, note = EXCLUDED.note,
+         color = EXCLUDED.color, repeat_weekly = EXCLUDED.repeat_weekly,
+         repeat_until = EXCLUDED.repeat_until, updated_at = now()
+       RETURNING *`,
+      [
+        id,
+        b.studentId || null,
+        b.source === 'studio' ? 'studio' : 'personal',
+        b.title || '',
+        String(b.day).slice(0, 10),
+        Number(b.startMin),
+        Number(b.endMin),
+        b.location || '',
+        b.note || '',
+        b.color || null,
+        !!b.repeatWeekly,
+        b.repeatUntil ? String(b.repeatUntil).slice(0, 10) : null,
+        b.externalId || null
+      ]
+    );
+    res.status(200).json({ event: calRow(r.rows[0]) });
+    return;
+  }
+
+  if (req.method === 'DELETE') {
+    const id = q('id');
+    if (!id) { res.status(400).json({ error: 'id required' }); return; }
+    await query('DELETE FROM calendar_events WHERE id = $1', [id]);
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
+}
+
 module.exports = async (req, res) => {
   try {
     const url = new URL(req.url, 'http://x');
@@ -202,6 +309,15 @@ module.exports = async (req, res) => {
     // а Vercel Cron шлёт Authorization: Bearer, не X-Site-Auth — поставь
     // requireTeacher выше, и ежедневные напоминания молча перестали бы ходить.
     if (!auth.requireTeacher(req, res)) return;
+
+    // Календарь живёт здесь, а не в api/calendar.js, потому что в api/ уже
+    // ровно 12 serverless-функций — потолок тарифа. Тот же приём, что и у
+    // hw-reminder: ветка по ?part=, а не новый файл. Стоит ПОСЛЕ
+    // requireTeacher: в событиях лежат имена учеников.
+    if (part === 'calendar') {
+      await handleCalendar(req, res, url);
+      return;
+    }
 
     if (req.method === 'GET') {
       const studentId = (req.query && req.query.studentId) || url.searchParams.get('studentId');

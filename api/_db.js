@@ -434,6 +434,43 @@ async function ensureSchema(p) {
     );
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS lesson_rooms_student_idx ON lesson_rooms (student_id);`);
+
+  // Календарь. Время хранится НЕ как timestamptz, а как локальная дата +
+  // минуты от полуночи: урок в 18:00 — это 18:00 по часам преподавателя,
+  // и никакой перевод в UTC и обратно (где Vercel живёт в UTC, а браузер —
+  // в Москве) не может его сдвинуть. Для расписания одного человека это
+  // правильная модель; цена — нельзя сравнивать события из разных поясов.
+  //
+  // source: 'personal' — своё, 'studio' — подтянуто из school-lz.
+  // Студийные строки идентифицируются по external_id и перезаписываются
+  // синхронизацией целиком; личные синк не трогает.
+  //
+  // Повтор намеренно примитивный: repeat_weekly + repeat_until, разворот
+  // в конкретные дни делает фронтенд на видимую неделю. Полноценный RRULE
+  // здесь не нужен — расписание уроков это сетка «каждый вторник в 18:00».
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id            TEXT PRIMARY KEY,
+      student_id    TEXT REFERENCES students(id) ON DELETE SET NULL,
+      source        TEXT NOT NULL DEFAULT 'personal',
+      title         TEXT,
+      day           DATE NOT NULL,
+      start_min     INTEGER NOT NULL,
+      end_min       INTEGER NOT NULL,
+      location      TEXT,
+      note          TEXT,
+      color         TEXT,
+      repeat_weekly BOOLEAN DEFAULT false,
+      repeat_until  DATE,
+      external_id   TEXT,
+      created_at    TIMESTAMPTZ DEFAULT now(),
+      updated_at    TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS calendar_events_day_idx ON calendar_events (day);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS calendar_events_student_idx ON calendar_events (student_id);`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS calendar_events_external_idx
+                 ON calendar_events (source, external_id) WHERE external_id IS NOT NULL;`);
 }
 
 async function query(sql, params) {
