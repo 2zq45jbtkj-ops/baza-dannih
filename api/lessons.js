@@ -195,20 +195,38 @@ function rowToJson(row) {
 // иначе опечатка в клиенте дала бы событие без цвета и без легенды.
 const CAL_SOURCES = ['personal', 'studio', 'life'];
 
+// Колонку типа DATE драйвер pg отдаёт объектом Date, а не строкой. Наивное
+// String(дата).slice(0,10) превращало её в "Wed Nov 04" — фронтенд сравнивал
+// это с "2026-11-04", не находил совпадений, и сохранённые уроки просто не
+// появлялись в сетке. Поэтому Date форматируем руками, а уже готовую строку
+// (если драйвер однажды начнёт отдавать строку) просто подрезаем.
+//
+// getFullYear/getMonth/getDate, а не toISOString: pg создаёт Date на
+// локальную полночь, и перевод в UTC сдвинул бы дату на сутки назад для
+// любого часового пояса восточнее Гринвича.
+function calDayStr(v) {
+  if (!v) return null;
+  if (v instanceof Date) {
+    const p = (n) => String(n).padStart(2, '0');
+    return v.getFullYear() + '-' + p(v.getMonth() + 1) + '-' + p(v.getDate());
+  }
+  return String(v).slice(0, 10);
+}
+
 function calRow(r) {
   return {
     id: r.id,
     studentId: r.student_id || null,
     source: r.source || 'personal',
     title: r.title || '',
-    day: r.day ? String(r.day).slice(0, 10) : null,
+    day: calDayStr(r.day),
     startMin: r.start_min,
     endMin: r.end_min,
     location: r.location || '',
     note: r.note || '',
     color: r.color || null,
     repeatWeekly: !!r.repeat_weekly,
-    repeatUntil: r.repeat_until ? String(r.repeat_until).slice(0, 10) : null,
+    repeatUntil: calDayStr(r.repeat_until),
     externalId: r.external_id || null
   };
 }
