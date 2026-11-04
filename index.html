@@ -852,6 +852,9 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-ev-title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-ev-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Короткий блок: третья строка не влезает и обрезается по нижнему краю —
+   лучше её не показывать вовсе, чем показывать половину буквы. */
+.cal-ev-tight .cal-ev-sub{display:none;}
 
 /* Идущее событие наливается СВЕРХУ ВНИЗ по мере того, как уходит время
    (приём из Structured). Направление не произвольное: в сетке время течёт
@@ -869,7 +872,6 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 
 /* Та же склейка для бегунка: позицию ему двигает тот же секундный тик. */
 .cal-now{transition:top 1s linear;}
-.cal-now-pin{transition:top 1s linear;}
 
 .cal-bell{font-size:13px;line-height:1;padding:7px 10px;}
 .cal-bell.active{border-color:var(--terracotta-light);background:var(--terracotta-bg);}
@@ -877,7 +879,7 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 /* Пользователь мог попросить систему убрать анимации — тогда убираем
    плавность, оставляя функциональность. */
 @media (prefers-reduced-motion: reduce){
-  .cal-ev-fill,.cal-now,.cal-now-pin{transition:none;}
+  .cal-ev-fill,.cal-now{transition:none;}
 }
 
 /* Бегунок текущего времени */
@@ -885,9 +887,11 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
   pointer-events:none;z-index:4;}
 .cal-now::before{content:'';position:absolute;left:-4px;top:-4px;width:7px;height:7px;
   border-radius:50%;background:var(--terracotta);}
-/* Часы бегунка живут на шкале слева, а не в колонке дня: внутри колонки
-   плашка перекрывала название урока. */
-.cal-now-pin{position:absolute;right:4px;transform:translateY(-50%);font-size:10px;
+/* Часы бегунка висят на самой линии, в колонке сегодняшнего дня: так
+   понятнее, к какому дню относится время. Плашка приподнята НАД линией
+   (bottom:1px), а не отцентрована по ней, — иначе ложится на название
+   идущего урока, блок которого линия пересекает. */
+.cal-now-pin{position:absolute;left:5px;bottom:1px;font-size:10px;line-height:1.4;
   padding:1px 5px;border-radius:8px;background:var(--terracotta);color:var(--white);z-index:5;}
 
 /* Модалка создания/правки урока */

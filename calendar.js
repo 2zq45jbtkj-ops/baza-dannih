@@ -251,7 +251,11 @@ function paintCalendar(){
       // текстом: так её высоту можно двигать каждую секунду, не трогая
       // ни текст, ни позицию самого блока.
       const running = isToday && calIsRunning(ev);
-      return `<div class="cal-ev cal-ev-${calEsc(ev.source)}${running ? ' cal-ev-now' : ''}"
+      // Три строки (время, название, место) требуют ~48px. В блоке короче
+      // этого место обрезалось по нижнему краю и выглядело как баг —
+      // поэтому у коротких событий третью строку прячем совсем.
+      const tight = h < 52;
+      return `<div class="cal-ev cal-ev-${calEsc(ev.source)}${running ? ' cal-ev-now' : ''}${tight ? ' cal-ev-tight' : ''}"
                    data-ev="${calEsc(ev.id)}"
                    data-start="${ev.startMin}" data-end="${ev.endMin}"
                    style="top:${top}px;height:${h}px;left:${lane*w}%;width:calc(${w}% - 3px);
@@ -324,7 +328,7 @@ function paintCalendar(){
              сеткой. Шапка дней снаружи и остаётся на месте. -->
         <div class="cal-body" id="calBody">
           <div class="cal-body-inner" style="height:${gridH}px">
-            <div class="cal-gutter">${hourLabels}${calNowPinHTML(days)}</div>
+            <div class="cal-gutter">${hourLabels}</div>
             <div class="cal-cols">${columns}</div>
           </div>
         </div>
@@ -337,24 +341,17 @@ function paintCalendar(){
 }
 
 // Бегунок: линия на позиции текущего времени внутри сегодняшней колонки.
-// Сами часы показываются не здесь, а на шкале слева (calNowPinHTML) —
-// внутри колонки плашка налезала бы на название урока.
+// Часы висят на самой линии, её дочерним узлом: так их не приходится
+// двигать отдельным кодом — плашка едет вместе с линией, и они не могут
+// разъехаться. Плашка прижата к левому краю колонки и приподнята над
+// линией, чтобы не ложиться на название идущего урока.
 function calNowLineHTML(){
   const m = calNowMin();
   if(m < CAL_DAY_START*60 || m > CAL_DAY_END*60) return '';
   const top = (m - CAL_DAY_START*60) * CAL_PX_PER_MIN;
-  return `<div class="cal-now" id="calNowLine" style="top:${top}px"></div>`;
-}
-
-// Метка текущего времени на шкале часов. Рисуется, только если сегодняшний
-// день попадает в показанную неделю — иначе бегунка на сетке тоже нет.
-function calNowPinHTML(days){
-  const todayISO = calISO(new Date());
-  if(!days.some(d => calISO(d) === todayISO)) return '';
-  const m = calNowMin();
-  if(m < CAL_DAY_START*60 || m > CAL_DAY_END*60) return '';
-  const top = (m - CAL_DAY_START*60) * CAL_PX_PER_MIN;
-  return `<div class="cal-now-pin" id="calNowPin" style="top:${top}px">${calHM(m)}</div>`;
+  return `<div class="cal-now" id="calNowLine" style="top:${top}px">
+            <span class="cal-now-pin" id="calNowPin">${calHM(m)}</span>
+          </div>`;
 }
 
 // «Что сейчас» — текстовая строка над сеткой. Отвечает на вопрос
@@ -403,10 +400,9 @@ function calStartTick(){
 
     if(mf >= CAL_DAY_START*60 && mf <= CAL_DAY_END*60){
       const top = ((mf - CAL_DAY_START*60) * CAL_PX_PER_MIN) + 'px';
+      // Плашка с часами — ребёнок линии, собственной координаты у неё нет.
       const line = document.getElementById('calNowLine');
       if(line) line.style.top = top;
-      const pin = document.getElementById('calNowPin');
-      if(pin) pin.style.top = top;
     }
 
     // Заливка идущего события. Ищем по data-атрибутам в DOM, а не по
