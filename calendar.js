@@ -24,10 +24,18 @@ const CAL_DAY_START = 7;   // первый час в сетке
 const CAL_DAY_END   = 23;  // последний (граница, не рисуется строкой)
 const CAL_PX_PER_MIN = 0.85;
 
+// Три категории, а не две: «личное время» — это НЕ урок (спорт, семья,
+// отдых), поэтому у него свой цвет и ученик к нему не привязывается.
+// Порядок ключей задаёт порядок в легенде и в выпадающем списке.
 const CAL_SOURCES = {
-  personal: { label: 'Моё',    color: 'var(--terracotta)' },
-  studio:   { label: 'Студия', color: 'var(--blue)' }
+  personal: { label: 'Моё',           color: 'var(--terracotta)', option: 'Мой урок',          blank: 'Урок' },
+  studio:   { label: 'Студия',        color: 'var(--blue)',       option: 'Студия',            blank: 'Занятие в студии' },
+  life:     { label: 'Личное время',  color: 'var(--cal-life)',   option: 'Личное время',      blank: 'Личное время' }
 };
+
+// У «личного времени» нет ученика: поле «Кто» для него прячется, а уже
+// проставленный studentId обнуляется при сохранении.
+function calIsLesson(source){ return source !== 'life'; }
 
 const calState = {
   weekStart: calMonday(new Date()),
@@ -85,6 +93,36 @@ function calNowMin(){
   return n.getHours()*60 + n.getMinutes();
 }
 
+// Дробные минуты — для заливки и бегунка. Целых минут мало: при шаге в
+// минуту заливка дёргалась бы рывками, а весь смысл в плавности.
+function calNowMinF(){
+  const n = new Date();
+  return n.getHours()*60 + n.getMinutes() + n.getSeconds()/60;
+}
+
+function calIsRunning(ev){
+  const m = calNowMinF();
+  return m >= ev.startMin && m < ev.endMin;
+}
+
+// Сколько события уже прошло, в процентах от его длительности.
+function calProgressPct(ev){
+  const span = ev.endMin - ev.startMin;
+  if(span <= 0) return 0;
+  return Math.max(0, Math.min(100, ((calNowMinF() - ev.startMin) / span) * 100));
+}
+
+// Подпись у идущего события: не диапазон времени, а сколько осталось —
+// на ходу это единственное, что хочется знать. Коротко («ещё 39 мин»,
+// не «осталось 39 мин»): колонка дня узкая, длинная строка переносилась
+// на две и выдавливала название с местом за край блока.
+function calLeftLabel(ev){
+  const left = Math.max(0, Math.ceil(ev.endMin - calNowMinF()));
+  return left >= 60
+    ? `ещё ${Math.floor(left/60)} ч ${left%60} мин`
+    : `ещё ${left} мин`;
+}
+
 const CAL_DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const CAL_MONTHS = ['января','февраля','марта','апреля','мая','июня',
                     'июля','августа','сентября','октября','ноября','декабря'];
@@ -96,7 +134,8 @@ function calStudentName(id){
 
 // Что показать в блоке: явный заголовок, иначе имя ученика, иначе «Урок».
 function calTitleOf(ev){
-  return ev.title || calStudentName(ev.studentId) || 'Урок';
+  const src = CAL_SOURCES[ev.source] || CAL_SOURCES.personal;
+  return ev.title || calStudentName(ev.studentId) || src.blank;
 }
 
 function calColorOf(ev){
@@ -207,12 +246,24 @@ function paintCalendar(){
       const w = 100 / lanes;
       const color = calColorOf(ev);
       const sub = ev.location || (ev.studentId && ev.title ? calStudentName(ev.studentId) : '');
-      return `<div class="cal-ev cal-ev-${calEsc(ev.source)}" data-ev="${calEsc(ev.id)}"
+      // Идущее сейчас событие наливается цветом снизу вверх по мере того,
+      // как уходит время (как в Structured). Заливка — отдельный слой под
+      // текстом: так её высоту можно двигать каждую секунду, не трогая
+      // ни текст, ни позицию самого блока.
+      const running = isToday && calIsRunning(ev);
+      return `<div class="cal-ev cal-ev-${calEsc(ev.source)}${running ? ' cal-ev-now' : ''}"
+                   data-ev="${calEsc(ev.id)}"
+                   data-start="${ev.startMin}" data-end="${ev.endMin}"
                    style="top:${top}px;height:${h}px;left:${lane*w}%;width:calc(${w}% - 3px);
                           --ev-color:${color}">
-                <div class="cal-ev-time">${calHM(ev.startMin)}–${calHM(ev.endMin)}</div>
-                <div class="cal-ev-title">${calEsc(calTitleOf(ev))}</div>
-                ${sub ? `<div class="cal-ev-sub">${calEsc(sub)}</div>` : ''}
+                <div class="cal-ev-fill" style="height:${running ? calProgressPct(ev) : 0}%"></div>
+                <div class="cal-ev-body">
+                  <div class="cal-ev-time">${running
+                    ? calLeftLabel(ev)
+                    : calHM(ev.startMin) + '–' + calHM(ev.endMin)}</div>
+                  <div class="cal-ev-title">${calEsc(calTitleOf(ev))}</div>
+                  ${sub ? `<div class="cal-ev-sub">${calEsc(sub)}</div>` : ''}
+                </div>
               </div>`;
     }).join('');
 
@@ -244,13 +295,18 @@ function paintCalendar(){
         </div>
         <div class="cal-toolbar-right">
           <div class="cal-legend">
-            <span class="cal-dot" style="--ev-color:var(--terracotta)"></span>Моё
-            <span class="cal-dot" style="--ev-color:var(--blue)"></span>Студия
+            ${Object.values(CAL_SOURCES).map(s =>
+              `<span class="cal-dot" style="--ev-color:${s.color}"></span>${calEsc(s.label)}`
+            ).join('')}
           </div>
+          <button class="cal-btn cal-bell${calNotifyOn() ? ' active' : ''}" id="calBell"
+                  title="${calNotifyOn()
+                    ? `Напоминания включены: за ${CAL_NOTIFY.beforeStart} мин до начала и за ${CAL_NOTIFY.beforeEnd} мин до конца. Приходят, пока вкладка сайта открыта.`
+                    : 'Включить напоминания об уроках'}">${calNotifyOn() ? '🔔' : '🔕'}</button>
           <button class="cal-btn" id="calPrev" title="Предыдущая неделя">←</button>
           <button class="cal-btn" id="calToday">Сегодня</button>
           <button class="cal-btn" id="calNext" title="Следующая неделя">→</button>
-          <button class="cal-btn cal-btn-primary" id="calAdd">+ Урок</button>
+          <button class="cal-btn cal-btn-primary" id="calAdd">+ Добавить</button>
         </div>
       </div>
 
@@ -333,23 +389,199 @@ function calNowSummary(){
           <span class="cal-now-dim">${today.length ? 'уроки на сегодня закончились' : 'уроков нет'}</span>`;
 }
 
-// Двигаем бегунок и пересчитываем строку «что сейчас» раз в полминуты,
-// не перерисовывая всю сетку — иначе каждые 30 секунд слетал бы скролл.
+// Раз в секунду двигаем бегунок и доливаем идущее событие. Сетка при этом
+// НЕ перерисовывается — меняются только inline-стили, иначе каждый тик
+// сбрасывал бы скролл и закрывал открытую модалку.
+// Секунда, а не полминуты: при шаге в 30 с заливка шла бы ступенями, а
+// просили плавность. Между тиками движение сглаживает CSS-transition.
 function calStartTick(){
   if(calState.tick) clearInterval(calState.tick);
+  let lastMinute = -1;
   calState.tick = setInterval(()=>{
     if(state.view !== 'calendar'){ clearInterval(calState.tick); calState.tick = null; return; }
-    const m = calNowMin();
-    if(m >= CAL_DAY_START*60 && m <= CAL_DAY_END*60){
-      const top = ((m - CAL_DAY_START*60) * CAL_PX_PER_MIN) + 'px';
+    const mf = calNowMinF();
+
+    if(mf >= CAL_DAY_START*60 && mf <= CAL_DAY_END*60){
+      const top = ((mf - CAL_DAY_START*60) * CAL_PX_PER_MIN) + 'px';
       const line = document.getElementById('calNowLine');
       if(line) line.style.top = top;
       const pin = document.getElementById('calNowPin');
-      if(pin){ pin.style.top = top; pin.textContent = calHM(m); }
+      if(pin) pin.style.top = top;
     }
-    const bar = document.getElementById('calNowBar');
-    if(bar) bar.innerHTML = calNowSummary();
-  }, 30000);
+
+    // Заливка идущего события. Ищем по data-атрибутам в DOM, а не по
+    // calState: повторы там уже развёрнуты в конкретные дни.
+    document.querySelectorAll('.cal-col-today .cal-ev').forEach(el => {
+      const s = Number(el.dataset.start), e = Number(el.dataset.end);
+      const running = mf >= s && mf < e;
+      el.classList.toggle('cal-ev-now', running);
+      const fill = el.querySelector('.cal-ev-fill');
+      if(fill) fill.style.height = running ? (((mf - s) / (e - s)) * 100) + '%' : '0%';
+    });
+
+    // Текст трогаем не чаще раза в минуту: в подписях только минуты,
+    // переписывать innerHTML каждую секунду незачем.
+    const m = Math.floor(mf);
+    if(m !== lastMinute){
+      lastMinute = m;
+      const pin = document.getElementById('calNowPin');
+      if(pin) pin.textContent = calHM(m);
+      const bar = document.getElementById('calNowBar');
+      if(bar) bar.innerHTML = calNowSummary();
+      document.querySelectorAll('.cal-col-today .cal-ev-now .cal-ev-time').forEach(t => {
+        t.textContent = calLeftLabel({ endMin: Number(t.closest('.cal-ev').dataset.end) });
+      });
+    }
+  }, 1000);
+}
+
+/* ============================================================
+   УВЕДОМЛЕНИЯ: за 10 минут до начала и за 5 минут до конца.
+
+   ВАЖНОЕ ОГРАНИЧЕНИЕ, которое надо понимать: это обычные
+   браузерные Notification, они приходят, только пока вкладка
+   сайта открыта (можно свернуть, но не закрыть). Настоящий push
+   на закрытый браузер потребовал бы service worker + VAPID +
+   хранение подписок на сервере — это отдельная задача.
+
+   Таймер свой, не общий с сеткой: уведомления должны работать и
+   когда открыта карточка ученика, а тик сетки на уходе с экрана
+   календаря сам себя гасит.
+   ============================================================ */
+
+const CAL_NOTIFY = {
+  beforeStart: 10,   // минут до начала
+  beforeEnd: 5,      // минут до конца
+  events: [],
+  timer: null,
+  lastFetch: 0
+};
+
+const CAL_NOTIFY_ON_KEY = 'bd_cal_notify';
+const CAL_NOTIFY_FIRED_KEY = 'bd_cal_notify_fired';
+
+function calNotifyOn(){
+  return localStorage.getItem(CAL_NOTIFY_ON_KEY) === '1'
+      && typeof Notification !== 'undefined'
+      && Notification.permission === 'granted';
+}
+
+// Отметки «уже показано» живут одним днём: иначе список рос бы вечно,
+// а напоминания о повторяющихся уроках перестали бы приходить завтра.
+function calFiredSet(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(CAL_NOTIFY_FIRED_KEY) || '{}');
+    if(raw.day !== calISO(new Date())) return new Set();
+    return new Set(raw.keys || []);
+  } catch(e){ return new Set(); }
+}
+function calMarkFired(key){
+  const s = calFiredSet();
+  s.add(key);
+  localStorage.setItem(CAL_NOTIFY_FIRED_KEY,
+    JSON.stringify({ day: calISO(new Date()), keys: [...s] }));
+}
+
+// Сегодняшние события тянем отдельно от сетки: на экране может быть
+// открыта любая неделя, а напоминать надо всегда про сегодня.
+async function calNotifyRefresh(){
+  const today = calISO(new Date());
+  try{
+    const r = await apiGet('/api/lessons?part=calendar&from=' + today + '&to=' + today);
+    const all = (r && r.events) || [];
+    const d = new Date();
+    CAL_NOTIFY.events = all.filter(ev => {
+      if(!ev.day) return false;
+      if(!ev.repeatWeekly) return ev.day === today;
+      const base = new Date(ev.day + 'T00:00:00');
+      return base.getDay() === d.getDay() && today >= ev.day
+          && (!ev.repeatUntil || today <= ev.repeatUntil);
+    });
+    CAL_NOTIFY.lastFetch = Date.now();
+  } catch(e){ /* сеть отвалилась — попробуем на следующем круге */ }
+}
+
+function calShowNotification(title, body){
+  try{
+    new Notification(title, { body, tag: title + '|' + body, icon: '/favicon.ico' });
+  } catch(e){ /* браузер может запретить — молча пропускаем */ }
+}
+
+function calNotifyCheck(){
+  if(!calNotifyOn()) return;
+  // Раз в 5 минут обновляем список: урок могли передвинуть или отменить.
+  if(Date.now() - CAL_NOTIFY.lastFetch > 5*60*1000) calNotifyRefresh();
+
+  const m = calNowMin();
+  const fired = calFiredSet();
+
+  CAL_NOTIFY.events.forEach(ev => {
+    const what = calTitleOf(ev);
+    const where = ev.location ? ' · ' + ev.location : '';
+
+    const startAt = ev.startMin - CAL_NOTIFY.beforeStart;
+    const kStart = ev.id + '|start';
+    if(m >= startAt && m < ev.startMin && !fired.has(kStart)){
+      calMarkFired(kStart);
+      calShowNotification(
+        `Через ${ev.startMin - m} мин — ${what}`,
+        `${calHM(ev.startMin)}–${calHM(ev.endMin)}${where}`
+      );
+    }
+
+    const endAt = ev.endMin - CAL_NOTIFY.beforeEnd;
+    const kEnd = ev.id + '|end';
+    if(m >= endAt && m < ev.endMin && !fired.has(kEnd)){
+      calMarkFired(kEnd);
+      calShowNotification(
+        `Заканчивается через ${ev.endMin - m} мин — ${what}`,
+        `до ${calHM(ev.endMin)}${where}`
+      );
+    }
+  });
+}
+
+function calNotifyStart(){
+  if(CAL_NOTIFY.timer) return;
+  if(!calNotifyOn()) return;
+  calNotifyRefresh();
+  // 20 секунд: достаточно часто, чтобы не проехать нужную минуту, и
+  // достаточно редко, чтобы не мешать.
+  CAL_NOTIFY.timer = setInterval(calNotifyCheck, 20000);
+  calNotifyCheck();
+}
+
+function calNotifyStop(){
+  if(CAL_NOTIFY.timer){ clearInterval(CAL_NOTIFY.timer); CAL_NOTIFY.timer = null; }
+}
+
+// Тумблер в шапке. Разрешение браузер спрашивает только по клику
+// пользователя — поэтому запрос живёт именно здесь, а не на загрузке.
+async function calNotifyToggle(){
+  if(typeof Notification === 'undefined'){
+    alert('Браузер не умеет уведомления.');
+    return;
+  }
+  if(calNotifyOn()){
+    localStorage.setItem(CAL_NOTIFY_ON_KEY, '0');
+    calNotifyStop();
+    paintCalendar();
+    return;
+  }
+  if(Notification.permission === 'denied'){
+    alert('Уведомления запрещены для этого сайта в настройках браузера.\n' +
+          'Нажмите на замок слева от адреса и разрешите их, потом включите тумблер снова.');
+    return;
+  }
+  if(Notification.permission !== 'granted'){
+    const res = await Notification.requestPermission();
+    if(res !== 'granted'){ paintCalendar(); return; }
+  }
+  localStorage.setItem(CAL_NOTIFY_ON_KEY, '1');
+  calNotifyStart();
+  calShowNotification('Напоминания включены',
+    `За ${CAL_NOTIFY.beforeStart} мин до начала и за ${CAL_NOTIFY.beforeEnd} мин до конца. Работают, пока вкладка сайта открыта.`);
+  paintCalendar();
 }
 
 /* ---------- обработчики ---------- */
@@ -368,6 +600,9 @@ function wireCalendar(){
     renderCalendarView();
   };
   document.getElementById('calAdd').onclick = ()=> calOpenEditor(null, calISO(new Date()), 18*60);
+  document.getElementById('calBell').onclick = calNotifyToggle;
+  // Если тумблер уже был включён в прошлый раз — поднимаем таймер молча.
+  calNotifyStart();
 
   document.querySelectorAll('.cal-ev').forEach(el => {
     el.onclick = (e)=>{
@@ -408,6 +643,27 @@ function calOpenEditor(ev, dayISO, startMin){
   calPaintEditor();
 }
 
+// Переносит то, что сейчас введено в форме, обратно в calState.editing.
+// Нужно при перерисовке модалки (смена категории) — без этого набранное
+// название и время сбрасывались бы к исходным.
+function calSnapshotEditor(){
+  const d = calState.editing;
+  if(!d || !document.getElementById('calModal')) return;
+  const val = (id)=> { const el = document.getElementById(id); return el ? el.value : null; };
+  const start = calParseHM(val('calStart'));
+  const end = calParseHM(val('calEnd'));
+  d.studentId = val('calStudent') || null;
+  d.title = (val('calTitle') || '').trim();
+  d.day = val('calDay') || d.day;
+  if(start != null) d.startMin = start;
+  if(end != null) d.endMin = end;
+  d.location = (val('calLoc') || '').trim();
+  d.note = (val('calNote') || '').trim();
+  const rep = document.getElementById('calRepeat');
+  d.repeatWeekly = rep ? rep.checked : d.repeatWeekly;
+  d.repeatUntil = d.repeatWeekly ? (val('calUntil') || null) : null;
+}
+
 function calPaintEditor(){
   const d = calState.editing;
   document.getElementById('calModal')?.remove();
@@ -424,18 +680,23 @@ function calPaintEditor(){
   wrap.innerHTML = `
     <div class="cal-modal">
       <div class="cal-modal-head">
-        <h2>${d.id ? 'Урок' : 'Новый урок'}</h2>
+        <h2>${calIsLesson(d.source)
+          ? (d.id ? 'Урок' : 'Новый урок')
+          : (d.id ? 'Личное время' : 'Новое личное время')}</h2>
         <button class="cal-modal-x" id="calClose">✕</button>
       </div>
 
-      <label class="cal-field">
+      <label class="cal-field${calIsLesson(d.source) ? '' : ' cal-hidden'}" id="calStudentWrap">
         <span>Кто</span>
         <select id="calStudent">${studentOpts}</select>
       </label>
 
       <label class="cal-field">
-        <span>Название <i>(необязательно — подставится имя ученика)</i></span>
-        <input type="text" id="calTitle" value="${calEsc(d.title)}" placeholder="Урок вокала">
+        <span>Название ${calIsLesson(d.source)
+          ? '<i>(необязательно — подставится имя ученика)</i>'
+          : '<i>(например «Спортзал» или «Семья»)</i>'}</span>
+        <input type="text" id="calTitle" value="${calEsc(d.title)}"
+               placeholder="${calIsLesson(d.source) ? 'Урок вокала' : 'Личное время'}">
       </label>
 
       <div class="cal-field-row">
@@ -454,10 +715,11 @@ function calPaintEditor(){
       </div>
 
       <label class="cal-field">
-        <span>Откуда</span>
+        <span>Что это</span>
         <select id="calSource">
-          <option value="personal" ${d.source==='personal'?'selected':''}>Моё расписание</option>
-          <option value="studio" ${d.source==='studio'?'selected':''}>Студия</option>
+          ${Object.entries(CAL_SOURCES).map(([k, s]) =>
+            `<option value="${k}" ${d.source===k?'selected':''}>${calEsc(s.option)}</option>`
+          ).join('')}
         </select>
       </label>
 
@@ -500,12 +762,21 @@ function calPaintEditor(){
     document.getElementById('calUntilWrap').classList.toggle('cal-hidden', !e.target.checked);
   };
 
+  // Смена категории меняет не только цвет, но и подписи с плейсхолдерами
+  // («Кто» исчезает у личного времени), поэтому модалка перерисовывается.
+  // Введённое при этом не теряется: сначала снимаем форму в черновик.
+  document.getElementById('calSource').onchange = (e)=>{
+    calSnapshotEditor();
+    calState.editing.source = e.target.value;
+    calPaintEditor();
+  };
+
   const goBtn = document.getElementById('calGoStudent');
   if(goBtn) goBtn.onclick = ()=>{ const id = d.studentId; close(); setStudentView(id); };
 
   const delBtn = document.getElementById('calDelete');
   if(delBtn) delBtn.onclick = async ()=>{
-    if(!confirm('Удалить этот урок из календаря?')) return;
+    if(!confirm('Удалить эту запись из календаря?')) return;
     await apiSend('/api/lessons?part=calendar&id=' + encodeURIComponent(d.id), 'DELETE', {});
     close();
     renderCalendarView();
@@ -518,14 +789,20 @@ function calPaintEditor(){
     const day = document.getElementById('calDay').value;
     if(!day){ err.textContent = 'Укажите дату.'; return; }
     if(startMin == null || endMin == null){ err.textContent = 'Укажите время начала и конца.'; return; }
-    if(endMin <= startMin){ err.textContent = 'Конец урока должен быть позже начала.'; return; }
+    if(endMin <= startMin){ err.textContent = 'Конец должен быть позже начала.'; return; }
 
     const repeatWeekly = document.getElementById('calRepeat').checked;
+    const source = document.getElementById('calSource').value;
     const payload = {
       id: d.id,
-      studentId: document.getElementById('calStudent').value || null,
+      // У личного времени ученика нет. Обнуляем явно: поле «Кто» скрыто,
+      // но если категорию переключили после выбора ученика, в нём осталось
+      // бы значение — и событие молча привязалось бы к человеку.
+      studentId: calIsLesson(source)
+        ? (document.getElementById('calStudent').value || null)
+        : null,
       title: document.getElementById('calTitle').value.trim(),
-      source: document.getElementById('calSource').value,
+      source,
       day, startMin, endMin,
       location: document.getElementById('calLoc').value.trim(),
       note: document.getElementById('calNote').value.trim(),

@@ -11,6 +11,10 @@
   --cream:#F2ECE7; --ink:#2E2A27; --muted:#8A8078; --line:#E4E0DA; --white:#FFFFFF;
   --bg:var(--cream); --panel:#fff; --text:var(--ink);
   --lvlA:#AE5F3F; --lvlB:#6C91A6; --lvlC:#C9A227; --lvlD:#7A6C9E;
+  /* Третья категория календаря — «личное время» (не урок). Своя переменная,
+     а не --lvlD: уровни A–D про темы занятий, и перекрасив уровень D ты
+     неожиданно перекрасил бы себе спортзал. */
+  --cal-life:#6E8B6B;
   /* Плеер распевок — тёмная «коробочка» в обеих темах. В светлой теме она
      лежит на белой карточке и видна сама по себе, поэтому обводки нет. */
   --wu-surface:#2A2622; --wu-edge:#3A342E; --wu-hover:#332E29; --wu-dim:#8A7E74;
@@ -839,13 +843,42 @@ body.dark .wu-filter-chip.on{border-color:#EFE9E3;background:#EFE9E3;color:#2320
 
 /* Блок урока. --ev-color задаётся инлайн по источнику события:
    заливка — полупрозрачная (color-mix), полоса слева — сплошная. */
-.cal-ev{position:absolute;box-sizing:border-box;padding:3px 6px;border-radius:6px;overflow:hidden;
+.cal-ev{position:absolute;box-sizing:border-box;border-radius:6px;overflow:hidden;
   cursor:pointer;background:color-mix(in srgb,var(--ev-color) 16%,var(--panel));
   border-left:3px solid var(--ev-color);color:var(--text);line-height:1.25;}
 .cal-ev:hover{background:color-mix(in srgb,var(--ev-color) 28%,var(--panel));}
-.cal-ev-time{font-size:10.5px;color:var(--muted);}
+.cal-ev-body{position:relative;z-index:1;padding:3px 6px;}
+.cal-ev-time{font-size:10.5px;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-ev-title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-ev-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Идущее событие наливается СВЕРХУ ВНИЗ по мере того, как уходит время
+   (приём из Structured). Направление не произвольное: в сетке время течёт
+   вниз, верх блока — это начало, поэтому прошедшая часть именно верхняя.
+   Залей снизу — и граница заливки разъедется с бегунком, который идёт
+   сверху вниз.
+   Заливка — отдельный слой ПОД текстом, поэтому её высоту можно менять
+   каждую секунду, не трогая вёрстку блока. transition 1s linear склеивает
+   секундные шаги в непрерывное движение. */
+.cal-ev-fill{position:absolute;left:0;right:0;top:0;height:0;z-index:0;
+  background:color-mix(in srgb,var(--ev-color) 38%,var(--panel));
+  transition:height 1s linear;}
+.cal-ev-now{box-shadow:0 0 0 1px var(--ev-color);}
+.cal-ev-now .cal-ev-time{color:var(--ev-color);font-weight:600;}
+
+/* Та же склейка для бегунка: позицию ему двигает тот же секундный тик. */
+.cal-now{transition:top 1s linear;}
+.cal-now-pin{transition:top 1s linear;}
+
+.cal-bell{font-size:13px;line-height:1;padding:7px 10px;}
+.cal-bell.active{border-color:var(--terracotta-light);background:var(--terracotta-bg);}
+
+/* Пользователь мог попросить систему убрать анимации — тогда убираем
+   плавность, оставляя функциональность. */
+@media (prefers-reduced-motion: reduce){
+  .cal-ev-fill,.cal-now,.cal-now-pin{transition:none;}
+}
 
 /* Бегунок текущего времени */
 .cal-now{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--terracotta);
@@ -1827,7 +1860,7 @@ function renderMain(s){
 
     ${/\(admin\)/i.test(s.name || '') ? `
     <div class="tg-token-row">
-      <span class="tg-token-label">Двойной код</span>
+      <span class="tg-token-label">Код от приложения</span>
       <span class="tg-token-val" id="admKeyVal" style="color:var(--muted);">••••••••••••• · •••••••</span>
       <button class="tg-token-btn" id="admKeyShow">Показать</button>
     </div>` : ''}

@@ -189,6 +189,12 @@ function rowToJson(row) {
 // КАЛЕНДАРЬ (?part=calendar)
 // ---------------------------------------------------------------------------
 
+// Категории события. 'life' — личное время, не урок: ученика у него нет,
+// и фронтенд обнуляет student_id сам, но подстраховываемся и здесь.
+// Неизвестное значение сводится к 'personal', а не пишется как есть —
+// иначе опечатка в клиенте дала бы событие без цвета и без легенды.
+const CAL_SOURCES = ['personal', 'studio', 'life'];
+
 function calRow(r) {
   return {
     id: r.id,
@@ -263,8 +269,8 @@ async function handleCalendar(req, res, url) {
        RETURNING *`,
       [
         id,
-        b.studentId || null,
-        b.source === 'studio' ? 'studio' : 'personal',
+        b.source === 'life' ? null : (b.studentId || null),
+        CAL_SOURCES.includes(b.source) ? b.source : 'personal',
         b.title || '',
         String(b.day).slice(0, 10),
         Number(b.startMin),
