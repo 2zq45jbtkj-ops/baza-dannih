@@ -471,6 +471,60 @@ async function ensureSchema(p) {
   await p.query(`CREATE INDEX IF NOT EXISTS calendar_events_student_idx ON calendar_events (student_id);`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS calendar_events_external_idx
                  ON calendar_events (source, external_id) WHERE external_id IS NOT NULL;`);
+  // Пропуск или перенос. Событие не удаляется, а зачёркивается: в HolliHop
+  // такие занятия остаются в расписании, и нам важно видеть, что окно в
+  // этот час было занято.
+  await p.query(`ALTER TABLE calendar_events
+                 ADD COLUMN IF NOT EXISTS canceled BOOLEAN DEFAULT false;`);
+
+  // Telegram-бот записи: колонки для студентов, пришедших через бот.
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS tg_id BIGINT;`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_students_tg_id ON students(tg_id) WHERE tg_id IS NOT NULL;`);
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'Asia/Yekaterinburg';`);
+  await p.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS funnel_status TEXT DEFAULT 'lead';`);
+
+  // Дополнительные атрибуты события календаря для бот-записей.
+  await p.query(`ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS lesson_status TEXT DEFAULT 'planned';`);
+  await p.query(`ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS lesson_type TEXT DEFAULT 'individual';`);
+  await p.query(`ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS bot_booking_id INTEGER;`);
+
+  // Блокировки педагога (недоступные окна, которые бот не предлагает).
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS teacher_blocks (
+      id            SERIAL PRIMARY KEY,
+      block_date    DATE NOT NULL,
+      start_min     INTEGER NOT NULL,
+      end_min       INTEGER NOT NULL,
+      reason        TEXT,
+      repeat_weekly BOOLEAN DEFAULT false,
+      repeat_until  DATE,
+      created_at    TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  // Заявки на пробный урок через бот.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS bot_bookings (
+      id                SERIAL PRIMARY KEY,
+      tg_id             BIGINT NOT NULL,
+      tg_username       TEXT,
+      name              TEXT NOT NULL,
+      timezone          TEXT NOT NULL,
+      goal              TEXT,
+      lesson_date       DATE NOT NULL,
+      start_min         INTEGER NOT NULL,
+      end_min           INTEGER NOT NULL,
+      lesson_type       TEXT NOT NULL DEFAULT 'trial',
+      status            TEXT NOT NULL DEFAULT 'pending_payment',
+      payment_deadline  TIMESTAMPTZ,
+      calendar_event_id TEXT REFERENCES calendar_events(id) ON DELETE SET NULL,
+      source            TEXT DEFAULT 'bot',
+      created_at        TIMESTAMPTZ DEFAULT now(),
+      updated_at        TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS bot_bookings_tg_id_idx ON bot_bookings(tg_id);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS bot_bookings_lesson_date_idx ON bot_bookings(lesson_date);`);
 }
 
 async function query(sql, params) {
