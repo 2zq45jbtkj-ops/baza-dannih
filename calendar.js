@@ -28,8 +28,8 @@ const CAL_PX_PER_MIN = 0.85;
 // отдых), поэтому у него свой цвет и ученик к нему не привязывается.
 // Порядок ключей задаёт порядок в легенде и в выпадающем списке.
 const CAL_SOURCES = {
-  personal: { label: 'Моё',           color: 'var(--terracotta)', option: 'Мой урок',          blank: 'Урок' },
-  studio:   { label: 'Студия',        color: 'var(--blue)',       option: 'Студия',            blank: 'Занятие в студии' },
+  personal: { label: 'МОИ',           color: 'var(--terracotta)', option: 'МОИ',               blank: 'Урок' },
+  studio:   { label: 'ЛЗ',            color: 'var(--blue)',       option: 'ЛЗ',                blank: 'Занятие в студии' },
   life:     { label: 'Личное время',  color: 'var(--cal-life)',   option: 'Личное время',      blank: 'Личное время' }
 };
 
@@ -135,7 +135,16 @@ function calStudentName(id){
 // Что показать в блоке: явный заголовок, иначе имя ученика, иначе «Урок».
 function calTitleOf(ev){
   const src = CAL_SOURCES[ev.source] || CAL_SOURCES.personal;
-  return ev.title || calStudentName(ev.studentId) || src.blank;
+  // Бот записи сохраняет студийные занятия как «ЛЗ: Имя» (или просто «ЛЗ»):
+  // метка ЛЗ уже стоит в подписи «преподаватель», в названии остаётся только имя.
+  const title = (ev.title || '').replace(/^ЛЗ:\s*/, '').replace(/^ЛЗ$/, '');
+  return title || calStudentName(ev.studentId) || src.blank;
+}
+
+// Маленькая подпись под именем: чей это урок (Коля, 11.11). У личного времени её нет.
+function calTeacherOf(ev){
+  if (!calIsLesson(ev.source)) return '';
+  return (CAL_SOURCES[ev.source] || CAL_SOURCES.personal).label;
 }
 
 function calColorOf(ev){
@@ -255,6 +264,7 @@ function paintCalendar(){
       // этого место обрезалось по нижнему краю и выглядело как баг —
       // поэтому у коротких событий третью строку прячем совсем.
       const tight = h < 52;
+      const teacher = calTeacherOf(ev);
       return `<div class="cal-ev cal-ev-${calEsc(ev.source)}${running ? ' cal-ev-now' : ''}${tight ? ' cal-ev-tight' : ''}"
                    data-ev="${calEsc(ev.id)}"
                    data-start="${ev.startMin}" data-end="${ev.endMin}"
@@ -264,9 +274,11 @@ function paintCalendar(){
                 <div class="cal-ev-body">
                   <div class="cal-ev-time">${running
                     ? calLeftLabel(ev)
-                    : calHM(ev.startMin) + '–' + calHM(ev.endMin)}</div>
+                    : calHM(ev.startMin) + '–' + calHM(ev.endMin)}${teacher
+                    ? `<span class="cal-ev-tl"> · ${calEsc(teacher)}</span>` : ''}</div>
                   <div class="cal-ev-title">${calEsc(calTitleOf(ev))}</div>
                   ${sub ? `<div class="cal-ev-sub">${calEsc(sub)}</div>` : ''}
+                  ${teacher ? `<div class="cal-ev-teacher">преподаватель: ${calEsc(teacher)}</div>` : ''}
                 </div>
               </div>`;
     }).join('');
@@ -425,7 +437,10 @@ function calStartTick(){
       const bar = document.getElementById('calNowBar');
       if(bar) bar.innerHTML = calNowSummary();
       document.querySelectorAll('.cal-col-today .cal-ev-now .cal-ev-time').forEach(t => {
+        // метку «· ЛЗ/МОИ» после времени (в коротком блоке) не стираем
+        const tl = t.querySelector('.cal-ev-tl');
         t.textContent = calLeftLabel({ endMin: Number(t.closest('.cal-ev').dataset.end) });
+        if(tl) t.appendChild(tl);
       });
     }
   }, 1000);
