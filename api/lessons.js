@@ -11,15 +11,37 @@ function fmtDue(due) {
 // Отправляет ученику уведомление о домашнем задании в Telegram, если у него
 // сохранён chat_id (см. POST /api/student-public). Ошибка отправки не должна
 // ронять сохранение урока — поэтому исключения здесь гасятся молча.
+const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля',
+  'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+// «20 ноября» — дедлайн словами, без сокращений (Николай, 13.11).
+function dueWords(due) {
+  if (!due) return '';
+  const p = String(due).slice(0, 10).split('-');
+  if (p.length !== 3) return '';
+  const m = parseInt(p[1], 10), d = parseInt(p[2], 10);
+  return m >= 1 && m <= 12 && d ? d + ' ' + MONTHS_GEN[m - 1] : '';
+}
+
+// Николай (13.11): когда он открывает ученику тему, ученику приходит только
+// «Тема «Дыхание» открыта до 20 ноября» — по строке на каждую открытую тему.
+function topicOpenText(items) {
+  return items.map((it) => {
+    const due = dueWords(it.due);
+    return 'Тема «' + String(it.title || '').trim() + '» открыта' + (due ? ' до ' + due : '');
+  }).join('\n');
+}
+
 async function notifyHomeworkSent(studentId, hwItems) {
   try {
-    const items = Array.isArray(hwItems) ? hwItems : [];
+    const items = (Array.isArray(hwItems) ? hwItems : []).filter((it) => it && String(it.title || '').trim());
     if (!items.length) return;
-    const sr = await query('SELECT telegram_chat_id FROM students WHERE id = $1', [studentId]);
-    const chatId = sr.rows[0] && sr.rows[0].telegram_chat_id;
+    // chat_id из Mini App, а если его нет — Telegram, привязанный в боте записи.
+    const sr = await query('SELECT telegram_chat_id, tg_id FROM students WHERE id = $1', [studentId]);
+    const row = sr.rows[0] || {};
+    const chatId = row.telegram_chat_id || (row.tg_id ? String(row.tg_id) : null);
     if (!chatId) return;
-    const lines = items.map(it => `• [Уровень ${it.level}] ${it.title}${fmtDue(it.due)}`).join('\n');
-    await sendTelegramMessage(chatId, `📚 Новое домашнее задание:\n\n${lines}\n\nОткрой мини-приложение, чтобы посмотреть подробности.`);
+    await sendTelegramMessage(chatId, topicOpenText(items));
   } catch (e) {
     // намеренно молча — доставка в Telegram не должна блокировать сохранение
   }
