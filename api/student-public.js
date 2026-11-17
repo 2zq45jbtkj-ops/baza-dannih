@@ -426,6 +426,54 @@ async function buildCabinet(student, hwRows) {
       ORDER BY created_at DESC, id DESC`,
     [sid]
   );
+  // Все уроки ученика (без пробного) — для списка уроков в каждом абонементе.
+  const evr = await query(
+    `SELECT id::text AS id, day::text AS day, start_min, created_at,
+            COALESCE(canceled, false) AS c, COALESCE(lesson_outcome, '') AS o,
+            COALESCE(repeat_weekly, false) AS rw
+       FROM calendar_events
+      WHERE student_id::text = $1 AND COALESCE(lesson_type, '') <> 'trial'
+      ORDER BY day, start_min`,
+    [sid]
+  );
+  const evs = evr.rows;
+  const nowMinH = teacherNowMin();
+  // Перенос: старый урок отменён, новый бот создаёт с id «bot_…» позже.
+  const usedTo = new Set();
+  const moveTarget = (x) => {
+    const xt = new Date(x.created_at).getTime();
+    const xd = dayMs(x.day);
+    let best = null;
+    for (const r of evs) {
+      if (r === x || usedTo.has(r.id) || !r.id.startsWith('bot_')) continue;
+      if (r.c && r.o !== '') continue;
+      const rt = new Date(r.created_at).getTime();
+      if (!(rt > xt) || dayMs(r.day) < xd - 3 * DAY_MS) continue;
+      if (!best || rt < new Date(best.created_at).getTime()) best = r;
+    }
+    if (best) usedTo.add(best.id);
+    return best;
+  };
+  const lessonOf = (e) => {
+    const o = e.o;
+    if (o === 'completed') return { day: e.day, s: 'ok' };
+    if (o === 'no_show') return { day: e.day, s: 'ns' };
+    if (o === 'student_cancel' || o === 'late_cancel') return { day: e.day, s: 'cx', paid: true };
+    if (o === 'teacher_cancel' || o === 'removed') return { day: e.day, s: 'cx', paid: false, teacher: true };
+    if (o === 'rescheduled') {
+      const t = moveTarget(e);
+      return { day: e.day, s: 'mv', to: t ? t.day : null };
+    }
+    if (e.c) {
+      const t = moveTarget(e);
+      return t ? { day: e.day, s: 'mv', to: t.day } : { day: e.day, s: 'cx', paid: false };
+    }
+    if (e.rw) return null; // повтор каждую неделю: будущие даты ниже, из расписания
+    if (e.day < today || (e.day === today && Number(e.start_min) <= nowMinH)) return { day: e.day, s: 'wait' };
+    return null; // будущий урок — в списке «впереди»
+  };
+  const lessonsAll = evs.map((e) => [e, lessonOf(e)]);
+
   out.history = [];
   for (let i = 0; i < hr.rows.length; i++) {
     const h = hr.rows[i];
@@ -450,6 +498,9 @@ async function buildCabinet(student, hwRows) {
       firstLesson: L.a || null,
       lastLesson: L.b || null,
       termEnd: h.term_started === 'true' ? h.deadline : null,
+      lessons: lessonsAll
+        .filter(([e, l]) => l && e.day >= h.created_day && (until === null || e.day < until))
+        .map(([, l]) => l),
     });
   }
 
@@ -497,6 +548,11 @@ async function buildCabinet(student, hwRows) {
   out.upcoming = all.slice(0, Math.min(cap, 24)).map((l) => ({
     at: lessonIso(l.day, l.startMin), day: l.day, golden: !!l.golden,
   }));
+  // Текущему абонементу — ещё уроки впереди (с датой, если уже в расписании).
+  const curH = out.history[0];
+  if (curH && curH.current) {
+    for (const u of out.upcoming) curH.lessons.push({ day: u.day, s: 'up' });
+  }
   const g = all.find((l) => l.golden);
   out.nextSrez = g ? g.day : null;
 
