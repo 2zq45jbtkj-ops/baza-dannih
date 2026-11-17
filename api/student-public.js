@@ -128,6 +128,84 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // «Было и стало» в Mini App: первая запись голоса ученика, сделанная в
+      // самом приложении. Ложится к референс-записям Кабинета (reference_takes)
+      // с source: 'app' — Николай слушает её там же, где свои записи на входе.
+      // Первая запись одна: повторная отправка не перезаписывает её.
+      // Ученик правит свою первую запись: название и пометки (как в диктофоне
+      // базы), либо удаляет её, чтобы записать заново.
+      const fe = body && (body.firstTakeEdit || body.firstTakeDelete);
+      if (fe) {
+        const esr = await query('SELECT id FROM students WHERE telegram_token = $1', [token]);
+        if (!esr.rows.length) { res.status(404).json({ error: 'student not found' }); return; }
+        const sid = esr.rows[0].id;
+        const cur = await query('SELECT reference_takes FROM student_intake WHERE student_id = $1', [sid]);
+        const list = cur.rows.length && Array.isArray(cur.rows[0].reference_takes) ? cur.rows[0].reference_takes : [];
+        const i = list.findIndex((t) => t && t.source === 'app' && String(t.id) === String(fe.id));
+        if (i < 0) { res.status(404).json({ error: 'no recording' }); return; }
+        let next;
+        if (body.firstTakeDelete) {
+          next = list.slice(0, i).concat(list.slice(i + 1));
+        } else {
+          const t = Object.assign({}, list[i]);
+          if (typeof fe.name === 'string' && fe.name.trim()) t.name = fe.name.trim().slice(0, 200);
+          if (Array.isArray(fe.markers)) {
+            t.markers = fe.markers.slice(0, 200).map((m) => ({
+              id: String((m && m.id) || '').slice(0, 40),
+              t: Math.max(0, Math.round((Number(m && m.t) || 0) * 10) / 10),
+              label: String((m && m.label) || '').slice(0, 200),
+              createdAt: String((m && m.createdAt) || new Date().toISOString()).slice(0, 40),
+            }));
+          }
+          next = list.slice(0, i).concat([t]).concat(list.slice(i + 1));
+        }
+        await query('UPDATE student_intake SET reference_takes = $2::jsonb WHERE student_id = $1', [sid, JSON.stringify(next)]);
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      const ft = body && body.firstTake;
+      if (ft) {
+        const dataUrl = String(ft.dataUrl || '');
+        if (!/^data:(audio\/|application\/octet-stream)[\w.+-]*(;[\w=.+-]+)*;base64,/.test(dataUrl) || dataUrl.length > 4200000) {
+          res.status(400).json({ error: 'bad recording' });
+          return;
+        }
+        const fsr = await query('SELECT id, name FROM students WHERE telegram_token = $1', [token]);
+        if (!fsr.rows.length) { res.status(404).json({ error: 'student not found' }); return; }
+        const fStudent = fsr.rows[0];
+        const have = await query('SELECT reference_takes FROM student_intake WHERE student_id = $1', [fStudent.id]);
+        const takes = have.rows.length && Array.isArray(have.rows[0].reference_takes) ? have.rows[0].reference_takes : [];
+        if (takes.some((t) => t && t.source === 'app')) { res.status(409).json({ error: 'already recorded' }); return; }
+        const secs = Math.max(0, Math.min(600, Math.round(Number(ft.durationSec) || 0)));
+        const pad = (n) => String(n).padStart(2, '0');
+        const d = new Date();
+        const dateLabel = pad(d.getUTCDate()) + '.' + pad(d.getUTCMonth() + 1) + '.' + d.getUTCFullYear();
+        const ext = /^data:[^;]*mp4/.test(dataUrl) ? 'm4a' : /^data:[^;]*ogg/.test(dataUrl) ? 'ogg' : 'webm';
+        const peaks = Array.isArray(ft.peaks) ? ft.peaks.slice(0, 400).map((v) => Math.max(0, Math.min(1, Number(v) || 0))) : [];
+        const take = {
+          id: Date.now(),
+          name: 'Первая запись из приложения · ' + dateLabel,
+          fileName: dateLabel + '_pervaya-zapis.' + ext,
+          meta: pad(Math.floor(secs / 60)) + ':' + pad(secs % 60) + ' · ' + Math.round(dataUrl.length * 0.75 / 1024) + ' KB',
+          dataUrl,
+          createdAt: d.toISOString(),
+          durationSec: secs,
+          markers: [],
+          peaks,
+          visibleToStudent: true,
+          source: 'app',
+        };
+        await query(
+          `INSERT INTO student_intake (student_id, reference_takes) VALUES ($1, $2::jsonb)
+           ON CONFLICT (student_id) DO UPDATE
+             SET reference_takes = COALESCE(student_intake.reference_takes, '[]'::jsonb) || $2::jsonb`,
+          [fStudent.id, JSON.stringify([take])]
+        );
+        res.status(200).json({ ok: true, id: take.id, name: take.name, meta: take.meta, createdAt: take.createdAt, durationSec: secs });
+        return;
+      }
+
       const chatId = body && body.chatId;
       if (!chatId) { res.status(400).json({ error: 'chatId required' }); return; }
       await query(
@@ -156,6 +234,46 @@ module.exports = async (req, res) => {
       return;
     }
     const student = sr.rows[0];
+
+    // «Было и стало»: «Было» — первая запись голоса из приложения,
+    // «Стало» — последняя запись с урока, которую Николай отметил «Виден ученику».
+    // part=bylo — только даты, длительности и волны; part=bylo-audio&which=was|now
+    // — сам звук байтами (две записи base64 в одном ответе упёрлись бы в лимит
+    // Vercel на размер ответа).
+    const part = (req.query && req.query.part) || new URL(req.url, 'http://x').searchParams.get('part');
+    if (part === 'bylo' || part === 'bylo-audio') {
+      const ir = await query('SELECT reference_takes FROM student_intake WHERE student_id = $1', [student.id]);
+      const refs = ir.rows.length && Array.isArray(ir.rows[0].reference_takes) ? ir.rows[0].reference_takes : [];
+      const was = refs.filter((t) => t && t.source === 'app' && t.dataUrl)
+        .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))[0] || null;
+      const lr = await query(
+        `SELECT lesson_date, takes FROM lesson_log
+          WHERE student_id = $1 AND takes @> '[{"visibleToStudent": true}]'::jsonb
+          ORDER BY lesson_date DESC LIMIT 1`,
+        [student.id]
+      );
+      let now = null, nowDate = null;
+      if (lr.rows.length) {
+        const vis = (lr.rows[0].takes || []).filter((t) => t && t.visibleToStudent === true && t.dataUrl);
+        now = vis[vis.length - 1] || null;
+        nowDate = lr.rows[0].lesson_date;
+      }
+      if (part === 'bylo') {
+        const meta = (t, date) => t ? { id: t.id, name: t.name, date: date || t.createdAt, createdAt: t.createdAt, durationSec: t.durationSec || 0, peaks: t.peaks || [], markers: t.markers || [], meta: t.meta || '' } : null;
+        res.status(200).json({ was: meta(was), now: meta(now, nowDate) });
+        return;
+      }
+      const which = (req.query && req.query.which) || new URL(req.url, 'http://x').searchParams.get('which');
+      const t = which === 'was' ? was : which === 'now' ? now : null;
+      const m = t && /^data:([^;,]+)[^,]*;base64,(.*)$/s.exec(t.dataUrl);
+      if (!m) { res.status(404).json({ error: 'no recording' }); return; }
+      const buf = Buffer.from(m[2], 'base64');
+      res.setHeader('Content-Type', m[1]);
+      res.setHeader('Content-Length', String(buf.length));
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.status(200).end(buf);
+      return;
+    }
 
     // Intake (Кабинет)
     const ir = await query('SELECT * FROM student_intake WHERE student_id = $1', [student.id]);
