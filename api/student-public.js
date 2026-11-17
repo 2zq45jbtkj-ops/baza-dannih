@@ -271,6 +271,7 @@ module.exports = async (req, res) => {
       cabinet = await buildCabinet(student, lr.rows);
     } catch (e) {
       cabinet.error = String((e && e.message) || e);
+      console.error('cabinet build failed:', cabinet.error);
     }
 
     res.status(200).json({
