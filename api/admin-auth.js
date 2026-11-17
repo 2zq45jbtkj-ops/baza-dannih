@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
   const K1 = process.env.ADMIN_KEY_1;
   const K2 = process.env.ADMIN_KEY_2;
 
-  if (!K1 || !K2) {
+  if ((!K1 || !K2) && !(body && body.linkToken)) {
     res.status(503).json({ error: 'admin keys not configured' });
     return;
   }
@@ -70,6 +70,25 @@ module.exports = async (req, res) => {
     }
     const nts = String(Date.now());
     res.status(200).json({ ok: true, key1: K1, key2: K2, revealToken: tokenOk ? body.token : nts + '.' + sign(nts) });
+    return;
+  }
+
+  // Вход Николая без ключей: личная ссылка (?k=<telegram_token>) его СОБСТВЕННОЙ
+  // карточки «Nikolai Sept» / «Николай Септ». Он сам попросил не спрашивать у
+  // него ключи в приложении. Ссылку бот выдаёт только ему; карточку с таким
+  // именем заводит только он сам. Код любого другого ученика здесь отказ.
+  if (body && typeof body.linkToken === 'string') {
+    const tok = body.linkToken.trim().toLowerCase();
+    let ok = false;
+    if (/^[0-9a-f-]{36}$/.test(tok)) {
+      const { query } = require('./_db');
+      const r = await query('SELECT name FROM students WHERE telegram_token = $1', [tok]);
+      const n = String((r.rows[0] && r.rows[0].name) || '').toLowerCase();
+      ok = (n.includes('sept') && n.includes('nikola')) || (n.includes('септ') && n.includes('никола'));
+    }
+    if (ok) { res.status(200).json({ ok: true, token: auth.teacherToken() }); return; }
+    await new Promise(r => setTimeout(r, 300));
+    res.status(401).json({ error: 'unauthorized' });
     return;
   }
 
