@@ -166,11 +166,20 @@ module.exports = async (req, res) => {
 
       const ft = body && body.firstTake;
       if (ft) {
-        const dataUrl = String(ft.dataUrl || '');
-        if (!/^data:(audio\/|application\/octet-stream)[\w.+-]*(;[\w=.+-]+)*;base64,/.test(dataUrl) || dataUrl.length > 4200000) {
-          res.status(400).json({ error: 'bad recording' });
+        // Телефоны пишут тип по-разному: iPhone может прислать «audio/mp4; codecs="mp4a.40.2"»
+        // (с пробелом и кавычками), Android — «audio/webm;codecs=opus», иногда
+        // тип пустой. Принимаем любой звук и храним с чистым заголовком.
+        const rawUrl = String(ft.dataUrl || '');
+        const hm = /^data:([^,;]*)(;[^,]*)?;base64,/.exec(rawUrl);
+        const mime = hm ? hm[1].trim().toLowerCase() : '';
+        const mimeOk = hm && (!mime || /^(audio|video)\/[\w.+-]+$/.test(mime) || mime === 'application/octet-stream');
+        if (!mimeOk || rawUrl.length > 4200000) {
+          console.warn('firstTake rejected:', hm ? JSON.stringify(rawUrl.slice(0, 80)) : 'no data url', 'len', rawUrl.length);
+          res.status(400).json({ error: !mimeOk ? 'bad recording' : 'too big' });
           return;
         }
+        const cleanMime = !mime || mime === 'application/octet-stream' ? 'audio/webm' : mime.replace(/^video\//, 'audio/');
+        const dataUrl = 'data:' + cleanMime + ';base64,' + rawUrl.slice(hm[0].length);
         const fsr = await query('SELECT id, name FROM students WHERE telegram_token = $1', [token]);
         if (!fsr.rows.length) { res.status(404).json({ error: 'student not found' }); return; }
         const fStudent = fsr.rows[0];
