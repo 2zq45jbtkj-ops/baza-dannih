@@ -279,6 +279,7 @@ module.exports = async (req, res) => {
       upcomingLessons: cabinet.upcoming,
       nextSrez: cabinet.nextSrez,
       hwTracker: cabinet.hwTracker,
+      subscriptionHistory: cabinet.history || [],
       student: {
         name: student.name,
         status: student.status,
@@ -358,10 +359,13 @@ async function buildCabinet(student, hwRows) {
   const out = { subscription: null, upcoming: [], nextSrez: null, hwTracker: [] };
 
   // ---- абонемент ----
+  // to_jsonb(s)->>'term_started': колонку добавляет бот (17.11); пока её нет,
+  // запрос не падает, а просто считает срок ещё не начатым.
   const sr = await query(
     `SELECT lessons_total, lessons_left, deadline_days, deadline::text AS deadline,
-            (created_at AT TIME ZONE 'UTC')::date::text AS created_day
-       FROM subscriptions
+            (created_at AT TIME ZONE 'Asia/Yekaterinburg')::date::text AS created_day,
+            to_jsonb(s)->>'term_started' AS term_started
+       FROM subscriptions s
       WHERE student_id::text = $1 AND status = 'active'
       ORDER BY created_at DESC LIMIT 1`,
     [sid]
@@ -373,35 +377,80 @@ async function buildCabinet(student, hwRows) {
     const days = Number(sub.deadline_days) || 0;
     const s = { lessonsTotal: total, lessonsLeft: left, started: false,
                 termDays: null, termEnd: null, extraLabel: null, extraEnd: null };
-    if (days > 0) {
-      // Срок идёт с первого урока, но не позже чем через 7 дней после оплаты
-      // (так написано в правилах в боте). Бот при покупке ставит deadline =
-      // оплата + 7 дней; всё, на что он больше этого, — сдвиг из-за отпуска
-      // Николая (vacation.py двигает deadline у всех активных абонементов).
-      const latestStart = dayMs(sub.created_day) + 7 * DAY_MS;
-      const shift = sub.deadline ? Math.max(0, dayMs(sub.deadline) - latestStart) : 0;
-      const fr = await query(
-        `SELECT min(day)::text AS d FROM calendar_events
-          WHERE student_id::text = $1
-            AND lesson_outcome IN ('completed', 'no_show', 'student_cancel')
-            AND COALESCE(lesson_type, '') <> 'trial'
-            AND day >= $2::date`,
-        [sid, sub.created_day]
-      );
-      const first = fr.rows[0] && fr.rows[0].d ? dayMs(fr.rows[0].d) : null;
-      let start = null;
-      if (first !== null) start = Math.min(first, latestStart);
-      else if (dayMs(today) > latestStart) start = latestStart;
+    if (days > 0 && sub.deadline) {
       const split = TERM_SPLIT[days] || { base: days, extraLabel: null };
       s.termDays = split.base;
       s.extraLabel = split.extraLabel;
-      if (start !== null) {
+      const extra = days - split.base;
+      if (sub.term_started === 'true') {
+        // Бот уже поставил настоящий срок: первый урок + дни пакета (+ отпуск).
         s.started = true;
-        s.termEnd = ymd(start + (split.base * DAY_MS) + shift);
-        if (split.extraLabel) s.extraEnd = ymd(start + days * DAY_MS + shift);
+        s.extraEnd = split.extraLabel ? sub.deadline : null;
+        s.termEnd = ymd(dayMs(sub.deadline) - extra * DAY_MS);
+      } else {
+        // До первого урока в deadline лежит «начать до» (оплата + 7, отпуск
+        // его сдвигает). Срок идёт с первого урока, но не позже этой даты.
+        const startBy = dayMs(sub.deadline);
+        const fr = await query(
+          `SELECT min(day)::text AS d FROM calendar_events
+            WHERE student_id::text = $1
+              AND lesson_outcome IN ('completed', 'no_show', 'student_cancel')
+              AND COALESCE(lesson_type, '') <> 'trial'
+              AND day >= $2::date`,
+          [sid, sub.created_day]
+        );
+        const first = fr.rows[0] && fr.rows[0].d ? dayMs(fr.rows[0].d) : null;
+        let start = null;
+        if (first !== null) start = Math.min(first, startBy);
+        else if (dayMs(today) > startBy) start = startBy;
+        if (start !== null) {
+          s.started = true;
+          s.termEnd = ymd(start + split.base * DAY_MS);
+          if (split.extraLabel) s.extraEnd = ymd(start + days * DAY_MS);
+        }
       }
     }
     out.subscription = s;
+  }
+
+  // ---- история абонементов: свежий сверху ----
+  // Уроки к абонементу привязаны только датами: всё от его покупки до
+  // покупки следующего.
+  const hr = await query(
+    `SELECT id, lessons_total, lessons_left, lesson_format, deadline_days,
+            deadline::text AS deadline, status,
+            (created_at AT TIME ZONE 'Asia/Yekaterinburg')::date::text AS created_day,
+            to_jsonb(s)->>'term_started' AS term_started
+       FROM subscriptions s
+      WHERE student_id::text = $1
+      ORDER BY created_at DESC, id DESC`,
+    [sid]
+  );
+  out.history = [];
+  for (let i = 0; i < hr.rows.length; i++) {
+    const h = hr.rows[i];
+    const until = i > 0 ? hr.rows[i - 1].created_day : null;
+    const lr2 = await query(
+      `SELECT min(day)::text AS a, max(day)::text AS b, count(*)::int AS n
+         FROM calendar_events
+        WHERE student_id::text = $1
+          AND lesson_outcome IN ('completed', 'no_show', 'student_cancel')
+          AND COALESCE(lesson_type, '') <> 'trial'
+          AND day >= $2::date AND ($3::date IS NULL OR day < $3::date)`,
+      [sid, h.created_day, until]
+    );
+    const L = lr2.rows[0] || {};
+    const totalH = Number(h.lessons_total) || 0;
+    out.history.push({
+      current: i === 0 && h.status === 'active',
+      bought: h.created_day,
+      lessonsTotal: totalH,
+      lessonsUsed: Math.max(0, totalH - (Number(h.lessons_left) || 0)),
+      format: Number(h.lesson_format) || 45,
+      firstLesson: L.a || null,
+      lastLesson: L.b || null,
+      termEnd: h.term_started === 'true' ? h.deadline : null,
+    });
   }
 
   // ---- ближайшие уроки (с еженедельными повторами, как в боте) ----
