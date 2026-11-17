@@ -263,7 +263,21 @@ module.exports = async (req, res) => {
       .map((s) => parseInt(s.trim(), 10))
       .filter((n) => Number.isInteger(n) && n > 0);
 
+    // Кабинет в Mini App: абонемент, ближайшие уроки, «золотой» урок-срез и
+    // трекер ДЗ. Ошибка здесь не должна ронять весь кабинет — тогда эти
+    // блоки просто придут пустыми.
+    let cabinet = { subscription: null, upcoming: [], nextSrez: null, hwTracker: [] };
+    try {
+      cabinet = await buildCabinet(student, lr.rows);
+    } catch (e) {
+      cabinet.error = String((e && e.message) || e);
+    }
+
     res.status(200).json({
+      subscription: cabinet.subscription,
+      upcomingLessons: cabinet.upcoming,
+      nextSrez: cabinet.nextSrez,
+      hwTracker: cabinet.hwTracker,
       student: {
         name: student.name,
         status: student.status,
@@ -312,3 +326,141 @@ module.exports = async (req, res) => {
     res.status(status).json({ error: err.message || String(err) });
   }
 };
+
+// ---------------------------------------------------------------------------
+// Кабинет: данные из бота записи (общая база). Таблицы subscriptions и
+// calendar_events ведёт бот; сайт их только читает.
+//
+// Время уроков в calendar_events — день + минуты от полуночи по времени
+// Николая (Екатеринбург, UTC+5). Наружу отдаём ISO в UTC, а время ученику
+// показывает уже приложение — в его собственном часовом поясе.
+const TEACHER_UTC_OFFSET_MIN = 5 * 60;
+const DAY_MS = 86400000;
+
+// Пакеты из бота (shared.PACKAGES): deadline_days = основной срок + запас.
+// 37 = 30 дней + 1 неделя, 74 = 60 + 2 недели, 120 = 90 + 1 месяц.
+const TERM_SPLIT = {
+  37: { base: 30, extraLabel: '+1 неделя' },
+  74: { base: 60, extraLabel: '+2 недели' },
+  120: { base: 90, extraLabel: '+1 месяц' },
+};
+
+function ymd(ms) { return new Date(ms).toISOString().slice(0, 10); }
+function dayMs(s) { const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return Date.UTC(y, m - 1, d); }
+function teacherToday() { return ymd(Date.now() + TEACHER_UTC_OFFSET_MIN * 60000); }
+function teacherNowMin() { const t = new Date(Date.now() + TEACHER_UTC_OFFSET_MIN * 60000); return t.getUTCHours() * 60 + t.getUTCMinutes(); }
+function lessonIso(day, startMin) { return new Date(dayMs(day) + (Number(startMin) - TEACHER_UTC_OFFSET_MIN) * 60000).toISOString(); }
+
+async function buildCabinet(student, hwRows) {
+  const sid = String(student.id);
+  const today = teacherToday();
+  const out = { subscription: null, upcoming: [], nextSrez: null, hwTracker: [] };
+
+  // ---- абонемент ----
+  const sr = await query(
+    `SELECT lessons_total, lessons_left, deadline_days, deadline::text AS deadline,
+            (created_at AT TIME ZONE 'UTC')::date::text AS created_day
+       FROM subscriptions
+      WHERE student_id::text = $1 AND status = 'active'
+      ORDER BY created_at DESC LIMIT 1`,
+    [sid]
+  );
+  const sub = sr.rows[0] || null;
+  if (sub) {
+    const total = Number(sub.lessons_total) || 0;
+    const left = Math.max(0, Math.min(total, Number(sub.lessons_left) || 0));
+    const days = Number(sub.deadline_days) || 0;
+    const s = { lessonsTotal: total, lessonsLeft: left, started: false,
+                termDays: null, termEnd: null, extraLabel: null, extraEnd: null };
+    if (days > 0) {
+      // Срок идёт с первого урока, но не позже чем через 7 дней после оплаты
+      // (так написано в правилах в боте). Бот при покупке ставит deadline =
+      // оплата + 7 дней; всё, на что он больше этого, — сдвиг из-за отпуска
+      // Николая (vacation.py двигает deadline у всех активных абонементов).
+      const latestStart = dayMs(sub.created_day) + 7 * DAY_MS;
+      const shift = sub.deadline ? Math.max(0, dayMs(sub.deadline) - latestStart) : 0;
+      const fr = await query(
+        `SELECT min(day)::text AS d FROM calendar_events
+          WHERE student_id::text = $1
+            AND lesson_outcome IN ('completed', 'no_show', 'student_cancel')
+            AND COALESCE(lesson_type, '') <> 'trial'
+            AND day >= $2::date`,
+        [sid, sub.created_day]
+      );
+      const first = fr.rows[0] && fr.rows[0].d ? dayMs(fr.rows[0].d) : null;
+      let start = null;
+      if (first !== null) start = Math.min(first, latestStart);
+      else if (dayMs(today) > latestStart) start = latestStart;
+      const split = TERM_SPLIT[days] || { base: days, extraLabel: null };
+      s.termDays = split.base;
+      s.extraLabel = split.extraLabel;
+      if (start !== null) {
+        s.started = true;
+        s.termEnd = ymd(start + (split.base * DAY_MS) + shift);
+        if (split.extraLabel) s.extraEnd = ymd(start + days * DAY_MS + shift);
+      }
+    }
+    out.subscription = s;
+  }
+
+  // ---- ближайшие уроки (с еженедельными повторами, как в боте) ----
+  const ur = await query(
+    `SELECT g.d::text AS day, ce.start_min
+       FROM (SELECT gs::date AS d FROM generate_series($2::date, $2::date + 120, interval '1 day') gs) g
+       JOIN calendar_events ce
+         ON ce.student_id::text = $1
+        AND COALESCE(ce.canceled, false) = false
+        AND COALESCE(ce.lesson_outcome, '') = ''
+        AND COALESCE(ce.lesson_type, '') <> 'trial'
+        AND (ce.day = g.d OR (COALESCE(ce.repeat_weekly, false) AND ce.day <= g.d
+             AND EXTRACT(ISODOW FROM ce.day) = EXTRACT(ISODOW FROM g.d)
+             AND (NULLIF(ce.repeat_until::text, '') IS NULL
+                  OR NULLIF(ce.repeat_until::text, '')::date >= g.d)))
+      ORDER BY g.d, ce.start_min
+      LIMIT 80`,
+    [sid, today]
+  );
+  const nowMin = teacherNowMin();
+  const seenSlot = new Set();
+  const all = [];
+  for (const r of ur.rows) {
+    if (r.day === today && Number(r.start_min) <= nowMin) continue;
+    const key = r.day + '|' + r.start_min;
+    if (seenSlot.has(key)) continue;
+    seenSlot.add(key);
+    all.push({ day: r.day, startMin: Number(r.start_min) });
+  }
+
+  // «Золотой» урок — последний урок месяца, на нём Николай делает срез и
+  // заполняет колесо баланса. Считаем его только если он попадает в последние
+  // 10 дней месяца: у «плавающих» учеников записан бывает один урок вперёд, и
+  // урок 5-го числа не должен становиться «последним в месяце».
+  const lastInMonth = {};
+  for (const l of all) lastInMonth[l.day.slice(0, 7)] = l;
+  for (const l of Object.values(lastInMonth)) {
+    const [y, m, d] = l.day.split('-').map(Number);
+    const monthDays = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    if (d > monthDays - 10) l.golden = true;
+  }
+
+  const cap = sub ? Math.max(0, Number(sub.lessons_left) || 0) : all.length;
+  out.upcoming = all.slice(0, Math.min(cap, 24)).map((l) => ({
+    at: lessonIso(l.day, l.startMin), day: l.day, golden: !!l.golden,
+  }));
+  const g = all.find((l) => l.golden);
+  out.nextSrez = g ? g.day : null;
+
+  // ---- трекер ДЗ: одно задание = ДЗ после одного урока (запись дневника) ----
+  const rows = (hwRows || []).slice(0, 8).reverse();
+  out.hwTracker = rows.map((row, i) => {
+    const items = Array.isArray(row.hw_items) ? row.hw_items : [];
+    const done = items.length > 0 && items.every((it) => /выполнен/i.test(String(it.status || '')));
+    const isLast = i === rows.length - 1;
+    const open = items.some((it) => !/выполнен/i.test(String(it.status || '')) &&
+      (it.due ? String(it.due).slice(0, 10) >= today : isLast));
+    const date = row.lesson_date instanceof Date ? ymd(row.lesson_date.getTime() + 12 * 3600000) : String(row.lesson_date || '').slice(0, 10);
+    return { lessonDate: date, state: done ? 'ok' : (open ? 'now' : 'no') };
+  });
+
+  return out;
+}
