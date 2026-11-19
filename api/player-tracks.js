@@ -66,7 +66,7 @@ const SONG_COLS = `
   id, student_id, title, artist, song_key, status, start_date, moises_link,
   notes, lyrics, peaks, peaks_voice, peaks_music, markers, volumes,
   voice_name, music_name, voice_duration_sec, music_duration_sec,
-  pitch_semitones, tempo_pct, lyric_times, created_at,
+  pitch_semitones, tempo_pct, lyric_times, created_at, app_hidden, added_by,
   CASE WHEN vocal_url        LIKE 'data:%' THEN NULL ELSE vocal_url        END AS vocal_url,
   CASE WHEN instrumental_url LIKE 'data:%' THEN NULL ELSE instrumental_url END AS instrumental_url,
   COALESCE(vocal_url        LIKE 'data:%', false) AS voice_inline,
@@ -112,7 +112,25 @@ function rowToJson(row) {
     tempoPct: row.tempo_pct != null ? Number(row.tempo_pct) : 100,
     lyricTimes: row.lyric_times || [],
     createdAt: row.created_at,
+    appHidden: row.app_hidden === true,
+    addedBy: row.added_by || 'teacher',
   };
+}
+
+// Лимит «Мои треки» в Mini App (20.11): у ученика в приложении не больше
+// 15 песен — и для самого ученика, и для Николая, когда он добавляет из
+// приложения. Убранные из приложения (app_hidden) не считаются. Сайт
+// (Репертуар) лимитом не ограничен: там fromApp не приходит.
+// Считаются песни с файлами — место занимают они, а не пустая «Новая песня».
+const APP_LIMIT = 15;
+async function appCount(studentId) {
+  const r = await query(
+    `SELECT count(*)::int AS n FROM player_tracks
+      WHERE student_id = $1 AND COALESCE(app_hidden, false) = false
+        AND (vocal_url IS NOT NULL OR instrumental_url IS NOT NULL)`,
+    [studentId]
+  );
+  return r.rows[0].n;
 }
 
 module.exports = async (req, res) => {
@@ -317,14 +335,29 @@ module.exports = async (req, res) => {
         return;
       }
 
-      if (!auth.requireTeacher(req, res)) return;
-      if (!b.studentId) { res.status(400).json({ error: 'studentId required' }); return; }
+      // Новая песня. Ученик (сессия) — только себе и всегда под лимитом
+      // приложения; преподаватель — любому, под лимитом только из приложения.
+      const sessNew = auth.readStudentSession(req);
+      let newFor, addedBy = 'teacher';
+      if (sessNew) {
+        newFor = sessNew.studentId; addedBy = 'student';
+      } else {
+        if (!auth.requireTeacher(req, res)) return;
+        newFor = b.studentId;
+      }
+      if (!newFor) { res.status(400).json({ error: 'studentId required' }); return; }
+      if (sessNew || b.fromApp) {
+        const n = await appCount(newFor);
+        if (n >= APP_LIMIT) { res.status(409).json({ error: 'limit', limit: APP_LIMIT, count: n }); return; }
+      }
+      const title = String(b.title || '').trim().slice(0, 160) || 'Новая песня';
+      const artist = String(b.artist || '').trim().slice(0, 120) || null;
       const id = 'song' + randomUUID();
       const r = await query(
-        `INSERT INTO player_tracks (id, student_id, title, status, start_date, volumes)
-         VALUES ($1,$2,$3,$4, CURRENT_DATE, '{"voice":80,"music":80}')
+        `INSERT INTO player_tracks (id, student_id, title, artist, status, start_date, volumes, added_by)
+         VALUES ($1,$2,$3,$4,$5, CURRENT_DATE, '{"voice":80,"music":80}', $6)
          RETURNING ${SONG_COLS}`,
-        [id, b.studentId, 'Новая песня', 'work']
+        [id, newFor, title, artist, 'work', addedBy]
       );
       res.status(200).json({ song: rowToJson(r.rows[0]) });
       return;
@@ -336,14 +369,27 @@ module.exports = async (req, res) => {
       // комнату урока (lesson_rooms) в api/ сейчас не читает никто, и писать
       // в песни со стороны ученика некому. Когда оно появится — разрешать
       // ему не весь PATCH, а именно эти поля и только у своих песен.
-      if (!auth.requireTeacher(req, res)) return;
       const id = (req.query && req.query.id) || url.searchParams.get('id');
       if (!id) { res.status(400).json({ error: 'id required' }); return; }
       let body = req.body;
       if (!body || typeof body === 'string') {
         try { body = JSON.parse(body || '{}'); } catch (e) { body = {}; }
       }
-      const b = body || {};
+      let b = body || {};
+      // Ученик из Mini App (20.11): у своих песен может убрать песню из
+      // приложения (appHidden), а у песен, которые загрузил сам, ещё и
+      // название, исполнителя, файлы и волну. Остальное — только преподаватель.
+      const sessP = auth.readStudentSession(req);
+      if (sessP) {
+        const own = await query('SELECT student_id, added_by FROM player_tracks WHERE id = $1', [id]);
+        if (!own.rows.length || own.rows[0].student_id !== sessP.studentId) { res.status(403).json({ error: 'not your song' }); return; }
+        const allowed = own.rows[0].added_by === 'student'
+          ? ['appHidden', 'title', 'artist', 'voice', 'music', 'peaks', 'peaksVoice', 'peaksMusic', 'fromApp']
+          : ['appHidden'];
+        const nb = {};
+        allowed.forEach(k => { if (Object.prototype.hasOwnProperty.call(b, k)) nb[k] = b[k]; });
+        b = nb;
+      } else if (!auth.requireTeacher(req, res)) return;
       const has = k => Object.prototype.hasOwnProperty.call(b, k);
 
       const cols = [];
@@ -382,6 +428,25 @@ module.exports = async (req, res) => {
           .map(m => ({ i: Math.max(0, Math.round(Number(m.i) || 0)), t: Math.max(0, Number(m.t)), text: String(m.text || '').slice(0, 300) }))
           .sort((a, b2) => a.t - b2.t);
         cols.push(`lyric_times = $${i++}`); vals.push(JSON.stringify(clean));
+      }
+      if (has('appHidden')) {
+        // вернуть песню в приложение можно, только если есть место
+        if (!b.appHidden) {
+          const sid = await query('SELECT student_id, app_hidden FROM player_tracks WHERE id = $1', [id]);
+          if (sid.rows.length && sid.rows[0].app_hidden && (await appCount(sid.rows[0].student_id)) >= APP_LIMIT) {
+            res.status(409).json({ error: 'limit', limit: APP_LIMIT }); return;
+          }
+        }
+        cols.push(`app_hidden = $${i++}`); vals.push(!!b.appHidden);
+      }
+      // первый файл у песни — это новое место в приложении: тоже под лимит
+      if ((has('voice') && b.voice) || (has('music') && b.music)) {
+        const cur = await query('SELECT student_id, app_hidden, vocal_url, instrumental_url FROM player_tracks WHERE id = $1', [id]);
+        const c = cur.rows[0];
+        if (c && !c.app_hidden && !c.vocal_url && !c.instrumental_url && (sessP || b.fromApp) &&
+            (await appCount(c.student_id)) >= APP_LIMIT) {
+          res.status(409).json({ error: 'limit', limit: APP_LIMIT }); return;
+        }
       }
       if (has('voice')) {
         const v = b.voice;

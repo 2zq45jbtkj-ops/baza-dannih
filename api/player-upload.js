@@ -30,6 +30,7 @@ const AUDIO_TYPES = [
 ];
 
 const MAX_SIZE = 80 * 1024 * 1024;
+const STUDENT_MAX_SIZE = 25 * 1024 * 1024;
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -68,14 +69,26 @@ module.exports = async (req, res) => {
   // и этот коллбэк начал бы получать 401. Он не беззащитен: handleUpload
   // сверяет HMAC-подпись из x-vercel-signature с BLOB_READ_WRITE_TOKEN —
   // и сверяет её по-настоящему только с заглушкой заголовков ниже.
+  // Ученик загружает свой трек из Mini App (20.11): в clientPayload вместо
+  // токена преподавателя — его сессия с приставкой «ps:». Ему можно только
+  // папку tracks/ и файл поменьше (25 МБ) — хранилище общее.
+  let studentUpload = false;
   if (body && body.type === 'blob.generate-client-token') {
-    // Заголовок проверяем первым и clientPayload к нему только запасной:
-    // дев-прокси .claude/server.js подставляет X-Site-Auth во всё, что
-    // проксирует, а localStorage на localhost пуст — иначе загрузка файлов
-    // работала бы на проде и падала с 401 локально.
-    const sent = String(req.headers['x-site-auth'] || '')
-      || (body.payload && body.payload.clientPayload) || '';
-    if (!auth.requireTeacher({ headers: { 'x-site-auth': sent } }, res)) return;
+    const payload = String((body.payload && body.payload.clientPayload) || '');
+    if (payload.startsWith('ps:')) {
+      if (!auth.readStudentSession({ headers: { 'x-player-session': payload.slice(3) } })) {
+        res.status(401).json({ error: 'unauthorized' });
+        return;
+      }
+      studentUpload = true;
+    } else {
+      // Заголовок проверяем первым и clientPayload к нему только запасной:
+      // дев-прокси .claude/server.js подставляет X-Site-Auth во всё, что
+      // проксирует, а localStorage на localhost пуст — иначе загрузка файлов
+      // работала бы на проде и падала с 401 локально.
+      const sent = String(req.headers['x-site-auth'] || '') || payload;
+      if (!auth.requireTeacher({ headers: { 'x-site-auth': sent } }, res)) return;
+    }
   }
 
   // @vercel/blob ждёт Fetch-подобный Request, но читает заголовки двумя
@@ -109,10 +122,11 @@ module.exports = async (req, res) => {
         if (!SCOPES.includes(scope)) {
           throw new Error('Недопустимая папка для загрузки: ' + (scope || 'не указана'));
         }
+        if (studentUpload && scope !== 'tracks') throw new Error('Ученику можно загружать только треки');
         return {
           allowedContentTypes: AUDIO_TYPES,
           addRandomSuffix: true,
-          maximumSizeInBytes: MAX_SIZE,
+          maximumSizeInBytes: studentUpload ? STUDENT_MAX_SIZE : MAX_SIZE,
           // Иначе handleUpload подставит сюда clientPayload, а там лежит
           // токен преподавателя: он уехал бы внутрь клиентского токена и
           // дальше на серверы Blob в коллбэке. Проверили — и забыли.

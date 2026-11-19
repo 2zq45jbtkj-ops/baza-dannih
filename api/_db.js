@@ -410,7 +410,13 @@ async function ensureSchema(p) {
     ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS pitch_semitones INTEGER DEFAULT 0;
     ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS tempo_pct INTEGER DEFAULT 100;
     ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS lyric_times JSONB DEFAULT '[]';
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS app_hidden BOOLEAN DEFAULT false;
+    ALTER TABLE player_tracks ADD COLUMN IF NOT EXISTS added_by TEXT DEFAULT 'teacher';
   `);
+  // app_hidden — песню убрали из «Мои треки» в Mini App (ученик или Николай),
+  // чтобы освободить место под лимит 15. В базе и в Репертуаре она остаётся.
+  // added_by — кто завёл песню: 'teacher' или 'student' (ученик сам загрузил
+  // трек в Mini App). Ученик может менять только свои песни.
 
   // Комната урока. state — синхронизируемое состояние плеера целиком
   // (какой трек, играет ли, якорь времени, тональность, темп, активный
