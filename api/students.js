@@ -43,6 +43,22 @@ module.exports = async (req, res) => {
   if (!auth.requireTeacher(req, res)) return;
 
   try {
+    // Объединение двух карточек (страница /merge.html): ?merge=preview|run
+    const mq = new URL(req.url, 'http://x').searchParams;
+    if (mq.get('merge')) {
+      const merge = require('./_merge');
+      if (mq.get('merge') === 'preview') {
+        res.status(200).json(await merge.preview(mq.get('keep'), mq.get('drop')));
+        return;
+      }
+      if (mq.get('merge') === 'run' && req.method === 'POST') {
+        let mb = req.body;
+        if (!mb || typeof mb === 'string') { try { mb = JSON.parse(mb || '{}'); } catch (e) { mb = {}; } }
+        const out = await merge.run(mb.keep, mb.drop, mb.name);
+        res.status(out.error ? 500 : 200).json(out);
+        return;
+      }
+    }
     if (req.method === 'GET') {
       const r = await query('SELECT * FROM students ORDER BY created_at ASC, id ASC', []);
       res.status(200).json({ students: r.rows.map(rowToJson) });

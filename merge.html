@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Объединить карточки</title>
+<style>
+  :root { --bg:#F2ECE7; --panel:#fff; --text:#2E2A27; --line:#E4E0DA; --muted:#8a817a; --acc:#AE5F3F; }
+  body { margin:0; font:15px/1.45 -apple-system, Inter, sans-serif; background:var(--bg); color:var(--text); }
+  .w { max-width:640px; margin:0 auto; padding:24px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 6px; } .s { color:var(--muted); margin-bottom:18px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-weight:600; font-size:13px; margin:10px 0 6px; color:var(--muted); }
+  select, input { width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid var(--line); font:inherit; background:#fff; color:var(--text); }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { padding:6px 4px; border-bottom:1px solid var(--line); text-align:left; } th { color:var(--muted); font-weight:600; }
+  button { font:600 15px inherit; padding:12px 18px; border-radius:12px; border:0; cursor:pointer; background:var(--acc); color:#fff; }
+  button.sec { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .err { color:#b3261e; } .ok { color:#2e7d32; } .row { display:flex; gap:10px; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>Объединить карточки ученика</h1>
+  <div class="s">Всё из второй карточки переносится в первую. Где у первой пусто — берётся из второй. Вторая карточка удаляется.</div>
+  <div class="card">
+    <label>Остаётся (её код и Telegram продолжат работать)</label><select id="keep"></select>
+    <label>Вливается и удаляется</label><select id="drop"></select>
+    <label>Имя общей карточки</label><input id="name" value="Nikolai Sept">
+    <div class="row"><button class="sec" id="pv">Показать, что перенесётся</button></div>
+  </div>
+  <div class="card" id="out" style="display:none"></div>
+</div>
+<script>
+(function () {
+  var tok = ''; try { tok = localStorage.getItem('bd_auth_token') || ''; } catch (e) {}
+  var out = document.getElementById('out');
+  function show(h) { out.style.display = 'block'; out.innerHTML = h; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function api(url, opt) {
+    opt = opt || {}; opt.headers = Object.assign({ 'X-Site-Auth': tok, 'Content-Type': 'application/json' }, opt.headers || {});
+    return fetch(url, opt).then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
+  }
+  if (!tok) { show('<div class="err">Сначала войди на основной сайт (baza-dannih.vercel.app) по паролю, потом открой эту страницу снова.</div>'); return; }
+  var K = document.getElementById('keep'), D = document.getElementById('drop');
+  var RX = /nikolai|sept|николай|септ|админ|admin/i;
+  api('/api/students').then(function (d) {
+    var list = d.students || [];
+    var opts = list.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+    K.innerHTML = opts; D.innerHTML = opts;
+    var m = list.filter(function (s) { return RX.test(s.name || ''); });
+    // остаётся та, что последней открывала приложение (на телефоне вход не слетит)
+    m.sort(function (a, b) { return (Date.parse(b.lastSeenAt || b.last_seen_at || 0) || 0) - (Date.parse(a.lastSeenAt || a.last_seen_at || 0) || 0); });
+    if (m[0]) K.value = m[0].id;
+    if (m[1]) D.value = m[1].id;
+    window.__found = m.map(function (s) { return s.name; });
+  }).catch(function (e) { show('<div class="err">Не загрузился список: ' + esc(e.message) + '</div>'); });
+
+  document.getElementById('pv').onclick = function () {
+    if (K.value === D.value) { show('<div class="err">Выбери две разные карточки.</div>'); return; }
+    show('Смотрю…');
+    api('/api/students?merge=preview&keep=' + encodeURIComponent(K.value) + '&drop=' + encodeURIComponent(D.value)).then(function (p) {
+      if (p.error) throw new Error(p.error);
+      var rows = p.counts.filter(function (c) { return c.keep || c.drop; }).map(function (c) {
+        return '<tr><td>' + esc(c.table) + '</td><td>' + c.keep + '</td><td>' + c.drop + '</td></tr>';
+      }).join('') || '<tr><td colspan="3">Записей нет</td></tr>';
+      show('<b>Остаётся:</b> ' + esc(p.keep.name) + ' · статус ' + esc(p.keep.status) + (p.keep.telegram_linked ? ' · Telegram привязан' : '') +
+        '<br><b>Удаляется:</b> ' + esc(p.drop.name) + ' · статус ' + esc(p.drop.status) + (p.drop.telegram_linked ? ' · Telegram привязан' : '') +
+        '<br><br><table><tr><th>Таблица</th><th>Остаётся</th><th>Переносится</th></tr>' + rows + '</table>' +
+        '<div class="row"><button id="go">Объединить</button></div><div id="res"></div>');
+      window.__preview = p;
+      document.getElementById('go').onclick = function () {
+        var b = this; b.disabled = true; b.textContent = 'Объединяю…';
+        api('/api/students?merge=run', { method: 'POST', body: JSON.stringify({ keep: K.value, drop: D.value, name: document.getElementById('name').value }) })
+          .then(function (r) { window.__result = r; document.getElementById('res').innerHTML = '<p class="ok"><b>Готово.</b><br>' + r.log.map(esc).join('<br>') + '</p>'; b.style.display = 'none'; })
+          .catch(function (e) { window.__result = { error: e.message }; document.getElementById('res').innerHTML = '<p class="err">Не получилось, ничего не изменено: ' + esc(e.message) + '</p>'; b.disabled = false; b.textContent = 'Объединить'; });
+      };
+    }).catch(function (e) { show('<div class="err">' + esc(e.message) + '</div>'); });
+  };
+})();
+</script>
+</body>
+</html>
