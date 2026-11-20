@@ -385,7 +385,9 @@ module.exports = async (req, res) => {
         if (!own.rows.length || own.rows[0].student_id !== sessP.studentId) { res.status(403).json({ error: 'not your song' }); return; }
         const allowed = own.rows[0].added_by === 'student'
           ? ['appHidden', 'title', 'artist', 'voice', 'music', 'peaks', 'peaksVoice', 'peaksMusic', 'fromApp']
-          : ['appHidden'];
+          // 20.11 (Николай): у треков от преподавателя ученик тоже может
+          // поправить название и исполнителя — песня всё равно только его
+          : ['appHidden', 'title', 'artist'];
         // «Исправить тап» в караоке (20.11): время строк ученик правит у любой
         // своей песни — и у той, что добавил Николай
         allowed.push('lyricTimes');
