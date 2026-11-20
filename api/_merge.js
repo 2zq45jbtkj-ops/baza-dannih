@@ -30,7 +30,7 @@ async function studentTables(c) {
     const t = row.table_name;
     // уникален ли student_id сам по себе (одна строка на ученика)
     const u = await c.query(`
-      SELECT i.indisunique, array_agg(a.attname ORDER BY a.attname) AS cols
+      SELECT i.indisunique, array_agg(a.attname::text ORDER BY a.attname::text) AS cols
         FROM pg_index i
         JOIN pg_class cl ON cl.oid = i.indrelid
         JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attnum = ANY(i.indkey)
@@ -80,14 +80,26 @@ function fillCols(keepRow, dropRow, skip) {
   return set;
 }
 
+// jsonb-колонки надо слать строкой JSON: массив JS драйвер иначе превратит
+// в массив Postgres ('{...}'), и jsonb его не примет
+const TYPES = {};
+async function colTypes(c, table) {
+  if (TYPES[table]) return TYPES[table];
+  const r = await c.query(`SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=$1`, [table]);
+  const m = {}; r.rows.forEach(x => { m[x.column_name] = x.data_type; });
+  return (TYPES[table] = m);
+}
+function toParam(type, v) {
+  if (v === null || v === undefined) return v;
+  if (type === 'jsonb' || type === 'json') return JSON.stringify(v);
+  return v;
+}
 async function updateCols(c, table, keyCol, keyVal, set) {
   const keys = Object.keys(set);
   if (!keys.length) return 0;
+  const ty = await colTypes(c, table);
   const parts = keys.map((k, i) => `"${k}" = $${i + 2}`);
-  const vals = keys.map(k => {
-    const v = set[k];
-    return (v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v)) ? JSON.stringify(v) : v;
-  });
+  const vals = keys.map(k => toParam(ty[k], set[k]));
   await c.query(`UPDATE "${table}" SET ${parts.join(', ')} WHERE "${keyCol}" = $1`, [keyVal].concat(vals));
   return keys.length;
 }
@@ -143,6 +155,8 @@ async function run(keepId, dropId, newName) {
             const set = fillCols(kr, dr, ['student_id'].concat(other, ['updated_at']));
             Object.keys(dr).forEach(k => { if (dr[k] === true && kr[k] === false) set[k] = true; });
             const keys = Object.keys(set);
+            const ty = await colTypes(c, t.table);
+            keys.forEach(k => { set[k] = toParam(ty[k], set[k]); });
             if (keys.length) {
               const parts = keys.map((k, i) => `"${k}" = $${i + 2 + other.length}`);
               await c.query(`UPDATE "${t.table}" SET ${parts.join(', ')} WHERE student_id = $1 AND ${where}`, [keepId].concat(vals, keys.map(k => set[k])));
