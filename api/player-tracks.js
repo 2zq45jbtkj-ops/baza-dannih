@@ -386,6 +386,9 @@ module.exports = async (req, res) => {
         const allowed = own.rows[0].added_by === 'student'
           ? ['appHidden', 'title', 'artist', 'voice', 'music', 'peaks', 'peaksVoice', 'peaksMusic', 'fromApp']
           : ['appHidden'];
+        // «Исправить тап» в караоке (20.11): время строк ученик правит у любой
+        // своей песни — и у той, что добавил Николай
+        allowed.push('lyricTimes');
         const nb = {};
         allowed.forEach(k => { if (Object.prototype.hasOwnProperty.call(b, k)) nb[k] = b[k]; });
         b = nb;
